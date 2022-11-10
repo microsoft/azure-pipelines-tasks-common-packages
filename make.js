@@ -3,7 +3,7 @@ const path = require('path');
 const util = require('./build-scripts/util');
 const minimist = require('minimist');
 
-const ignoredFolders = ['build-scripts', '.git', '_download', 'node_modules'];
+const ignoredFolders = ['build-scripts', '.git', '_download', 'node_modules', 'ci'];
 const defaultTestSuite = 'L0';
 const predefinedFlags = {
     boolean: [
