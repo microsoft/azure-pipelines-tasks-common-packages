@@ -8,7 +8,7 @@ stages:
   dependsOn: []
   pool:
     vmImage: windows-2022
-  condition: and(succeeded())
+  condition: succeeded()
   jobs:
   - template: ci/build-common-packages.yml
 
@@ -17,6 +17,6 @@ stages:
   dependsOn: []
   pool:
     vmImage: 'ubuntu-20.04'
-  condition: and(succeeded())
+  condition: succeeded()
   jobs:
   - template: ci/build-common-packages.yml
