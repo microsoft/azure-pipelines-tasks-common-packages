@@ -11,6 +11,8 @@ stages:
   condition: succeeded()
   jobs:
   - template: ci/build-common-packages.yml
+    parameters:
+      AgentOS: 'Windows'
 
 - stage: 'BuildSharedNpmUbuntu'
   displayName: 'Ubuntu - Build Shared Npm packages'
@@ -20,6 +22,8 @@ stages:
   condition: succeeded()
   jobs:
   - template: ci/build-common-packages.yml
+    parameters:
+      AgentOS: 'Ubuntu'
 
 - stage: 'BuildSharedNpmMac'
   displayName: 'MacOS - Build Shared Npm packages'
@@ -29,3 +33,5 @@ stages:
   condition: succeeded()
   jobs:
   - template: ci/build-common-packages.yml
+    parameters:
+      AgentOS: 'MacOS'

@@ -1,6 +1,9 @@
+parameters:
+- name: AgentOS
+
 jobs:
 - job: 'BuildSharedNpmPackages'
-  displayName: 'Build Shared Npm Packages'
+  displayName: 'Build Shared Npm Packages - ${{ parameters.AgentOS }}'
   steps:
   - checkout: self
     clean: true
