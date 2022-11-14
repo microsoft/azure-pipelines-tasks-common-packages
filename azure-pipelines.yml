@@ -2,10 +2,21 @@ trigger:
 - master
 - releases/*
 
-jobs:
-- job: buildSharedNpm_win
-  displayName: Build shared npm packages (Win)
+stages:
+- stage: 'BuildSharedNpm_Win'
+  displayName: 'Windows - Build Shared Npm packages'
+  dependsOn: []
   pool:
     vmImage: windows-2022
-  steps:
+  condition: and(succeeded())
+  jobs:
+  - template: ci/build-common-packages.yml
+
+- stage: 'BuildSharedNpm_Ubuntu'
+  displayName: 'Ubuntu - Build Shared Npm packages'
+  dependsOn: []
+  pool:
+    vmImage: 'ubuntu-20.04'
+  condition: and(succeeded())
+  jobs:
   - template: ci/build-common-packages.yml
