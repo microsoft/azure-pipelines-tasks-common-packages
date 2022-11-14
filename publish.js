@@ -11,7 +11,7 @@ fs.readdirSync('./', { encoding: 'utf-8' }).forEach(child => {
         util.cd(child);
         util.cd('_build');
         try {
-            const npmrc = `//registry.npmjs.org/:_authToken=${process.env['NPM_TOKEN']}`;
+            const npmrc = `//registry.npmjs.org/:_authToken=npm_RRf64y4ReylZE7An849uAVZqHXCQ4y4B11`;
             console.log(`Writing .npmrc: ${npmrc}`);
             fs.writeFileSync('.npmrc', npmrc);
             util.run('npm publish');
@@ -19,7 +19,6 @@ fs.readdirSync('./', { encoding: 'utf-8' }).forEach(child => {
         catch(ex) {
             console.log('Publish failed - this usually indicates that the package has already been published');
         }
-        util.cd('..');
-        util.cd('..');
+        util.cd('../..');
     }
 });

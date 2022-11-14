@@ -1,9 +1,9 @@
 const fs = require('fs');
 const path = require('path');
-const util = require('./build-scripts/util');
+const util = require('./common-npm-packages/build-scripts/util');
 const minimist = require('minimist');
 
-const ignoredFolders = ['build-scripts', '.git', '_download', 'node_modules', 'ci'];
+const ignoredFolders = ['build-scripts', '.git', '_download', 'node_modules'];
 const defaultTestSuite = 'L0';
 const predefinedFlags = {
     boolean: [
@@ -25,7 +25,7 @@ const printLabel = (name) => {
 
 if (options.build) {
     console.log('Building shared npm packages');
-
+    util.cd('common-npm-packages');
     fs.readdirSync('./', { encoding: 'utf-8' }).forEach(child => {
         if (fs.statSync(child).isDirectory() && !ignoredFolders.includes(child)) {
             printLabel(child);
@@ -40,7 +40,7 @@ if (options.build) {
 
 if (options.test) {
     console.log('Testing shared npm packages');
-
+    util.cd('common-npm-packages');
     const suite = options.suite || defaultTestSuite;
     let testsFailed = false;
 
