@@ -3,7 +3,7 @@ trigger:
 - releases/*
 
 stages:
-- stage: 'BuildSharedNpm_Win'
+- stage: 'BuildSharedNpmWin'
   displayName: 'Windows - Build Shared Npm packages'
   dependsOn: []
   pool:
@@ -12,7 +12,7 @@ stages:
   jobs:
   - template: ci/build-common-packages.yml
 
-- stage: 'BuildSharedNpm_Ubuntu'
+- stage: 'BuildSharedNpmUbuntu'
   displayName: 'Ubuntu - Build Shared Npm packages'
   dependsOn: []
   pool:
