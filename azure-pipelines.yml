@@ -20,3 +20,12 @@ stages:
   condition: succeeded()
   jobs:
   - template: ci/build-common-packages.yml
+
+- stage: 'BuildSharedNpmMac'
+  displayName: 'MacOS - Build Shared Npm packages'
+  dependsOn: []
+  pool:
+    vmImage: 'macos-12'
+  condition: succeeded()
+  jobs:
+  - template: ci/build-common-packages.yml
