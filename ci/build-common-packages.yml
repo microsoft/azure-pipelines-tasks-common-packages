@@ -1,6 +1,6 @@
 jobs:
-- job: 'Build Shared Npm packages'
-
+- job: 'BuildSharedNpmPackages'
+  displayName: 'Build Shared Npm Packages'
   steps:
   - checkout: self
     clean: true
