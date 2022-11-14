@@ -3,6 +3,7 @@ var util = require('./build-scripts/util');
 
 console.log('Publishing shared npm packages');
 
+util.cd('common-npm-packages');
 fs.readdirSync('./', { encoding: 'utf-8' }).forEach(child => {
     if (fs.statSync(child).isDirectory() &&  ['build-scripts', '.git', '_download', 'node_modules'].indexOf(child) < 0) {
         console.log('\n----------------------------------');

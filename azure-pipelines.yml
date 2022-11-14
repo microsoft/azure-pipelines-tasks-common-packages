@@ -4,7 +4,7 @@ trigger:
 
 stages:
 - stage: 'BuildSharedNpmWin'
-  displayName: 'Windows - Build Shared Npm packages'
+  displayName: 'Windows - Build & Publish Shared Npm packages'
   dependsOn: []
   pool:
     vmImage: windows-2022

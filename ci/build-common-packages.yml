@@ -36,4 +36,4 @@ jobs:
     env:
       NPM_TOKEN: $(npmPublishToken)
     displayName: Publish packages
-    enabled: false
+    enabled: true
