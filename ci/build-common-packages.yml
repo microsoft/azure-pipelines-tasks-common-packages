@@ -1,10 +1,10 @@
 jobs:
 - job: 'BuildSharedNpmPackages'
-  ${{ if eq(variables['Agent.OS'], 'Windows_NT') }}: 
+  ${{ if eq(variables['Agent.Os'], 'Windows_NT') }}: 
     displayName: 'Build & Publish Shared Npm Packages - Windows'
-  ${{ if eq(variables['Agent.OS'], 'Linus') }}: 
+  ${{ if eq(variables['Agent.Os'], 'Linux') }}: 
     displayName: 'Build Shared Npm Packages - Linux'
-  ${{ if eq(variables['Agent.OS'], 'Darwin') }}:
+  ${{ if eq(variables['Agent.Os'], 'Darwin') }}:
     displayName: 'Build Shared Npm Packages - MacOS'
   steps:
   - checkout: self
