@@ -1,6 +1,6 @@
 jobs:
 - job: 'BuildSharedNpmPackages'
-  displayName: 'Build Shared Npm Packages - ${{ variables.Agent.Os }}'
+  displayName: 'Build Shared Npm Packages - ${{ System.StageName }}'
   steps:
   - checkout: self
     clean: true
