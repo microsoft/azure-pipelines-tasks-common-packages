@@ -3,8 +3,8 @@ trigger:
 - releases/*
 
 stages:
-- stage: 'BuildSharedNpmWin'
-  displayName: 'Windows - Build & Publish Shared Npm packages'
+- stage: 'BuildCommonNpmWin'
+  displayName: 'Windows - Build & Publish Common Npm packages'
   dependsOn: []
   pool:
     vmImage: windows-2022
@@ -12,8 +12,8 @@ stages:
   jobs:
   - template: ci/build-common-packages.yml
 
-- stage: 'BuildSharedNpmUbuntu'
-  displayName: 'Ubuntu - Build Shared Npm packages'
+- stage: 'BuildCommonNpmUbuntu'
+  displayName: 'Ubuntu - Build Common Npm packages'
   dependsOn: []
   pool:
     vmImage: 'ubuntu-20.04'
@@ -21,8 +21,8 @@ stages:
   jobs:
   - template: ci/build-common-packages.yml
 
-- stage: 'BuildSharedNpmMac'
-  displayName: 'MacOS - Build Shared Npm packages'
+- stage: 'BuildCommonNpmMac'
+  displayName: 'MacOS - Build Common Npm packages'
   dependsOn: []
   pool:
     vmImage: 'macos-12'
