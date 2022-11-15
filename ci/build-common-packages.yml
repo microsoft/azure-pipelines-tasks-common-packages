@@ -1,6 +1,11 @@
 jobs:
 - job: 'BuildSharedNpmPackages'
-  displayName: 'Build Shared Npm Packages - ${{ variables.System.StageName }}'
+  ${{ if eq(variables['Agent.OS'], 'Windows_NT') }}: 
+    displayName: 'Build & Publish Shared Npm Packages - Windows'
+  ${{ if eq(variables['Agent.OS'], 'Linus') }}: 
+    displayName: 'Build Shared Npm Packages - Linux'
+  ${{ if eq(variables['Agent.OS'], 'Darwin') }}:
+    displayName: 'Build Shared Npm Packages - MacOS'
   steps:
   - checkout: self
     clean: true
