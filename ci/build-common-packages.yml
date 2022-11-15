@@ -1,6 +1,6 @@
 jobs:
 - job: 'BuildCommonNpmPackages'
-  displayName: 'Build & Publish Common Npm Packages'
+  displayName: 'Build Common Npm Packages'
   steps:
   - checkout: self
     clean: true
