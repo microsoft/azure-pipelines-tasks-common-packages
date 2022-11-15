@@ -1,6 +1,6 @@
 jobs:
-- job: 'BuildSharedNpmPackages'
-  displayName: 'Build Shared Npm Packages - $(Agent.Os)'
+- job: 'BuildCommonNpmPackages'
+  displayName: 'Build & Publish Common Npm Packages'
   steps:
   - checkout: self
     clean: true
@@ -22,11 +22,11 @@ jobs:
   # npm install
   - script: |
         npm run build
-    displayName: Build shared packages
+    displayName: Build Common Npm packages
 
   - script: |
         npm run test
-    displayName: Test shared packages
+    displayName: Test Common Npm packages
 
   # For CI runs on master, automatically publish packages
   - bash: |
