@@ -1,11 +1,6 @@
 jobs:
-- job: 'BuildSharedNpmPackages'
-  ${{ if eq(variables['Agent.Os'], 'Windows_NT') }}: 
-    displayName: 'Build & Publish Shared Npm Packages - Windows'
-  ${{ if eq(variables['Agent.Os'], 'Linux') }}: 
-    displayName: 'Build Shared Npm Packages - Linux'
-  ${{ if eq(variables['Agent.Os'], 'Darwin') }}:
-    displayName: 'Build Shared Npm Packages - MacOS'
+- job: 'BuildCommonNpmPackages'
+  displayName: 'Build & Publish Common Npm Packages'
   steps:
   - checkout: self
     clean: true
@@ -27,11 +22,11 @@ jobs:
   # npm install
   - script: |
         npm run build
-    displayName: Build shared packages
+    displayName: Build Common Npm packages
 
   - script: |
         npm run test
-    displayName: Test shared packages
+    displayName: Test Common Npm packages
 
   # For CI runs on master, automatically publish packages
   - bash: |
