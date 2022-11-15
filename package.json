@@ -4,7 +4,9 @@
   "description": "Shared npm packages for azure pipelines tasks",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "npm install && cd common-npm-packages/build-scripts && npm install && cd ../.. && node make.js --build",
+    "test": "node make.js --test",
+    "publish": "node publish.js"
   },
   "repository": {
     "type": "git",
@@ -15,5 +17,16 @@
   "bugs": {
     "url": "https://github.com/microsoft/azure-pipelines-tasks-common-packages/issues"
   },
-  "homepage": "https://github.com/microsoft/azure-pipelines-tasks-common-packages#readme"
+  "homepage": "https://github.com/microsoft/azure-pipelines-tasks-common-packages#readme",
+  "devDependencies": {
+    "@types/node": "^10.17.0",
+    "@types/mocha": "^5.2.7",
+    "@types/uuid": "^8.3.0",
+    "@types/q": "^1.5.4",
+    "minimist": "^1.2.6",
+    "mocha": "^6.2.3",
+    "q": "1.4.1",
+    "shelljs": "^0.8.5",
+    "typescript": "4.0.2"
+  }
 }
