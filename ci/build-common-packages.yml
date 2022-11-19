@@ -1,6 +1,3 @@
-variables:
-- group: npm-publish
-
 jobs:
 - job: 'BuildCommonNpmPackages'
   displayName: 'Build Common Npm Packages'
