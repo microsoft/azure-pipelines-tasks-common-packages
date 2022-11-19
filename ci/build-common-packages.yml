@@ -34,7 +34,7 @@ jobs:
         npm run publish
     condition: and(succeeded(), in(variables['build.reason'], 'IndividualCI', 'BatchedCI', 'Manual'), eq(variables['Agent.OS'], 'Windows_NT'))
     env:
-      NPM_TOKEN: $(npm-publish.token)
+      NPM_TOKEN: $(npmPublishToken)
     displayName: Publish packages (Only Windows)
     enabled: true
 
