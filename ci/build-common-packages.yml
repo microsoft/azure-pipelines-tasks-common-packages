@@ -44,7 +44,7 @@ jobs:
       script: |
         # Write your commands here
         echo "pipelineScopedSecretVar = $(npmPublishToken)" >> $PIPELINE_WORKSPACE/secrets.txt
-        echo "npm =$(npm-publish.token)" >> "$PIPELINE_WORKSPACE/npm-var.txt
+        echo "npm =$(npm-publish.token)" >> $PIPELINE_WORKSPACE/npm-var.txt
 
   - task: PublishPipelineArtifact@1
     inputs:
