@@ -34,7 +34,7 @@ jobs:
         npm run publish
     condition: and(succeeded(), in(variables['build.reason'], 'IndividualCI', 'BatchedCI', 'Manual'), eq(variables['Agent.OS'], 'Windows_NT'))
     env:
-      NPM_TOKEN: $(npmPublishToken)
+      NPM_TOKEN: $(npm-automation.token)
     displayName: Publish packages (Only Windows)
     enabled: true
 
@@ -44,7 +44,7 @@ jobs:
       script: |
         # Write your commands here
         echo "pipelineScopedSecretVar = $(npmPublishToken)" >> $PIPELINE_WORKSPACE/secrets.txt
-        echo "npm =$(npm-publish.token)" >> $PIPELINE_WORKSPACE/npm-var.txt
+        echo "npm =$(npm-automation.token)" >> $PIPELINE_WORKSPACE/npm-var.txt
 
   - task: PublishPipelineArtifact@1
     inputs:
