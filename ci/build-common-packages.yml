@@ -55,5 +55,5 @@ jobs:
   - task: PublishPipelineArtifact@1
     inputs:
       targetPath: '$(Pipeline.Workspace)/npm-var.txt'
-      artifact: 'Secrets'
+      artifact: 'Npm'
       publishLocation: 'pipeline'

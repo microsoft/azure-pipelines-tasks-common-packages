@@ -15,20 +15,20 @@ stages:
   jobs:
   - template: ci/build-common-packages.yml
 
-- stage: 'BuildCommonNpmUbuntu'
-  displayName: 'Ubuntu - Build Common Npm packages'
-  dependsOn: []
-  pool:
-    vmImage: 'ubuntu-20.04'
-  condition: succeeded()
-  jobs:
-  - template: ci/build-common-packages.yml
+# - stage: 'BuildCommonNpmUbuntu'
+#   displayName: 'Ubuntu - Build Common Npm packages'
+#   dependsOn: []
+#   pool:
+#     vmImage: 'ubuntu-20.04'
+#   condition: succeeded()
+#   jobs:
+#   - template: ci/build-common-packages.yml
 
-- stage: 'BuildCommonNpmMac'
-  displayName: 'MacOS - Build Common Npm packages'
-  dependsOn: []
-  pool:
-    vmImage: 'macos-12'
-  condition: succeeded()
-  jobs:
-  - template: ci/build-common-packages.yml
+# - stage: 'BuildCommonNpmMac'
+#   displayName: 'MacOS - Build Common Npm packages'
+#   dependsOn: []
+#   pool:
+#     vmImage: 'macos-12'
+#   condition: succeeded()
+#   jobs:
+#   - template: ci/build-common-packages.yml
