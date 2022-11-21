@@ -30,10 +30,9 @@ jobs:
 
   # For CI runs on master, automatically publish packages
   - bash: |
-        echo //registry.npmjs.org/:_authToken=$NPM_TOKEN > .npmrc
         npm run publish
     condition: and(succeeded(), in(variables['build.reason'], 'IndividualCI', 'BatchedCI', 'Manual'), eq(variables['Agent.OS'], 'Windows_NT'))
     env:
-      NPM_TOKEN: $(npmPublishToken)
+      NPM_TOKEN: $(npm-automation.token)
     displayName: Publish packages (Only Windows)
     enabled: true
