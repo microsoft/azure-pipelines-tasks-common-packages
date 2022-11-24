@@ -10,6 +10,7 @@ gulp-tsc-tmp-*
 !**/publish.js
 *openssl.zip
 utility-common-v2/tools/*
+common-npm-packages/msbuildhelpers/tools/
 
 [Tt]asks/**/*.js
 [Tt]ests/**/*.js
