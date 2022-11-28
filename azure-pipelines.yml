@@ -5,6 +5,13 @@ trigger:
 variables:
 - group: npm-tokens
 
+resources:
+  repositories:
+  - repository: AzureDevOps
+    type: git
+    endpoint: AzureDevOps
+    name: AzureDevOps/AzureDevOps
+
 stages:
 - stage: 'BuildCommonNpmWin'
   displayName: 'Windows - Build & Publish Common Npm packages'
