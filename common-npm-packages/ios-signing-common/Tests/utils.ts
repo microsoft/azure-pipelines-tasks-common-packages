@@ -1,3 +1,7 @@
+/* 
+    Proxy function using to mute console.log from toolrunner
+    to clean output. Also it could be improved if necessary to write output in to variable  
+*/
 export function setToolProxy(tl) {
     return new Proxy(tl, {
         apply(target, thisArg, args) {
