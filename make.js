@@ -33,7 +33,7 @@ if (options.build) {
             printLabel(child);
 
             util.cd(child);
-            // util.run('npm install');
+            util.run('npm install');
             util.run('npm run build');
             util.cd('..');
         }
