@@ -4,6 +4,7 @@ _temp/
 .DS_Store
 gulp-tsc-tmp-*
 .gulp-tsc-tmp-*
+junit/*.xml
 
 *common*/*.js
 !**/make.js

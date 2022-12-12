@@ -28,6 +28,17 @@ jobs:
         npm run test
     displayName: Test Common Npm packages
 
+  - task: PublishTestResults@2
+    inputs:
+      testRunner: JUnit
+      testResultsFiles: '**/*unittest.xml'
+
+  - task: PublishCodeCoverageResults@1
+    inputs: 
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/*coverage.xml'
+      reportDirectory: '$(System.DefaultWorkingDirectory)/**/coverage'
+
   # For CI runs on master, automatically publish packages
   - bash: |
         npm run publish
