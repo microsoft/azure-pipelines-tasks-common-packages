@@ -18,7 +18,6 @@ stages:
     pool:
       vmImage: windows-latest
     steps:
-
     - checkout: self
       persistCredentials: true
 
@@ -40,6 +39,7 @@ stages:
         }
         Write-Host "##vso[task.setvariable variable=sprint]$($sprintInfo.sprint)"
       displayName: "Determine the number of the week in the sprint and sprint number"
+      
     - powershell: |
         git config --global user.email "$(github_email)"
         git config --global user.name "$(username)"
@@ -48,6 +48,7 @@ stages:
         git push origin Localization
       displayName: "Sync with master branch"
       condition: and(succeeded(), in(variables['build.reason'], 'Schedule', 'Manual'))
+      
     - task: OneLocBuild@2
       condition: and(succeeded(), in(variables['build.reason'], 'Schedule', 'Manual'))
       inputs:
@@ -75,6 +76,7 @@ stages:
         git commit -m 'Bumped versions'
       displayName: Bump tasks' and packages' versions
       condition: and(succeeded(), or(and(eq(variables['SHOULDCREATEPR'], 'True'), eq(variables['build.reason'], 'Schedule')), eq(variables['build.reason'], 'Manual')))
+      
     - powershell: |
         $date= Get-Date -Format "MMddyyyy"
         $updateBranch="Localization-update_$date"
@@ -107,13 +109,13 @@ stages:
     # Notifications are set by POST method to MS Teams webhook
     # Body of message is compiled as Office 365 connector card
     # More details about cards - https://docs.microsoft.com/en-us/microsoftteams/platform/task-modules-and-cards/cards/cards-reference#office-365-connector-card
-    - powershell: .\ci\localization-updates\send-notifications.ps1 -IsPRCreated $true -RepoName "Tasks"
+    - powershell: 'ci\localization-updates\send-notifications.ps1 -IsPRCreated $true -RepoName "Tasks Common Packages"'
       displayName: 'Send MS Teams notification about PR opened'
       env:
         TEAMS_WEBHOOK: $(MSTeamsUri)
       condition: and(succeeded(), eq(variables['SHOULDCREATEPR'], 'True'), eq(variables['build.reason'], 'Schedule'))
 
-    - powershell: .\ci\localization-updates\send-notifications.ps1 -IsPRCreated $false -RepoName "Tasks"
+    - powershell: 'ci\localization-updates\send-notifications.ps1 -IsPRCreated $false -RepoName "Tasks Common Packages"'
       displayName: 'Send MS Teams notification about error'
       env:
         TEAMS_WEBHOOK: $(MSTeamsUri)
