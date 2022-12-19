@@ -1,38 +1,27 @@
-import * as assert from "assert";
-import * as mockery from "mockery";
+import { tlClone } from "./utils";
+import { strictEqual } from "assert";
 import { Writable, Readable } from "stream";
-import { resolve } from "path";
 import { IRequestHandler } from "azure-devops-node-api/interfaces/common/VsoBaseInterfaces";
+import {
+    deregisterMock,
+    resetCache,
+    registerMock,
+    deregisterAll,
+    disable,
+    enable
+} from "mockery";
 
-export const tlMock = {
-    getVariable(name: string) {
-        return `${name}_value`;
+export const secureFileId = Math.random().toString(36).slice(2, 7);
+process.env['SECUREFILE_NAME_' + secureFileId] = 'securefilename';
+
+const tmAnswers = {
+    'exist': {
+        'System.TeamFoundationCollectionUri': 'System.TeamFoundationCollectionUri',
     },
-    getEndpointAuthorizationParameter(id: string, key: string, optional: boolean) {
-        return `${id}_${key}_${optional}`;
-    },
-    debug() {
-        return;
-    },
-    getHttpProxyConfiguration() {
-        return false;
-    },
-    getSecureFileName(secureFileId: string) {
-        return `${secureFileId}_secureFileId`;
-    },
-    resolve(...pathSegments) {
-        return resolve(...pathSegments as string[]);
-    },
-    exist(path: string) {
-        return true;
-    },
-    rmRF(path: string) {
-        return;
-    },
-    getSecureFileTicket() {
-        return {};
+    'rmRF': {
+        'securefilename': undefined
     }
-};
+}
 
 class AgentAPI {
     downloadSecureFile() {
@@ -67,12 +56,6 @@ export const fsMock = {
         };
 
         return ws;
-    },
-    existsSync() {
-        return true;
-    },
-    readFileSync() {
-        return "";
     }
 };
 
@@ -80,25 +63,26 @@ const getMaxRetries = (maxRetries?: number) => maxRetries >= 0 ? maxRetries : 5;
 
 describe("securefiles-common package suites", function() {
     before(() => {
-        mockery.enable({
+        enable({
             useCleanCache: true,
             warnOnUnregistered: false
         });
     });
 
     after(() => {
-        mockery.deregisterAll();
-        mockery.disable();
+        deregisterAll();
+        disable();
     });
 
     beforeEach(() => {
-        mockery.resetCache();
-        mockery.registerMock("azure-pipelines-task-lib/task", tlMock);
+        resetCache();
+        registerMock("azure-pipelines-task-lib/task", tlClone);
+        tlClone.setAnswers(tmAnswers);
     });
 
     afterEach(() => {
-        mockery.deregisterMock("azure-pipelines-task-lib/task");
-        mockery.deregisterMock("fs");
+        deregisterMock("azure-pipelines-task-lib/task");
+        deregisterMock("fs");
     });
 
     const secureFilesHelpersProps = [
@@ -113,38 +97,34 @@ describe("securefiles-common package suites", function() {
 
         it(`Check SecureFileHelpers instance properties with args: [${maxRetries}, ${socketTimeout}]`, async() => {
             const secureFiles = require("../securefiles-common");
-
             const secureFileHelpers = new secureFiles.SecureFileHelpers(...args);
 
-            assert.strictEqual(secureFileHelpers.serverConnection.options.maxRetries, getMaxRetries(maxRetries), `Result should be equal ${maxRetries}`);
-            assert.strictEqual(secureFileHelpers.serverConnection.options.socketTimeout, socketTimeout, `Result should be equal ${socketTimeout}`);
+            strictEqual(secureFileHelpers.serverConnection.options.maxRetries, getMaxRetries(maxRetries), `Result should be equal ${maxRetries}`);
+            strictEqual(secureFileHelpers.serverConnection.options.socketTimeout, socketTimeout, `Result should be equal ${socketTimeout}`);
         });
     });
 
     it("Check downloadSecureFile", async() => {
-        mockery.registerMock("azure-devops-node-api", nodeapiMock);
-        mockery.registerMock("fs", fsMock);
+        registerMock("azure-devops-node-api", nodeapiMock);
+        registerMock("fs", fsMock);
         const secureFiles = require("../securefiles-common");
         const secureFileHelpers = new secureFiles.SecureFileHelpers();
-        const secureFileId = Math.random().toString(36).slice(2, 7);
         const secureFilePath = await secureFileHelpers.downloadSecureFile(secureFileId);
         const pseudoResolvedPath = await secureFileHelpers.getSecureFileTempDownloadPath(secureFileId);
-        assert.strictEqual(secureFilePath, pseudoResolvedPath, `Result should be equal to ${pseudoResolvedPath}`);
+        strictEqual(secureFilePath, pseudoResolvedPath, `Result should be equal to ${pseudoResolvedPath}`);
     });
 
     it("Check deleteSecureFile", async() => {
         const secureFiles = require("../securefiles-common");
         const secureFileHelpers = new secureFiles.SecureFileHelpers();
-        const secureFileId = Math.random().toString(36).slice(2, 7);
         secureFileHelpers.deleteSecureFile(secureFileId);
     });
 
     it("Check getSecureFileTempDownloadPath", async() => {
         const secureFiles = require("../securefiles-common");
         const secureFileHelpers = new secureFiles.SecureFileHelpers();
-        const secureFileId = Math.random().toString(36).slice(2, 7);
         const resolvedPath = secureFileHelpers.getSecureFileTempDownloadPath(secureFileId);
-        const pseudoResolvedPath = tlMock.resolve(tlMock.getVariable("Agent.TempDirectory"), tlMock.getSecureFileName(secureFileId));
-        assert.strictEqual(resolvedPath, pseudoResolvedPath, `Resolved path "${resolvedPath}" should be equal to "${pseudoResolvedPath}"`);
+        const pseudoResolvedPath = tlClone.resolve(tlClone.getVariable("Agent.TempDirectory"), tlClone.getSecureFileName(secureFileId));
+        strictEqual(resolvedPath, pseudoResolvedPath, `Resolved path "${resolvedPath}" should be equal to "${pseudoResolvedPath}"`);
     });
 });
