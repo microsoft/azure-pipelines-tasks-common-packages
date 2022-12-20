@@ -27,7 +27,6 @@ if (options.build) {
     console.log('Building shared npm packages');
     util.cd('common-npm-packages');
     fs.readdirSync('./', { encoding: 'utf-8' }).forEach(child => {
-        if (child !== 'codecoverage-tools') return;
         if (fs.statSync(child).isDirectory() && !ignoredFolders.includes(child)) {
             printLabel(child);
 
