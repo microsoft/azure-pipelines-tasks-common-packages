@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/microsoft/azure-pipelines-tasks-common-packages#readme",
   "devDependencies": {
+    "@types/node": "^10.17.0",
     "@types/mocha": "^5.2.7",
     "@types/uuid": "^8.3.0",
     "minimist": "^1.2.6",

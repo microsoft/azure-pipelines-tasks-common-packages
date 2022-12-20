@@ -49,7 +49,6 @@ if (options.test) {
         if (fs.statSync(child).isDirectory() && !ignoredFolders.includes(child)) {
             printLabel(child);
 
-            if (child !== 'codecoverage-tools') return;
             if (fs.existsSync(path.join('./', child, '_build'))) {
                 util.cd(path.join(child, '_build'));
 

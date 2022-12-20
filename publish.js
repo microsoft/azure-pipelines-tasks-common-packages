@@ -6,7 +6,6 @@ console.log('Publishing shared npm packages');
 util.cd('common-npm-packages');
 fs.readdirSync('./', { encoding: 'utf-8' }).forEach(child => {
     if (fs.statSync(child).isDirectory() &&  ['build-scripts', '.git', '_download', 'node_modules'].indexOf(child) < 0) {
-        if (child !== 'codecoverage-tools') return;
         console.log('\n----------------------------------');
         console.log(child);
         console.log('----------------------------------');
