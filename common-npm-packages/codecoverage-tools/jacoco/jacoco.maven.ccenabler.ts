@@ -8,6 +8,13 @@ import * as path from "path";
 
 tl.setResourcePath(path.join(path.dirname(__dirname), 'module.json'), true);
 
+interface IPomData {
+    groupId: string;
+    artifactId: string;
+    version: string;
+    modules?: [string];
+}
+
 export class JacocoMavenCodeCoverageEnabler extends cc.JacocoCodeCoverageEnabler {
 
     excludeFilter: string[];
@@ -21,7 +28,7 @@ export class JacocoMavenCodeCoverageEnabler extends cc.JacocoCodeCoverageEnabler
     // Enable code coverage for Jacoco Maven Builds
     // - enableCodeCoverage: CodeCoverageProperties  - ccProps
     // -----------------------------------------------------
-    public enableCodeCoverage(ccProps: { [name: string]: string }): Q.Promise<boolean> {
+    public enableCodeCoverage(ccProps: { [name: string]: string }): Q.Promise<string> {
         let _this = this;
 
         tl.debug("Input parameters: " + JSON.stringify(ccProps));
@@ -40,8 +47,7 @@ export class JacocoMavenCodeCoverageEnabler extends cc.JacocoCodeCoverageEnabler
         return util.readXmlFileAsJson(_this.buildFile)
             .then(function (resp) {
                 return _this.addCodeCoverageData(resp);
-            })
-            .thenResolve(true);
+            });
     }
 
     protected applyFilterPattern(filter: string): string[] {
@@ -59,7 +65,7 @@ export class JacocoMavenCodeCoverageEnabler extends cc.JacocoCodeCoverageEnabler
         return ccfilter;
     }
 
-    protected addCodeCoverageData(pomJson: any): Q.Promise<any[]> {
+    protected addCodeCoverageData(pomJson: any): Q.Promise<string> {
         let _this = this;
 
         if (!pomJson.project) {
@@ -67,6 +73,7 @@ export class JacocoMavenCodeCoverageEnabler extends cc.JacocoCodeCoverageEnabler
         }
 
         let isMultiModule = false;
+        const originalPom = JSON.parse(JSON.stringify(pomJson));
         if (pomJson.project.modules) {
             tl.debug("Multimodule project detected");
             isMultiModule = true;
@@ -74,10 +81,23 @@ export class JacocoMavenCodeCoverageEnabler extends cc.JacocoCodeCoverageEnabler
 
         let promises = [_this.addCodeCoveragePluginData(pomJson)];
         if (isMultiModule) {
-            promises.push(_this.createMultiModuleReport(_this.reportDir));
+            pomJson.project.modules[0].module.push(path.basename(_this.reportDir));
+
+            promises.push(_this.createMultiModuleReport(originalPom));
         }
 
-        return Q.all(promises);
+        return Q.all(promises)
+            .then(() => {
+                const jacocoDir = isMultiModule ?
+                    "jacoco-aggregate" :
+                    "jacoco";
+
+                const dirName = isMultiModule ?
+                    _this.reportDir :
+                    path.dirname(_this.reportDir);
+
+                return path.join(dirName, "target", "site", jacocoDir);
+            });
     }
 
     protected addCodeCoverageNodes(buildJsonContent: any): Q.Promise<any> {
@@ -85,7 +105,7 @@ export class JacocoMavenCodeCoverageEnabler extends cc.JacocoCodeCoverageEnabler
 
         let buildNode = _this.getBuildDataNode(buildJsonContent);
         let pluginsNode = _this.getPluginDataNode(buildNode);
-        let ccContent = ccc.jacocoMavenPluginEnable(_this.includeFilter, _this.excludeFilter, _this.reportDir);
+        let ccContent = ccc.jacocoMavenPluginEnable(_this.includeFilter, _this.excludeFilter);
         util.addPropToJson(pluginsNode, "plugin", ccContent);
         return Q.resolve(buildJsonContent);
     }
@@ -131,12 +151,78 @@ export class JacocoMavenCodeCoverageEnabler extends cc.JacocoCodeCoverageEnabler
         return pluginsNode;
     }
 
-    protected createMultiModuleReport(reportDir: string): Q.Promise<any> {
+    private getParentPomData (pomJson: any): IPomData {
+        const groupId: string = pomJson.project.groupId[0];
+        const artifactId: string = pomJson.project.artifactId[0];
+        const version: string = pomJson.project.version[0];
+        const jsonModulesProperty = pomJson.project?.modules;
+        const modules: [string] = jsonModulesProperty instanceof Array ?
+            jsonModulesProperty[0].module :
+            []
+
+        return {
+            groupId,
+            artifactId,
+            version,
+            modules
+        }
+    }
+
+    private formatParentData(data: IPomData) {
+        return `
+                <parent>
+                    <groupId>${data.groupId}</groupId>
+                    <artifactId>${data.artifactId}</artifactId>
+                    <version>${data.version}</version>
+                </parent>
+                `;
+    }
+
+    private formatModulesData(modules: IPomData[]) {
+        const dependencies = modules.reduce((acc, current) => {
+            return `
+                    ${acc}
+                    <dependency>
+                        <groupId>${current.groupId}</groupId>
+                        <artifactId>${current.artifactId}</artifactId>
+                        <version>${current.version}</version>
+                    </dependency>
+                    `
+        }, '');
+
+        return `<dependencies>
+                    ${dependencies}
+                </dependencies>`;
+    }
+
+    private getModulesData(data: IPomData) {
+        const _this = this;
+
+        return data.modules.map((moduleName) => {
+            const modulePom = path.join(path.dirname(_this.reportDir), moduleName, 'pom.xml');
+
+            return util.readXmlFileAsJson(modulePom)
+                .then((content) => {
+                    const jsonGroup = content.project?.groupId;
+                    const jsonVersion = content.project?.version;
+
+                    return {
+                        artifactId: content.project.artifactId[0],
+                        groupId: (jsonGroup && jsonGroup[0]) || data.groupId,
+                        version: (jsonVersion && jsonVersion[0]) || data.version
+                    };
+                });
+        });
+    }
+
+    protected createMultiModuleReport(pomJson: any): Q.Promise<any> {
         let _this = this;
         let srcDirs = _this.sourceDirs;
         let classDirs = _this.classDirs;
         let includeFilter = _this.includeFilter.join(",");
         let excludeFilter = _this.excludeFilter.join(",");
+        const reportArtifactId = path.basename(_this.reportDir)
+        const parentData = _this.getParentPomData(pomJson);
 
         if (util.isNullOrWhitespace(srcDirs)) {
             srcDirs = ".";
@@ -145,7 +231,22 @@ export class JacocoMavenCodeCoverageEnabler extends cc.JacocoCodeCoverageEnabler
             classDirs = ".";
         }
 
-        return util.writeFile(_this.reportBuildFile, ccc.jacocoMavenMultiModuleReport(reportDir, srcDirs, classDirs, includeFilter, excludeFilter));
+        return Q.all(_this.getModulesData(parentData))
+            .then((modules) => {
+                return util.writeFile(
+                    _this.reportBuildFile,
+                    ccc.jacocoMavenMultiModuleReport(
+                        reportArtifactId,
+                        srcDirs,
+                        classDirs,
+                        includeFilter,
+                        excludeFilter,
+                        parentData.groupId,
+                        _this.formatParentData(parentData),
+                        _this.formatModulesData(modules)
+                    )
+                )
+            });
     }
 
     protected addCodeCoveragePluginData(pomJson: any): Q.Promise<any> {
