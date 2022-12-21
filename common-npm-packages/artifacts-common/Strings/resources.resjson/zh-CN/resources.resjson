@@ -1,13 +1,13 @@
 {
-  "loc.messages.CredProvider_AlreadyInstalled": "已安装凭据提供程序。如果在后续步骤中存在与包相关的身份验证失败，请考虑将此任务的输入 \"forceReinstallCredentialProvider\" 设置为 true 以强制重新安装。",
-  "loc.messages.CredProvider_Error_FailedCopy": "安装凭据提供程序时，未能从 \"%s\" 复制到 \"%s\"。请确保目标目录未在使用中，并且代理帐户有权向其写入内容。",
-  "loc.messages.CredProvider_Error_FailedRemoveDir": "安装凭据提供程序时，未能删除目录 \"%s\"。请确保此目录未在使用中，并且代理帐户有权删除此目录。",
-  "loc.messages.CredProvider_Error_InvalidServiceConnection": "\"%s\" 的服务连接无效。",
-  "loc.messages.CredProvider_Error_InvalidServiceConnection_ApiKey": "\"%s\" 的服务连接无效。此任务中不支持 ApiKey 服务连接。请在调用工具本身时改用 -ApiKey (NuGet) 或 --api-key (dotnet)。有关详细信息，请参阅任务文档。",
-  "loc.messages.CredProvider_InstallingNetCoreTo": "正在将 Azure Artifacts 凭据提供程序(.NET Core)安装到 \"%s\"。此凭据提供程序与 dotnet SDK 2.1.400 或更高版本兼容。",
-  "loc.messages.CredProvider_InstallingNetFxTo": "正在将 Azure Artifacts 凭据提供程序(.NET Framework)安装到 \"%s\"。此凭据提供程序与 nuget.exe 4.8.0.5385 或更高版本以及 MSBuild 15.8.166.59604 或更高版本兼容。",
-  "loc.messages.CredProvider_SettingUpForOrgFeeds": "设置凭据提供程序，以将标识 \"%s\" 用于组织/集合中以下列内容开头的源:",
-  "loc.messages.CredProvider_SettingUpForServiceConnections": "为这些服务连接设置凭据提供程序:",
-  "loc.messages.ServiceConnections_Error_FailedToParseServiceEndpoint_MissingParameter": "未能分析服务终结点 \"%s\"，因为它缺少参数 \"%s\"",
-  "loc.messages.ServiceConnections_Error_FailedToParseServiceEndpoint_BadScheme": "未能分析服务终结点 \"%s\"，因为身份验证方案 \"%s\" 无效"
+  "loc.messages.CredProvider_AlreadyInstalled": "The credential provider is already installed. If there are package related authentication failures in later steps, consider setting this task's input 'forceReinstallCredentialProvider' to true to force reinstallation.",
+  "loc.messages.CredProvider_Error_FailedCopy": "Failed to copy from '%s' to '%s' while installing the credential provider. Ensure that the destination directory is not in use and that the agent account has permission to write to it.",
+  "loc.messages.CredProvider_Error_FailedRemoveDir": "Failed to remove the directory '%s' while installing the credential provider. Ensure that this directory is not in use and that the agent account has permission to delete this directory.",
+  "loc.messages.CredProvider_Error_InvalidServiceConnection": "The service connection for '%s' is not valid.",
+  "loc.messages.CredProvider_Error_InvalidServiceConnection_ApiKey": "The service connection for '%s' is not valid. ApiKey service connections are not supported in this task. Instead, use -ApiKey (NuGet) or --api-key (dotnet) when invoking the tool itself. See the task documentation for more details.",
+  "loc.messages.CredProvider_InstallingNetCoreTo": "Installing the Azure Artifacts Credential Provider (.NET Core) to '%s'. This credential provider is compatible with dotnet SDK 2.1.400 or later.",
+  "loc.messages.CredProvider_InstallingNetFxTo": "Installing the Azure Artifacts Credential Provider (.NET Framework) to '%s'. This credential provider is compatible with nuget.exe 4.8.0.5385 or later, and MSBuild 15.8.166.59604 or later.",
+  "loc.messages.CredProvider_SettingUpForOrgFeeds": "Setting up the credential provider to use the identity '%s' for feeds in your organization/collection starting with:",
+  "loc.messages.CredProvider_SettingUpForServiceConnections": "Setting up the credential provider for these service connections:",
+  "loc.messages.ServiceConnections_Error_FailedToParseServiceEndpoint_MissingParameter": "Failed to parse the service endpoint '%s' because it was missing the parameter '%s'",
+  "loc.messages.ServiceConnections_Error_FailedToParseServiceEndpoint_BadScheme": "Failed to parse the service endpoint '%s' because the auth scheme '%s' was invalid"
 }
