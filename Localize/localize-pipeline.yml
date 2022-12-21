@@ -44,9 +44,9 @@ stages:
         git config --global user.email "$(github_email)"
         git config --global user.name "$(username)"
         git checkout -b Localization origin/Localization
-        git merge origin/master
+        git merge origin/main
         git push origin Localization
-      displayName: "Sync with master branch"
+      displayName: "Sync with main branch"
       condition: and(succeeded(), in(variables['build.reason'], 'Schedule', 'Manual'))
       
     - task: OneLocBuild@2
