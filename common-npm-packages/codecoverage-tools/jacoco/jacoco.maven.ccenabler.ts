@@ -12,6 +12,7 @@ interface IPomData {
     groupId: string;
     artifactId: string;
     version: string;
+    packaging?: string;
     modules?: [string];
 }
 
@@ -186,6 +187,7 @@ export class JacocoMavenCodeCoverageEnabler extends cc.JacocoCodeCoverageEnabler
                         <groupId>${current.groupId}</groupId>
                         <artifactId>${current.artifactId}</artifactId>
                         <version>${current.version}</version>
+                        <type>${current.packaging}</type>
                     </dependency>
                     `
         }, '');
@@ -205,11 +207,13 @@ export class JacocoMavenCodeCoverageEnabler extends cc.JacocoCodeCoverageEnabler
                 .then((content) => {
                     const jsonGroup = content.project?.groupId;
                     const jsonVersion = content.project?.version;
+                    const jsonPackaging = content.project?.packaging;
 
                     return {
                         artifactId: content.project.artifactId[0],
                         groupId: (jsonGroup && jsonGroup[0]) || data.groupId,
-                        version: (jsonVersion && jsonVersion[0]) || data.version
+                        version: (jsonVersion && jsonVersion[0]) || data.version,
+                        packaging: (jsonPackaging && jsonPackaging[0]) || "jar"
                     };
                 });
         });
