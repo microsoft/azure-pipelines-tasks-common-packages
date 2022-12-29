@@ -23,8 +23,18 @@ const printLabel = (name) => {
     console.log('----------------------------------');
 }
 
+const buildPsTestHelpers = () => {
+    console.log('Building PsTestHelpers');
+    util.cd('PsTestHelpers');
+    util.run('npm install');
+    util.run('tsc');
+    util.cd('..');
+}
+
 if (options.build) {
-    console.log('Building shared npm packages');
+    buildPsTestHelpers();
+
+    console.log('\nBuilding shared npm packages');
     util.cd('common-npm-packages');
     fs.readdirSync('./', { encoding: 'utf-8' }).forEach(child => {
         if (fs.statSync(child).isDirectory() && !ignoredFolders.includes(child)) {
