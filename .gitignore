@@ -12,7 +12,8 @@ gulp-tsc-tmp-*
 common-npm-packages/*/openssl/
 common-npm-packages/*/tools/
 
-PsTestHelpers/**/*.js
+[Tt]asks/**/*.js
+[Tt]ests/**/*.js
 !**/mock_node_modules/**/*.js
 .taskkey
 
