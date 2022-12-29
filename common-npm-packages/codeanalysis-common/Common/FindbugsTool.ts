@@ -46,6 +46,15 @@ export class FindbugsTool extends BaseTool {
     }
 
     /**
+     * Asynchronously configures the provided ToolRunner instance with arguments which will invoke the tool represented by this class.
+     * @param toolRunner
+     * @returns {Promise<ToolRunner>} ToolRunner instance with arguments applied
+     */
+    public async configureBuildAsync(toolRunner: ToolRunner): Promise<ToolRunner> {
+        return this.configureBuild(toolRunner);
+    }
+
+    /**
      * Implementers must specify where the XML reports are located
      */
     protected getBuildReportDir(output: ModuleOutput): string {
@@ -66,7 +75,7 @@ export class FindbugsTool extends BaseTool {
      * @returns a tuple of [affected_file_count, violation_count]
      */
     protected parseXmlReport(xmlReport: string, moduleName: string): [number, number] {
-        let jsonCounts:[number, number] = [0, 0];
+        let jsonCounts: [number, number] = [0, 0];
 
         let reportContent: string = fs.readFileSync(xmlReport, 'utf-8');
         xml2js.parseString(reportContent, (err, data) => {
@@ -109,7 +118,7 @@ export class FindbugsTool extends BaseTool {
 
         // Extract violation and file count data from the sourceFile attribute of ClassStats
         let filesToViolations: Map<string, number> = new Map(); // Maps files -> number of violations
-        data.BugCollection.FindBugsSummary[0].PackageStats[0].ClassStats.forEach((classStats:any) => {
+        data.BugCollection.FindBugsSummary[0].PackageStats[0].ClassStats.forEach((classStats: any) => {
             // The below line takes the sourceFile attribute of the classStats tag - it looks like this in the XML
             // <ClassStats class="main.java.TestClassWithErrors" sourceFile="TestClassWithErrors.java" ... />
             let sourceFile: string = classStats.$.sourceFile;
