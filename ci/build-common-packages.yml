@@ -15,6 +15,9 @@ jobs:
 
   - script: |
         npm install
+    displayName: Npm install
+
+  - script: |
         npm run build
     displayName: Build Common Npm packages
 
