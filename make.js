@@ -27,7 +27,7 @@ const buildPsTestHelpers = () => {
     console.log('Building PsTestHelpers');
     util.cd('PsTestHelpers');
     util.run('npm install');
-    util.run(path.join(__dirname, 'node_modules/.bin/tsc'));
+    util.run(path.join('node_modules', '.bin', 'tsc'));
     util.cd('..');
 }
 
