@@ -9,11 +9,10 @@ gulp-tsc-tmp-*
 !**/make.js
 !**/publish.js
 *openssl.zip
-utility-common-v2/tools/*
-common-npm-packages/msbuildhelpers/tools/
+common-npm-packages/*/openssl/
+common-npm-packages/*/tools/
 
-[Tt]asks/**/*.js
-[Tt]ests/**/*.js
+PsTestHelpers/**/*.js
 !**/mock_node_modules/**/*.js
 .taskkey
 
