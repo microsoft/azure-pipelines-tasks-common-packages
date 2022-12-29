@@ -24,8 +24,8 @@ const printLabel = (name) => {
 }
 
 const buildPsTestHelpers = () => {
-    console.log('Building PsTestHelpers');
-    util.cd('PsTestHelpers');
+    console.log('Building Tests');
+    util.cd('Tests');
     util.run('npm install');
     util.run(path.join('node_modules', '.bin', 'tsc'));
     util.cd('..');
