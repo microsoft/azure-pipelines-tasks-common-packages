@@ -22,6 +22,11 @@ jobs:
     displayName: Build Common Npm packages
 
   - script: |
+        node ./ci/verify-source-changes.js
+    displayName: Verify task source changes
+    condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/master'))
+
+  - script: |
         npm run test
     displayName: Test Common Npm packages
 
