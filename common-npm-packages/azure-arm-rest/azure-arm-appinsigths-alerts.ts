@@ -1,12 +1,16 @@
 import msRestAzure = require('./azure-arm-common');
-import tl = require('vsts-task-lib/task');
+import tl = require('azure-pipelines-task-lib/task');
 import util = require('util');
 import webClient = require('./webClient');
-import  {ToError, ServiceClient } from './AzureServiceClient';
+import  { ServiceClient } from './AzureServiceClient';
+import { ToError } from './AzureServiceClientBase';
 import Model = require('./azureModels');
 import Q = require('q');
+import path = require('path');
 import { AzureEndpoint, IAzureMetricAlertRequestBody } from './azureModels';
 import { APIVersions } from './constants';
+
+tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
 export class AzureMonitorAlerts {
     private _resourceGroupName: string;

@@ -1,18 +1,24 @@
 import msRestAzure = require('./azure-arm-common');
-import tl = require('vsts-task-lib/task');
+import tl = require('azure-pipelines-task-lib/task');
 import Model = require("./azureModels");
 import util = require('util');
 import webClient = require('./webClient');
 import Q = require('q');
+import path = require('path');
 import {
     AzureEndpoint,
     AKSCluster
 } from './azureModels';
 
 import {
-    ServiceClient,
-    ToError
+    ServiceClient
 } from './AzureServiceClient';
+
+import {
+    ToError
+} from './AzureServiceClientBase';
+
+tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
 export class AzureAksService {
 

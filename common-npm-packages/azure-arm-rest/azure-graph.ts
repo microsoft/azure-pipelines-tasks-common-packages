@@ -1,6 +1,7 @@
-import tl = require('vsts-task-lib/task');
+import tl = require('azure-pipelines-task-lib/task');
 import msRestAzure = require("./azure-arm-common");
 import azureServiceClient = require("./AzureServiceClient");
+import azureServiceClientBase = require("./AzureServiceClientBase");
 import webClient = require("./webClient");
 import util = require("util");
 import Q = require("q");
@@ -11,7 +12,10 @@ export class GraphManagementClient extends azureServiceClient.ServiceClient {
     constructor(credentials: msRestAzure.ApplicationTokenCredentials, baseUri?: any, options?: any) {
         super(credentials, null);
 
-        this.apiVersion = '1.6';
+        const useMSAL = credentials.getUseMSAL();
+        tl.debug(`MSAL - Graph - GraphManagementClient - useMSAL = ${useMSAL}`);
+
+        this.apiVersion = useMSAL ? '' : '1.6';
         this.acceptLanguage = 'en-US';
         this.generateClientRequestId = true;
 
@@ -20,6 +24,8 @@ export class GraphManagementClient extends azureServiceClient.ServiceClient {
 
         if (baseUri) {
             this.baseUri = baseUri;
+        } else {
+            this.baseUri = credentials.activeDirectoryResourceId;
         }
 
         if (options.acceptLanguage) {
@@ -35,10 +41,8 @@ export class GraphManagementClient extends azureServiceClient.ServiceClient {
         this.servicePrincipals = new ServicePrincipals(this);
     }
 
-    protected validateInputs(credentials: msRestAzure.ApplicationTokenCredentials, subscriptionId: string) {
-        if (!credentials) {
-            throw new Error(tl.loc("CredentialsCannotBeNull"));
-        }
+    //Since there is no subscriptionId so keeping the check here and empty.
+    protected validateInputs(subscriptionId: string) {
     }
 }
 
@@ -54,16 +58,23 @@ export class ServicePrincipals {
         httpRequest.method = 'GET';
         httpRequest.headers = this.client.setCustomHeaders(options);
 
-        var filterQuery = util.format("appId eq '%s'", this.client.getCredentials().getClientId());
-        httpRequest.uri = this.client.getRequestUri("{tenantId}/servicePrincipals",
+        const clientCredentials = this.client.getCredentials();
+        const useMSAL = clientCredentials.getUseMSAL();
+        tl.debug(`MSAL - Graph - GetServicePrincipal - useMSAL = ${useMSAL}`);
+        const requestUriFormat = (useMSAL ? "v1.0/" : "") + "{tenantId}/servicePrincipals";
+
+        var filterQuery = util.format("appId eq '%s'", clientCredentials.getClientId());
+        httpRequest.uri = this.client.getRequestUri(requestUriFormat,
             {
-                '{tenantId}': this.client.getCredentials().getDomain()
+                '{tenantId}': clientCredentials.getTenantId()
             },
             ['$filter=' + encodeURIComponent(filterQuery)]
         );
 
+        tl.debug(`MSAL - Graph - GetServicePrincipal - requestURL = ${httpRequest.uri}`);
+
         var deferred = Q.defer<any>();
-        this.client.beginRequest(httpRequest).then(async function(response) {
+        this.client.beginRequest(httpRequest).then(async function (response) {
             if (response.statusCode == 200) {
                 var result = null;
                 if (response.body.value) {
@@ -71,11 +82,10 @@ export class ServicePrincipals {
                 }
 
                 deferred.resolve(result);
+            } else {
+                deferred.reject(azureServiceClientBase.ToError(response));
             }
-            else {
-                deferred.reject(azureServiceClient.ToError(response));
-            }
-        }).catch(function(error) {
+        }).catch(function (error) {
             deferred.reject(error);
         });
 

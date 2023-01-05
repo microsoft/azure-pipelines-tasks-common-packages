@@ -19,4 +19,5 @@ export declare const AzureServicePrinicipalAuthentications: {
 export declare const AzureRmEndpointAuthenticationScheme: {
     "ServicePrincipal": string;
     "ManagedServiceIdentity": string;
+    "PublishProfile": string;
 };
