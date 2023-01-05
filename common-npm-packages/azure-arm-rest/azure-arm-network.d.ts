@@ -1,5 +1,6 @@
 import msRestAzure = require("./azure-arm-common");
 import azureServiceClient = require("./AzureServiceClient");
+import azureServiceClientBase = require("./AzureServiceClientBase");
 export declare class NetworkManagementClient extends azureServiceClient.ServiceClient {
     networkSecurityGroups: networkSecurityGroups;
     networkInterfaces: NetworkInterfaces;
@@ -11,8 +12,8 @@ export declare class NetworkManagementClient extends azureServiceClient.ServiceC
 export declare class loadBalancers {
     private client;
     constructor(client: any);
-    list(resourceGroupName: string, callback: azureServiceClient.ApiCallback): void;
-    list(resourceGroupName: string, options: Object, callback: azureServiceClient.ApiCallback): void;
+    list(resourceGroupName: string, callback: azureServiceClientBase.ApiCallback): void;
+    list(resourceGroupName: string, options: Object, callback: azureServiceClientBase.ApiCallback): void;
     get(resourceGroupName: any, loadBalancerName: any, options: any, callback: any): any;
     createOrUpdate(resourceGroupName: any, loadBalancerName: any, parameters: any, options?: any, callback?: any): any;
 }

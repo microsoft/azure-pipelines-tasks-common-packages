@@ -13,7 +13,10 @@ export declare class AzureAppService {
     start(): Promise<void>;
     stop(): Promise<void>;
     restart(): Promise<void>;
+    delete(): Promise<void>;
     swap(slotName: string, preserveVNet?: boolean): Promise<void>;
+    swapSlotWithPreview(slotName: string, preserveVNet?: boolean): Promise<void>;
+    cancelSwapSlotWithPreview(): Promise<void>;
     get(force?: boolean): Promise<AzureAppServiceConfigurationDetails>;
     getPublishingProfileWithSecrets(force?: boolean): Promise<any>;
     getPublishingCredentials(): Promise<any>;

@@ -1,10 +1,14 @@
 import msRestAzure = require("./azure-arm-common");
 import azureServiceClient = require("./AzureServiceClient");
+import azureServiceClientBase = require("./AzureServiceClientBase");
 import Model = require("./azureModels");
 import webClient = require("./webClient");
-import tl = require('vsts-task-lib/task');
+import tl = require('azure-pipelines-task-lib/task');
 import Q = require('q');
 import util = require("util");
+import path = require('path');
+
+tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
 export class StorageManagementClient extends azureServiceClient.ServiceClient {
     public storageAccounts: StorageAccounts;
@@ -72,7 +76,7 @@ export class StorageAccounts {
                 deferred.resolve(result);
             }
             else {
-                deferred.reject(azureServiceClient.ToError(response));
+                deferred.reject(azureServiceClientBase.ToError(response));
             }
         }).catch(function (error) {
             deferred.reject(error);
@@ -112,7 +116,7 @@ export class StorageAccounts {
                  deferred.resolve(result);
              }
              else {
-                 deferred.reject(azureServiceClient.ToError(response));
+                 deferred.reject(azureServiceClientBase.ToError(response));
              }
          }).catch(function(error) {
              deferred.reject(error);
@@ -167,7 +171,7 @@ export class StorageAccounts {
 
                 deferred.resolve(accessKeys);
             } else {
-                deferred.reject(azureServiceClient.ToError(response));
+                deferred.reject(azureServiceClientBase.ToError(response));
             }
         }).catch(function (error) {
             deferred.reject(error);

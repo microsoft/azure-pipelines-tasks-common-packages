@@ -1,4 +1,4 @@
-import tl = require('vsts-task-lib/task');
+import tl = require('azure-pipelines-task-lib/task');
 import Q = require('q');
 import querystring = require('querystring');
 import webClient = require("./webClient");
@@ -6,13 +6,16 @@ import AzureModels = require("./azureModels");
 import constants = require('./constants');
 import path = require('path');
 import fs = require('fs');
-var jwt = require('jsonwebtoken');
+import jwt = require('jsonwebtoken');
+
+tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
 export class ApplicationTokenCredentials {
     private clientId: string;
     private domain: string;
     private authType: string;
     private secret?: string;
+    private accessToken?: string;
     private certFilePath?: string;
     private isADFSEnabled?: boolean;
     public baseUrl: string;
@@ -23,7 +26,7 @@ export class ApplicationTokenCredentials {
     public msiClientId: string;
     private token_deferred: Q.Promise<string>;
 
-    constructor(clientId: string, domain: string, secret: string, baseUrl: string, authorityUrl: string, activeDirectoryResourceId: string, isAzureStackEnvironment: boolean, scheme?: string, msiClientId?: string, authType?: string, certFilePath?: string, isADFSEnabled?: boolean) {
+    constructor(clientId: string, domain: string, secret: string, baseUrl: string, authorityUrl: string, activeDirectoryResourceId: string, isAzureStackEnvironment: boolean, scheme?: string, msiClientId?: string, authType?: string, certFilePath?: string, isADFSEnabled?: boolean, access_token?: string) {
 
         if (!Boolean(domain) || typeof domain.valueOf() !== 'string') {
             throw new Error(tl.loc("DomainCannotBeEmpty"));
@@ -83,10 +86,18 @@ export class ApplicationTokenCredentials {
         }
         
         this.isADFSEnabled = isADFSEnabled;
+        this.accessToken = access_token;
 
     }
 
     public getToken(force?: boolean): Q.Promise<string> {
+        if (!!this.accessToken && !force) {
+            tl.debug("==================== USING ENDPOINT PROVIDED ACCESS TOKEN ====================");
+            let deferred = Q.defer<string>();
+            deferred.resolve(this.accessToken);
+            return deferred.promise;
+        }
+        
         if (!this.token_deferred || force) {
             if(this.scheme === AzureModels.Scheme.ManagedServiceIdentity)
             {
@@ -181,7 +192,8 @@ export class ApplicationTokenCredentials {
             retriableErrorCodes: null,
             retriableStatusCodes: [400, 408, 409, 500, 502, 503, 504],
             retryCount: null,
-            retryIntervalInSeconds: null
+            retryIntervalInSeconds: null,
+            retryRequestTimedout: null
         };
 
         webClient.sendRequest(webRequest, webRequestOptions).then(
@@ -223,7 +235,8 @@ export class ApplicationTokenCredentials {
             retriableErrorCodes: null,
             retriableStatusCodes: [400, 403, 408, 409, 500, 502, 503, 504],
             retryCount: null,
-            retryIntervalInSeconds: null
+            retryIntervalInSeconds: null,
+            retryRequestTimedout: null
         };
 
         webClient.sendRequest(webRequest, webRequestOptions).then(

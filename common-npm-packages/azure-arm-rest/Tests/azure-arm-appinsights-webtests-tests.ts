@@ -1,6 +1,6 @@
 import { getMockEndpoint, nock, mockAzureARMAppInsightsWebTests } from './mock_utils';
 import { AzureEndpoint } from '../azureModels';
-import tl = require('vsts-task-lib');
+import tl = require('azure-pipelines-task-lib');
 import { ApplicationInsightsWebTests } from '../azure-arm-appinsights-webtests';
 
 var endpoint = getMockEndpoint();
@@ -49,7 +49,7 @@ export class ApplicationInsightsWebTestsTests {
             tl.setResult(tl.TaskResult.Failed, 'ApplicationInsightsWebTestsTests.create() should have failed but passed');
         }
         catch(error) {
-
+            tl.error(error);
         }
     }
 }

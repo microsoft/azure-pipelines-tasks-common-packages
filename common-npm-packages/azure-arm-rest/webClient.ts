@@ -1,4 +1,4 @@
-import tl = require('vsts-task-lib/task');
+import tl = require('azure-pipelines-task-lib/task');
 import util = require("util");
 import fs = require('fs');
 import httpClient = require("typed-rest-client/HttpClient");
@@ -12,7 +12,9 @@ var requestOptions: httpInterfaces.IRequestOptions = proxyUrl ? {
         proxyPassword: tl.getVariable("agent.proxypassword"),
         proxyBypassHosts: tl.getVariable("agent.proxybypasslist") ? JSON.parse(tl.getVariable("agent.proxybypasslist")) : null
     }
-} : {};
+} : {
+    allowRedirects: false
+};
 
 let ignoreSslErrors: string = tl.getVariable("VSTS_ARM_REST_IGNORE_SSL_ERRORS");
 requestOptions.ignoreSslError = ignoreSslErrors && ignoreSslErrors.toLowerCase() == "true";
@@ -35,11 +37,11 @@ export class WebResponse {
 }
 
 export class WebRequestOptions {
-    public retriableErrorCodes?: string[];
-    public retryCount?: number;
-    public retryIntervalInSeconds?: number;
-    public retriableStatusCodes?: number[];
-    public retryRequestTimedout?: boolean;
+    public retriableErrorCodes: string[];
+    public retryCount: number;
+    public retryIntervalInSeconds: number;
+    public retriableStatusCodes: number[];
+    public retryRequestTimedout: boolean;
 }
 
 export async function sendRequest(request: WebRequest, options?: WebRequestOptions): Promise<WebResponse> {
