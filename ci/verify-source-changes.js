@@ -4,6 +4,8 @@ var util = require('./ci-util');
 
 packagesList = util.getDirectories(util.commonPackagesSourcePath);
 
+var totalDiffList = [];
+
 console.log(`Checking packages sources for uncommitted changes...`);
 packagesList.forEach(function(packageName) {
     console.log(`====================${packageName}====================`);
@@ -18,15 +20,29 @@ packagesList.forEach(function(packageName) {
         console.log(`Uncommitted changes found:`);
         console.log(``);
         diffList.forEach(function(item){
+            totalDiffList.push(item);
             console.log(` - ${item}`);
+            console.log(``);
         });
+    } else {
         console.log(``);
-        console.log(`Please validate your changes locally. Make sure that you build packages using an NPM version lower than 7`);
+        console.log(`No uncommitted changes found`);
         console.log(``);
-
-        process.exit(1);
     };
-
-    console.log(`No uncommitted changes found`);
-    console.log(``);
 });
+
+if (totalDiffList.length) {
+    console.log(``);
+    console.log(`Please build packages locally and commit specified changes:`);
+    console.log(``);
+
+    totalDiffList.forEach(function(item){
+        console.log(` - ${item}`);
+    });
+
+    console.log(``);
+    console.log(`Make sure you are using Node 10 and NPM 6.`);
+    console.log(``);
+
+    process.exit(1);
+};
