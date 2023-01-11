@@ -1,5 +1,3 @@
-import * as cheerio from 'cheerio';
-
 export const classDir = 'some/folder/with/classes';
 export const reportDir = 'report/dir';
 export const sourceDir = 'source/dir';
@@ -22,10 +20,10 @@ export const modules = '<modules><module name="module"></module></modules>';
 export const aggregate = 'aggregateFake';
 export const baseDir = 'base/dir';
 export const getFormattedFileCollectionAssignGradleOutput = 'fileCollectionAssign';
-export const sharedSubString1 = "abcd";
-export const sharedSubString2 = "efhg";
-export const sharedSubString3 = "abhg";
+export const sharedSubString1 = 'abcd';
+export const sharedSubString2 = 'efhg';
+export const sharedSubString3 = 'abhg';
 export const stringArray = ['g', 'b', 'a', 'p', 'f', 'c', 's', 'e', 'a', 't', 'o', 'u', 'q', 'r', 'y', 'd', 'z', 'v', 'x', 'n', 'h', 'w', 'i', 'l', 'j', 'm', 'k'];
-export const string = "fake string";
-export const propertyName = "someProperty";
+export const string = 'fake string';
+export const propertyName = 'someProperty';
 export const propertyValue = 108;
