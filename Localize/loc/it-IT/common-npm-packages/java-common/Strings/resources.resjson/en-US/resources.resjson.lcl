@@ -12,6 +12,9 @@
       <Item ItemId=";loc.messages.FailedToLocateSpecifiedJVM" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Failed to find the specified JDK version. Please ensure the specified JDK version is installed on the agent and the environment variable '%s' exists and is set to the location of a corresponding JDK or use the [Java Tool Installer]5D;(https://docs.microsoft.com/en-us/vsts/build-release/tasks/tool/java-tool-installer) task to install the desired JDK.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[La versione del JDK specificata non è stata trovata. Assicurarsi che sia installata nell'agente e che la variabile di ambiente '%s' sia presente e impostata sul percorso di un JDK corrispondente oppure usare l'attività [Programma di installazione strumenti Java]5D;(https://docs.microsoft.com/it-it/vsts/build-release/tasks/tool/java-tool-installer) per installare il JDK desiderato.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
