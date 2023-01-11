@@ -36,7 +36,7 @@ var run = function (cl, inheritStreams) {
     var options = {
         stdio: inheritStreams ? 'inherit' : 'pipe'
     };
-    var rc = 0;
+    
     var output;
     try {
         output = ncp.execSync(cl, options);
