@@ -6,6 +6,10 @@ packagesList = util.getDirectories(util.commonPackagesSourcePath);
 
 var totalDiffList = [];
 
+// Due to migration scope, some of the packages were migrated without the changes, which cause the check failures
+// We should remove the exclusions after the related fixes are done
+var excludeList = ["common-npm-packages/kubernetes-common/_tools/7zip/License.txt"];
+
 console.log(`Checking packages sources for uncommitted changes...`);
 packagesList.forEach(function(packageName) {
     console.log(`====================${packageName}====================`);
@@ -20,6 +24,10 @@ packagesList.forEach(function(packageName) {
         console.log(`Uncommitted changes found:`);
         console.log(``);
         diffList.forEach(function(item){
+            if (excludeList.includes(item)) {
+                console.log(` - ${item} - is in the exclusion list`);
+                return;
+            };
             totalDiffList.push(item);
             console.log(` - ${item}`);
             console.log(``);

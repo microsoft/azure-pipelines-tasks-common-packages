@@ -24,12 +24,7 @@ jobs:
   - script: |
         node ./ci/verify-source-changes.js
     displayName: Verify task source changes
-    condition: |
-      and(
-        succeeded(),
-        ne(variables['Build.SourceBranch'], 'refs/heads/main'),     
-        eq(variables['Agent.OS'], 'Windows_NT')
-      )
+    condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/main'))
 
   - script: |
         npm run test
