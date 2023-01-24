@@ -91,15 +91,15 @@ if (options.test) {
         }
     });
 
-    if (testsFailed) {
-        throw new Error('Tests failed!');
-    }
-
     try {
         util.rm(path.join(coveragePath, summaryBaseName));
         util.run(`nyc merge ${coveragePath} ${path.join(testResultsPath, 'merged-coverage.json')}`, true);
-        util.run(`nyc report -t ${testResultsPath} --report-dir test-results --reporter=cobertura`, true);
+        util.run(`nyc report -t ${testResultsPath} --report-dir ${testResultsPath} --reporter=cobertura`, true);
     } catch (e) {
         console.log('Error while generating coverage report')
+    }
+
+    if (testsFailed) {
+        throw new Error('Tests failed!');
     }
 }
