@@ -34,11 +34,7 @@ export async function downloadNode(
 
         const extractedNodePath = await extractArchive(downloadedNodePath);
 
-        const fileName = getBaseDistroFileName(
-            targetNodeVersion,
-            targetOsInfo.osPlatform,
-            targetOsInfo.osArch
-        );
+        const fileName = getBaseDistroFileName(targetNodeVersion, targetOsInfo);
 
         //
         // Install into the local tool cache - node extracts with a root folder that matches the fileName downloaded
@@ -131,7 +127,7 @@ export function getNodeDownloadUrl(
     distributionUrl: string = BASE_NODE_DISTRIBUTION_URL
 ) {
 
-    const fileName = getBaseDistroFileName(nodeVersion, targetOsInfo.osPlatform, targetOsInfo.osArch);
+    const fileName = getBaseDistroFileName(nodeVersion, targetOsInfo);
 
     const urlFileName: string =
         targetOsInfo.osPlatform === 'win32' ?

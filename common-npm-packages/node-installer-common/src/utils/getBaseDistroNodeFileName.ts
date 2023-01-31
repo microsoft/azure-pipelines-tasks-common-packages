@@ -1,4 +1,4 @@
-import { NodeOsPlatform, NodeOsArch } from '../interfaces/os-types';
+import { NodeOsPlatform, NodeOsArch, TargetOsInfo } from '../interfaces/os-types';
 
 /**
  * Gets node file from the base distro.
@@ -7,8 +7,8 @@ import { NodeOsPlatform, NodeOsArch } from '../interfaces/os-types';
  * @param osArch Node os arch. x86, x68, arm, etc.
  * @returns Node file name from the base distro
  */
-export function getBaseDistroFileName(version: string, osPlatform: NodeOsPlatform, osArch: NodeOsArch): string {
-    return osPlatform === 'win32' ?
-        'node-v' + version + '-win-' + osArch :
-        'node-v' + version + '-' + osPlatform + '-' + osArch;
+export function getBaseDistroFileName(version: string, osInfo: TargetOsInfo): string {
+    return osInfo.osPlatform === 'win32' ?
+        'node-v' + version + '-win-' + osInfo.osArch :
+        'node-v' + version + '-' + osInfo.osPlatform + '-' + osInfo.osArch;
 }
