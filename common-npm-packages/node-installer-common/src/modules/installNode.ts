@@ -6,7 +6,7 @@ import * as toolLib from 'azure-pipelines-tool-lib/tool';
 
 import { NodeOsArch, InputOsOptions } from '../interfaces/os-types';
 import { isDarwinArmWithRosetta } from '../utils/isDarwinArmWithRosetta';
-import { downloadNodeFromBaseDistro } from './downloadNode';
+import { downloadNode } from './downloadNode';
 import { getExplicitNodeVersion } from './getExplicitNodeVersion';
 import { tryFindNodeInCache } from './cache';
 
@@ -50,7 +50,7 @@ export async function installNode(versionSpec: string, checkLatest: boolean, osO
         resultNodePath = tryFindNodeInCache(explicitVersion, targetNodeArch);
 
         if (!resultNodePath) {
-            resultNodePath = await downloadNodeFromBaseDistro(
+            resultNodePath = await downloadNode(
                 explicitVersion,
                 {
                     osPlatform: targetNodePlatform,

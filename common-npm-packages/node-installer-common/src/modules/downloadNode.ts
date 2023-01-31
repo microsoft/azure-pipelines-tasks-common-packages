@@ -15,7 +15,11 @@ import { extractArchive } from '../utils/extractArchive';
  * @param installedArch arch.
  * @returns The path on which the Node was cached.
  */
-export async function downloadNodeFromBaseDistro(targetNodeVersion: string, targetOsInfo: TargetOsInfo): Promise<string> {
+export async function downloadNode(
+    targetNodeVersion: string,
+    targetOsInfo: TargetOsInfo,
+    distributionUrl: string = BASE_NODE_DISTRIBUTION_URL
+): Promise<string> {
 
     if (!toolLib.isExplicitVersion(targetNodeVersion)) {
         throw new Error('Node version must be explicit.');
@@ -23,26 +27,38 @@ export async function downloadNodeFromBaseDistro(targetNodeVersion: string, targ
 
     targetNodeVersion = toolLib.cleanVersion(targetNodeVersion);
 
-    const downloadUrl = getBaseDownloadUrl(targetNodeVersion, targetOsInfo);
+    const downloadUrl = getNodeDownloadUrl(targetNodeVersion, targetOsInfo, distributionUrl);
 
     try {
         const downloadedNodePath = await toolLib.downloadTool(downloadUrl);
 
         const extractedNodePath = await extractArchive(downloadedNodePath);
 
-        const fileName = getBaseDistroFileName(targetNodeVersion, targetOsInfo.osPlatform, targetOsInfo.osArch);
+        const fileName = getBaseDistroFileName(
+            targetNodeVersion,
+            targetOsInfo.osPlatform,
+            targetOsInfo.osArch
+        );
 
         //
         // Install into the local tool cache - node extracts with a root folder that matches the fileName downloaded
         //
         const downloadedNodeRoot = path.join(extractedNodePath, fileName);
 
-        return await toolLib.cacheDir(downloadedNodeRoot, 'node', targetNodeVersion, targetOsInfo.osArch);
+        return await toolLib.cacheDir(downloadedNodeRoot,
+            'node',
+            targetNodeVersion,
+            targetOsInfo.osArch
+        );
     } catch (err) {
         if (err.httpStatusCode &&
             // tslint:disable-next-line: triple-equals
             err.httpStatusCode == 404) {
-            return await downloadNodeFromFallbackLocation(targetNodeVersion, targetOsInfo.osArch);
+            return await downloadNodeFromFallbackLocation(
+                targetNodeVersion,
+                targetOsInfo.osArch,
+                distributionUrl
+            );
         }
 
         throw err;
@@ -73,7 +89,11 @@ export async function downloadNodeFromBaseDistro(targetNodeVersion: string, targ
  * @param arch OS arch.
  * @returns The path on which the Node was cached.
  */
-export async function downloadNodeFromFallbackLocation(version: string, arch: NodeOsArch): Promise<string> {
+export async function downloadNodeFromFallbackLocation(
+    version: string,
+    arch: NodeOsArch,
+    distributionUrl: string = BASE_NODE_DISTRIBUTION_URL
+): Promise<string> {
     // Create temporary folder to download in to
     const tempDownloadFolder: string = 'temp_' + Math.floor(Math.random() * 2e9);
     const agentTempDir = taskLib.getVariable('agent.tempDirectory')!;
@@ -83,8 +103,8 @@ export async function downloadNodeFromFallbackLocation(version: string, arch: No
     let exeUrl: string;
     let libUrl: string;
     try {
-        exeUrl = `${BASE_NODE_DISTRIBUTION_URL}/v${version}/win-${arch}/node.exe`;
-        libUrl = `${BASE_NODE_DISTRIBUTION_URL}/v${version}/win-${arch}/node.lib`;
+        exeUrl = `${distributionUrl}/v${version}/win-${arch}/node.exe`;
+        libUrl = `${distributionUrl}/v${version}/win-${arch}/node.lib`;
 
         await toolLib.downloadTool(exeUrl, path.join(tempDir, 'node.exe'));
         await toolLib.downloadTool(libUrl, path.join(tempDir, 'node.lib'));
@@ -92,8 +112,8 @@ export async function downloadNodeFromFallbackLocation(version: string, arch: No
         if (err.httpStatusCode &&
             // tslint:disable-next-line: triple-equals
             err.httpStatusCode == 404) {
-            exeUrl = `${BASE_NODE_DISTRIBUTION_URL}/v${version}/node.exe`;
-            libUrl = `${BASE_NODE_DISTRIBUTION_URL}/v${version}/node.lib`;
+            exeUrl = `${distributionUrl}/v${version}/node.exe`;
+            libUrl = `${distributionUrl}/v${version}/node.lib`;
 
             await toolLib.downloadTool(exeUrl, path.join(tempDir, 'node.exe'));
             await toolLib.downloadTool(libUrl, path.join(tempDir, 'node.lib'));
@@ -105,7 +125,11 @@ export async function downloadNodeFromFallbackLocation(version: string, arch: No
     return await toolLib.cacheDir(tempDir, 'node', version, arch);
 }
 
-export function getBaseDownloadUrl(nodeVersion: string, targetOsInfo: TargetOsInfo) {
+export function getNodeDownloadUrl(
+    nodeVersion: string,
+    targetOsInfo: TargetOsInfo,
+    distributionUrl: string = BASE_NODE_DISTRIBUTION_URL
+) {
 
     const fileName = getBaseDistroFileName(nodeVersion, targetOsInfo.osPlatform, targetOsInfo.osArch);
 
@@ -115,7 +139,7 @@ export function getBaseDownloadUrl(nodeVersion: string, targetOsInfo: TargetOsIn
             fileName + '.tar.gz';
 
     // example: https://nodejs.org/dist/v10.24.1/node-v10.24.1-linux-x64.tar.gz
-    const downloadUrl = BASE_NODE_DISTRIBUTION_URL + '/v' + nodeVersion + '/' + urlFileName;
+    const downloadUrl = distributionUrl + '/v' + nodeVersion + '/' + urlFileName;
 
     return downloadUrl;
 }
