@@ -11,7 +11,13 @@ var shellAssert = function () {
         throw new Error(errMsg);
     }
 }
-
+/**
+ * Function to run command line via child_process.execSync
+ * @param {*} cl Command line to run
+ * @param {*} inheritStreams - Inherit/pipe stdio streams
+ * @param {*} noHeader - Don't print command line header
+ * @returns 
+ */
 var run = function (cl, inheritStreams, noHeader) {
     if (!noHeader) {
         console.log();
@@ -38,6 +44,11 @@ var run = function (cl, inheritStreams, noHeader) {
 }
 exports.run = run;
 
+/**
+ * cd unix command via shelljs, with logging
+ * change process.cwd() to dir
+ * @param {String} dir - Directory path
+ */
 var cd = function (dir) {
     var cwd = process.cwd();
     if (cwd != dir) {
@@ -49,6 +60,12 @@ var cd = function (dir) {
 }
 exports.cd = cd;
 
+/**
+ * mkdir unix command via shelljs
+ * @param {String} options - Command options
+ * @param {String} source - Source folder path
+ * @param {String} dest - Destination folder path
+ */
 var cp = function (options, source, dest) {
     if (dest) {
         shell.cp(options, source, dest);
@@ -61,6 +78,11 @@ var cp = function (options, source, dest) {
 }
 exports.cp = cp;
 
+/**
+ * mkdir unix command via shelljs
+ * @param {String} options - Command options
+ * @param {String} target - Destination path
+ */
 var mkdir = function (options, target) {
     if (target) {
         shell.mkdir(options, target);
@@ -73,6 +95,12 @@ var mkdir = function (options, target) {
 }
 exports.mkdir = mkdir;
 
+/**
+ * test unix command via shelljs
+ * @param {String} options - Command options
+ * @param {String} p - Destination path
+ * @returns 
+ */
 var test = function (options, p) {
     var result = shell.test(options, p);
     shellAssert();
@@ -80,6 +108,11 @@ var test = function (options, p) {
 }
 exports.test = test;
 
+/**
+ * rm unix command via shelljs
+ * @param {String} options - Command options
+ * @param {String} target - Destination path
+ */
 var rm = function (options, target) {
     if (target) {
         shell.rm(options, target);
@@ -91,3 +124,77 @@ var rm = function (options, target) {
     shellAssert();
 }
 exports.rm = rm;
+
+/**
+ * Function to create mocha options, return empty string if params not passed
+ * @param {String} reporterPath - Path/name to reporter
+ * @param {String} baseOutput - Output folder
+ * @param {String} reportName - Report name
+ * @returns {String} - Mocha options
+ */
+const createMochaOptions = function (reporterPath, baseOutput, reportName) {
+    if (!reporterPath || !baseOutput || !reportName) return '';
+
+    const mochaFile = path.join(baseOutput, reportName + '.xml');
+    return `-R ${reporterPath} -O mochaFile=${mochaFile}`
+}
+exports.createMochaOptions = createMochaOptions;
+
+/**
+ * Function to remove folder content
+ * @param {String} folder - Path to folder
+ * @param {Array} excludedNames - Array of excluded names
+ */
+const cleanFolder = function (folder, excludedNames) {
+    if (!fs.existsSync(folder)) return;
+    
+    const stack = [folder];
+    const excluded = excludedNames || [];
+
+    while (stack.length > 0) {
+        const currentFolder = stack.pop();
+
+        try {
+            const files = fs.readdirSync(currentFolder);
+            if (files.length === 0) {
+                fs.rmdirSync(currentFolder);
+            } else {
+                files.forEach(file => {
+                    if (excluded.indexOf(file) === -1) {
+                        const filePath = path.join(currentFolder, file);
+                        const fileStat = fs.statSync(filePath);
+                        if (fileStat.isDirectory()) {
+                            stack.push(filePath);
+                        } else {
+                            fs.unlinkSync(filePath);
+                        }
+                    }
+                });
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+}
+exports.cleanFolder = cleanFolder;
+
+/**
+ * Function to rename file in folder
+ * @param {String} folderPath - Path to folder
+ * @param {String} oldName - Old file name
+ * @param {String} newName - New file name
+ * @returns void
+ */
+var renameFile = function (folderPath, oldName, newName) {
+    try {
+        if (!fs.existsSync(folderPath)) return;
+        const oldFile = path.join(folderPath, oldName);
+        const newFile = path.join(folderPath, newName);
+        if (fs.existsSync(oldFile)) {
+            fs.renameSync(oldFile, newFile);
+        }
+    } catch (e) {
+        console.log(e)
+    }
+}
+exports.renameFile = renameFile;
