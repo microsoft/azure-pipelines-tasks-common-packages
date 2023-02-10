@@ -4,12 +4,14 @@ import * as del from "del";
 import * as fs from "fs";
 import * as path from "path";
 import * as url from "url";
-import * as tl from "vsts-task-lib/task";
-import * as tr from "vsts-task-lib/toolrunner";
+import * as tl from "azure-pipelines-task-lib/task";
+import * as tr from "azure-pipelines-task-lib/toolrunner";
 import * as imageUtils from "./containerimageutils";
 import AuthenticationToken from "./registryauthenticationprovider/registryauthenticationtoken"
 import * as fileutils from "./fileutils";
 import * as os from "os";
+
+tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
 export default class ContainerConnection {
     private dockerPath: string;
@@ -22,8 +24,8 @@ export default class ContainerConnection {
     private configurationDirPath: string;    
     private oldDockerConfigContent: string;
 
-    constructor() {
-        this.dockerPath = tl.which("docker", true);
+    constructor(isDockerRequired: boolean = true) {
+        this.dockerPath = tl.which("docker", isDockerRequired);        
     }
 
     public createCommand(): tr.ToolRunner {
