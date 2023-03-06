@@ -4,7 +4,7 @@
   "loc.messages.Error_NoMatchingFilesFoundForPattern": "No se encontraron archivos coincidentes con el patrón de búsqueda: %s",
   "loc.messages.Error_NoUrlWasFoundWhichMatches": "No se encontró ninguna dirección URL de descarga para %s.",
   "loc.messages.Error_NoVersionWasFoundWhichMatches": "No se encontró ninguna versión que coincida con la entrada %s",
-  "loc.messages.Error_NuGetToolInstallerFailer": "Error al instalar la herramienta: %s",
+  "loc.messages.Error_NuGetToolInstallerFailer": "No se pudo instalar la herramienta: %s",
   "loc.messages.Info_AvailableVersions": "Versiones disponibles: %s",
   "loc.messages.Info_ExpectBehaviorChangeWhenUsingVersionQuery": "Está usando una coincidencia de consultas en la cadena de versión. Pueden producirse cambios de comportamiento o drásticos cuando NuGet se actualiza a una nueva versión.",
   "loc.messages.Info_MatchingUrlWasFoundSettingAuth": "Usando información de autenticación para el siguiente URI: ",
