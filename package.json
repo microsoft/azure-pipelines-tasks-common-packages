@@ -19,13 +19,10 @@
   },
   "homepage": "https://github.com/microsoft/azure-pipelines-tasks-common-packages#readme",
   "devDependencies": {
-    "@types/node": "^10.17.0",
-    "@types/mocha": "^5.2.7",
-    "@types/uuid": "^8.3.0",
     "minimist": "^1.2.6",
     "mocha": "^6.2.3",
-    "q": "1.4.1",
-    "shelljs": "^0.8.5",
-    "typescript": "4.0.2"
+    "mocha-junit-reporter": "^2.2.0",
+    "nyc": "^15.1.0",
+    "shelljs": "^0.8.5"
   }
 }
