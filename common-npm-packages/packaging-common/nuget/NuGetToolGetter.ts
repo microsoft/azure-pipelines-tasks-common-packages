@@ -27,8 +27,8 @@ const NUGET_EXE_FILENAME: string = 'nuget.exe';
 export const FORCE_NUGET_4_0_0: string  = 'FORCE_NUGET_4_0_0';
 export const NUGET_VERSION_4_0_0: string = '4.0.0';
 export const NUGET_VERSION_4_0_0_PATH_SUFFIX: string = 'NuGet/4.0.0/';
-export const DEFAULT_NUGET_VERSION: string = '4.1.0';
-export const DEFAULT_NUGET_PATH_SUFFIX: string = 'NuGet/4.1.0/';
+export const DEFAULT_NUGET_VERSION: string = '4.9.6';
+export const DEFAULT_NUGET_PATH_SUFFIX: string = 'NuGet/4.9.6/';
 export const NUGET_EXE_TOOL_PATH_ENV_VAR: string = 'NuGetExeToolPath';
 
 export async function getNuGet(versionSpec: string, checkLatest?: boolean, addNuGetToPath?: boolean): Promise<string> {
