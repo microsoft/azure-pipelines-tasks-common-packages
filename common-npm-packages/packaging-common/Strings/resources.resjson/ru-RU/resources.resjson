@@ -2,7 +2,7 @@
   "loc.messages.Error_ApiKeyNotSupported": ".NET Core сейчас не поддерживает использование зашифрованных ключей API.",
   "loc.messages.Error_ExpectedConfigurationElement": "Недопустимый код XML. Ожидается элемент \"configuration\".",
   "loc.messages.Error_NoMatchingFilesFoundForPattern": "Не найдены файлы, соответствующие шаблону поиска: %s.",
-  "loc.messages.Error_NoUrlWasFoundWhichMatches": "URL-адрес скачивания для %s не найден.",
+  "loc.messages.Error_NoUrlWasFoundWhichMatches": "URL-адрес скачивания для \"%s\" не найден.",
   "loc.messages.Error_NoVersionWasFoundWhichMatches": "Не найдена версия, соответствующая входному параметру %s",
   "loc.messages.Error_NuGetToolInstallerFailer": "Сбой установки инструмента: %s",
   "loc.messages.Info_AvailableVersions": "Доступные версии: %s",
@@ -24,7 +24,7 @@
   "loc.messages.NGCommon_RemovingSources": "Подготовка к настройке учетных данных в NuGet.config",
   "loc.messages.NGCommon_SpsNotFound": "Не удается найти область \"%s\" [%s]. Возможно, возникла проблема с установкой Team Foundation Server.",
   "loc.messages.NGCommon_UnabletoDetectNuGetVersion": "Выбрана неизвестная версия NuGet.",
-  "loc.messages.NGCommon_UnableToFindTool": "Не удается найти средство \"%s\"",
+  "loc.messages.NGCommon_UnableToFindTool": "Не удается найти средство %s",
   "loc.messages.Warning_SessionCreationFailed": "Не удалось создать сеанс происхождения.",
   "loc.messages.Warning_UpdatingNuGetVersion": "Обновление версии NuGet.exe на %s с %s. При обновлении версии NuGet возможны изменения в поведении или критические изменения. Если это нежелательно, снимите флажок \"Проверить наличие последней версии\" в параметрах задачи."
 }
