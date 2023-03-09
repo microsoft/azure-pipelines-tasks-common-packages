@@ -8,7 +8,7 @@
   "loc.messages.FailedToListItemInsideContainer": "Не удалось получить список элементов внутри контейнера: {0}. Ошибка: {1}",
   "loc.messages.SuccessFullyFetchedItemList": "Список элементов успешно получен",
   "loc.messages.UnableToFetchItem": "Не удается получить элемент: {0}. Ошибка: {1}",
-  "loc.messages.UploadingItem": "Отправляется {0}.",
-  "loc.messages.ContinuationTokenExistsFetchingRemainingFiles": "Существует токен продолжения. Выполняется попытка получить список остальных файлов.",
+  "loc.messages.UploadingItem": "Идет отправка {0}.",
+  "loc.messages.ContinuationTokenExistsFetchingRemainingFiles": "Существует маркер продолжения. Выполняется попытка получить список остальных файлов.",
   "loc.messages.GetArtifactItemsNotSupported": "Получение элементов артефактов не поддерживается; недопустимый путь к коду"
 }
