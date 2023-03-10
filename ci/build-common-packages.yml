@@ -22,8 +22,25 @@ jobs:
     displayName: Build Common Npm packages
 
   - script: |
+        node ./ci/verify-source-changes.js
+    displayName: Verify task source changes
+    condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/main'))
+
+  - script: |
         npm run test
     displayName: Test Common Npm packages
+
+  - task: PublishTestResults@2
+    displayName: Publish JUnit Results
+    inputs:
+      testRunner: JUnit
+      testResultsFiles: '$(System.DefaultWorkingDirectory)/test-results/junit/*suite.xml'
+
+  - task: PublishCodeCoverageResults@1
+    displayName: Publish Code Coverage Results
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: $(System.DefaultWorkingDirectory)/test-results/*coverage.xml
 
   # For CI runs on master, automatically publish packages
   - bash: |

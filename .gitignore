@@ -218,3 +218,5 @@ ModelManifest.xml
 /Package
 LoadTest.code-workspace
 .idea/
+test-results
+.nyc_output/
