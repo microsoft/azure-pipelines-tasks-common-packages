@@ -2,7 +2,7 @@
 
 These packages are only meant for use by [in the box tasks](https://github.com/microsoft/azure-pipelines-tasks) - contributions will only be accepted for those purposes.
 
-Publishing should happen automatically on CI builds, for any issues with this process please reach out to @wgasior/@martinmrazik and/or the Azure Pipelines Platform team.
+Publishing should happen automatically on CI builds, for any issues with this process please reach out to @tkasparek/@martinmrazik and/or the Azure Pipelines Platform team.
 
 ## Contributing
 
