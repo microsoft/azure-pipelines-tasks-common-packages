@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-java-common",
-    "version": "2.219.0",
+    "version": "2.219.1",
     "description": "Azure Pipelines tasks Java Common",
     "main": "java-common.js",
     "scripts": {
