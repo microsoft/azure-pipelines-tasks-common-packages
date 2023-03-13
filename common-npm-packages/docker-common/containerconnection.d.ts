@@ -1,4 +1,4 @@
-import * as tr from "vsts-task-lib/toolrunner";
+import * as tr from "azure-pipelines-task-lib/toolrunner";
 import AuthenticationToken from "./registryauthenticationprovider/registryauthenticationtoken";
 export default class ContainerConnection {
     private dockerPath;
@@ -10,7 +10,7 @@ export default class ContainerConnection {
     private registryAuth;
     private configurationDirPath;
     private oldDockerConfigContent;
-    constructor();
+    constructor(isDockerRequired?: boolean);
     createCommand(): tr.ToolRunner;
     execCommand(command: tr.ToolRunner, options?: tr.IExecOptions): Q.Promise<never>;
     open(hostEndpoint?: string, authenticationToken?: AuthenticationToken, multipleLoginSupported?: boolean, doNotAddAuthToConfig?: boolean): void;
