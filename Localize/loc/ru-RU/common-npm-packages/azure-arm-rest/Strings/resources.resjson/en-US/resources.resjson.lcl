@@ -831,6 +831,9 @@
       <Item ItemId=";loc.messages.MysqlServerNameCannotBeEmpty" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[The MySQL server name cannot be null.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Имя сервера MySQL не может иметь значение NULL.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -864,6 +867,9 @@
       <Item ItemId=";loc.messages.NotAbleToCreateFirewallRule" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Getting error during adding firewall rule to Azure mysql server. Error: %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Сбой при добавлении правила брандмауэра на сервере MySQL Azure. Ошибка: %s]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -888,6 +894,9 @@
       <Item ItemId=";loc.messages.PreviewSwapPhase1" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Preview the Phase 1 swap in the source slot by going to https://%s-%s.azurewebsites.net]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Просмотрите 1-й этап переключения в исходном слоте, перейдя по адресу https://%s-%s.azurewebsites.net]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -1020,6 +1029,9 @@
       <Item ItemId=";loc.messages.RetryingRequest" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Retrying request after %s seconds.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Повторная попытка запроса будет выполнена через %s с.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -1260,6 +1272,9 @@
       <Item ItemId=";loc.messages.StorageAccountDoesNotExist" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Failed to get azure storage account with name %s.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Не удалось получить учетную запись хранения Azure с именем %s.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -1302,6 +1317,9 @@
       <Item ItemId=";loc.messages.SwappedAppServiceSlotSlotsPhase1" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Swapped Phase 1 Configuration Changes for App Service '%s' slots - '%s' and '%s']]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Выполнен 1-й этап переключения изменений конфигурации для слотов "%s" Службы приложений — "%s" и "%s"]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -1326,6 +1344,9 @@
       <Item ItemId=";loc.messages.SwappingAppServiceSlotSlotsPhase1" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Swapping Phase 1 Configuration Changes for App Service '%s' slots - '%s' and '%s']]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Выполняется 1-й этап переключения изменений конфигурации для слотов "%s" Службы приложений — "%s" и "%s"]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -1377,6 +1398,9 @@
       <Item ItemId=";loc.messages.UpdatedRule" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Updated rule : '%s']]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Обновлено правило: "%s"]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>

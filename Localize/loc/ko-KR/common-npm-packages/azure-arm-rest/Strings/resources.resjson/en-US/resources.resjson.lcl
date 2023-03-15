@@ -75,18 +75,27 @@
       <Item ItemId=";loc.messages.CancelSwapAppServiceSlotSlotsPhase1" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Cancel Swap Phase 1 Configuration Changes for App Service '%s' slots - '%s']]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[App Service '%s' 슬롯 '%s'에 대한 1단계 구성 변경 내용 전환을 취소합니다.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
       <Item ItemId=";loc.messages.CancelledSwapAppServiceSlotSlotsPhase1" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Cancelled Swap Phase 1 Configuration Changes for App Service '%s' slots - '%s']]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[App Service '%s' 슬롯 '%s'에 대한 1단계 구성 변경 내용 전환을 취소했습니다.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
       <Item ItemId=";loc.messages.CantDownloadAccessProfile" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Cannot download access profile/kube config file for the cluster %s. Reason %s.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[%s 클러스터의 액세스 프로필/kube 구성 파일을 다운로드할 수 없습니다. 이유: %s.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -147,6 +156,9 @@
       <Item ItemId=";loc.messages.CreatedRule" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Created rule : '%s']]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA['%s' 규칙을 만들었습니다.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -162,12 +174,18 @@
       <Item ItemId=";loc.messages.DeletedAppServiceSlot" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[App Service slot '%s' deleted successfully.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[App Service 슬롯 '%s'을(를) 삭제했습니다.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
       <Item ItemId=";loc.messages.DeletingAppServiceSlot" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Deleting App Service slot: %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[App Service 슬롯 %s을(를) 삭제하는 중]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -255,6 +273,9 @@
       <Item ItemId=";loc.messages.FailedToCancelSwapAppServiceSlotSlotsPhase1" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Failed to cancel swap Phase 1 configuration changes for App Service '%s' slot -'%s'. Error: %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[App Service '%s' 슬롯 '%s'에 대한 1단계 구성 변경 내용 전환을 취소하지 못했습니다. 오류: %s]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -279,6 +300,9 @@
       <Item ItemId=";loc.messages.FailedToDeleteAppServiceSlot" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Failed to delete App Service slot '%s'. Error: %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[App Service 슬롯 '%s'을(를) 삭제하지 못했습니다. 오류: %s]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -582,6 +606,9 @@
       <Item ItemId=";loc.messages.FailedToSwapAppServiceSlotSlotsPhase1" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Failed to swap Phase 1 configuration changes for App Service '%s' slots - '%s' and '%s'. Error: %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[App Service '%s' 슬롯 '%s' 및 '%s'에 대한 1단계 구성 변경 내용을 전환하지 못했습니다. 오류: %s]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -678,6 +705,9 @@
       <Item ItemId=";loc.messages.FirewallRuleNameCannotBeNull" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[The firewall rule name cannot be null.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[방화벽 규칙 이름은 null일 수 없습니다.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -783,6 +813,9 @@
       <Item ItemId=";loc.messages.MethodNotImplementedError" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Method '%s' is not implemented.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[메서드 '%s'이(가) 구현되지 않았습니다.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -798,6 +831,9 @@
       <Item ItemId=";loc.messages.MysqlServerNameCannotBeEmpty" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[The MySQL server name cannot be null.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[MySQL 서버 이름은 null일 수 없습니다.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -831,6 +867,9 @@
       <Item ItemId=";loc.messages.NotAbleToCreateFirewallRule" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Getting error during adding firewall rule to Azure mysql server. Error: %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Azure MySQL 서버에 방화벽 규칙을 추가하는 중 오류가 발생했습니다. 오류: %s]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -855,6 +894,9 @@
       <Item ItemId=";loc.messages.PreviewSwapPhase1" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Preview the Phase 1 swap in the source slot by going to https://%s-%s.azurewebsites.net]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[https://%s-%s.azurewebsites.net으로 이동하여 소스 슬롯에서 1단계 교환을 미리 봅니다.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -987,6 +1029,9 @@
       <Item ItemId=";loc.messages.RetryingRequest" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Retrying request after %s seconds.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[%s초 후에 요청을 다시 시도합니다.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -1227,6 +1272,9 @@
       <Item ItemId=";loc.messages.StorageAccountDoesNotExist" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Failed to get azure storage account with name %s.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[이름이 %s인 Azure Storage 계정을 가져오지 못했습니다.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -1269,6 +1317,9 @@
       <Item ItemId=";loc.messages.SwappedAppServiceSlotSlotsPhase1" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Swapped Phase 1 Configuration Changes for App Service '%s' slots - '%s' and '%s']]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[App Service '%s' 슬롯 - '%s' 및 '%s'에 대한 1단계 구성 변경 내용을 교환했습니다.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -1293,6 +1344,9 @@
       <Item ItemId=";loc.messages.SwappingAppServiceSlotSlotsPhase1" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Swapping Phase 1 Configuration Changes for App Service '%s' slots - '%s' and '%s']]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[App Service '%s' 슬롯 - '%s' 및 '%s'에 대한 1단계 구성 변경 내용을 교환하는 중]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -1344,6 +1398,9 @@
       <Item ItemId=";loc.messages.UpdatedRule" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Updated rule : '%s']]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA['%s' 규칙을 업데이트했습니다.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>

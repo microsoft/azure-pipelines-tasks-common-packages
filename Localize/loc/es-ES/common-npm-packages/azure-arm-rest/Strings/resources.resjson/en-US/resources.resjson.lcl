@@ -75,18 +75,27 @@
       <Item ItemId=";loc.messages.CancelSwapAppServiceSlotSlotsPhase1" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Cancel Swap Phase 1 Configuration Changes for App Service '%s' slots - '%s']]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Cancelar los cambios de configuración de la primera fase del intercambio para los espacios "%s" de la instancia de App Service "%s"]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
       <Item ItemId=";loc.messages.CancelledSwapAppServiceSlotSlotsPhase1" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Cancelled Swap Phase 1 Configuration Changes for App Service '%s' slots - '%s']]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Se han cancelado los cambios de configuración de la primera fase del intercambio para los espacios "%s" de la instancia de App Service "%s"]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
       <Item ItemId=";loc.messages.CantDownloadAccessProfile" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Cannot download access profile/kube config file for the cluster %s. Reason %s.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[No se puede descargar el archivo de configuración del perfil de acceso o kube para el clúster %s. Motivo %s.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -147,6 +156,9 @@
       <Item ItemId=";loc.messages.CreatedRule" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Created rule : '%s']]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Regla creada: "%s"]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -162,12 +174,18 @@
       <Item ItemId=";loc.messages.DeletedAppServiceSlot" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[App Service slot '%s' deleted successfully.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[El espacio de App Service "%s" se eliminó correctamente.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
       <Item ItemId=";loc.messages.DeletingAppServiceSlot" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Deleting App Service slot: %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Eliminando el espacio de App Service: %s]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -255,6 +273,9 @@
       <Item ItemId=";loc.messages.FailedToCancelSwapAppServiceSlotSlotsPhase1" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Failed to cancel swap Phase 1 configuration changes for App Service '%s' slot -'%s'. Error: %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[No se pudieron cancelar los cambios de configuración de la primera fase del intercambio para el espacio "%s" de la instancia de App Service "%s". Error: %s]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -279,6 +300,9 @@
       <Item ItemId=";loc.messages.FailedToDeleteAppServiceSlot" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Failed to delete App Service slot '%s'. Error: %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[No se pudo eliminar el espacio de App Service "%s". Error: %s]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -582,6 +606,9 @@
       <Item ItemId=";loc.messages.FailedToSwapAppServiceSlotSlotsPhase1" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Failed to swap Phase 1 configuration changes for App Service '%s' slots - '%s' and '%s'. Error: %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[No se pudieron intercambiar los cambios de configuración de la primera fase para los espacios "%s" y "%s" de la instancia de App Service "%s". Error: %s]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -678,6 +705,9 @@
       <Item ItemId=";loc.messages.FirewallRuleNameCannotBeNull" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[The firewall rule name cannot be null.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[El nombre de la regla de firewall no puede ser un valor null.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -783,6 +813,9 @@
       <Item ItemId=";loc.messages.MethodNotImplementedError" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Method '%s' is not implemented.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[El método "%s" no está implementado.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
