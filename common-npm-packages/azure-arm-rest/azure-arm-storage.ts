@@ -129,6 +129,7 @@ export class StorageAccounts {
         const httpRequest = new webClient.WebRequest();
         httpRequest.method = 'GET';
         httpRequest.headers = this.client.setCustomHeaders(options);
+        // TODO: I think we should use newer api versions in the future?
         httpRequest.uri = `https://management.azure.com/resources?api-version=2014-04-01-preview&%24filter=(subscriptionId%20eq%20'${this.client.subscriptionId}')%20and%20(resourceType%20eq%20'microsoft.storage%2Fstorageaccounts'%20or%20resourceType%20eq%20'microsoft.classicstorage%2Fstorageaccounts')%20and%20(name%20eq%20'${accountName}')`;
 
         const res = await this.client.beginRequest(httpRequest);
