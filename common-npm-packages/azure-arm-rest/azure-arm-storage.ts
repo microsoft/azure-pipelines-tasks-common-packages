@@ -125,7 +125,7 @@ export class StorageAccounts {
          return deferred.promise;
      }
 
-    public async GetClassicOrArmAccountByName(accountName: string, options: any): Promise<Model.StorageAccount> {
+    public async getClassicOrArmAccountByName(accountName: string, options: any): Promise<Model.StorageAccount> {
         const httpRequest = new webClient.WebRequest();
         httpRequest.method = 'GET';
         httpRequest.headers = this.client.setCustomHeaders(options);
