@@ -139,21 +139,21 @@ export class StorageAccounts {
         }
 
         storageAccounts = response.body.value;
-        const armStorageAccount = storageAccounts?.find(sa => sa.name = accountName)
+        const armStorageAccount = storageAccounts?.find(sa => sa.name === accountName);
 
         if (armStorageAccount) {
-            return armStorageAccount
+            return armStorageAccount;
         }
 
         storageAccountsRequest.uri = `https://management.azure.com/subscriptions/${this.client.subscriptionId}/providers/Microsoft.ClassicStorage/storageAccounts?api-version=2016-11-01`;
 
         response = await this.client.beginRequest(storageAccountsRequest);
         if (response.statusCode !== 200) {
-            throw azureServiceClientBase.ToError(response)
+            throw azureServiceClientBase.ToError(response);
         }
 
         storageAccounts = response.body.value;
-        return storageAccounts.find(sa => sa.name = accountName)
+        return storageAccounts.find(sa => sa.name === accountName);
     }
 
     public async listKeys(resourceGroupName: string, accountName: string, options, storageAccountType?: string): Promise<string[]> {
