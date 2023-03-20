@@ -135,7 +135,7 @@ export class StorageAccounts {
 
         let response = await this.client.beginRequest(storageAccountsRequest);
         if (response.statusCode !== 200) {
-            azureServiceClientBase.ToError(response)
+            throw azureServiceClientBase.ToError(response)
         }
 
         storageAccounts = response.body.value;
@@ -149,7 +149,7 @@ export class StorageAccounts {
 
         response = await this.client.beginRequest(storageAccountsRequest);
         if (response.statusCode !== 200) {
-            azureServiceClientBase.ToError(response)
+            throw azureServiceClientBase.ToError(response)
         }
 
         storageAccounts = response.body.value;
