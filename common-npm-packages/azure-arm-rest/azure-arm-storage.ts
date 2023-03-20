@@ -125,17 +125,17 @@ export class StorageAccounts {
          return deferred.promise;
      }
 
-    public async getClassicOrArmAccountByName(accountName: string, options: any): Promise<Model.StorageAccount> {
+    public async getClassicOrArmAccountByName(accountName: string, options: any): Promise<Model.StorageAccount | undefined> {
         const storageAccountsRequest = new webClient.WebRequest();
         storageAccountsRequest.method = 'GET';
         storageAccountsRequest.headers = this.client.setCustomHeaders(options);
         storageAccountsRequest.uri = `https://management.azure.com/subscriptions/${this.client.subscriptionId}/providers/Microsoft.Storage/storageAccounts?api-version=2023-01-01`;
 
-        let storageAccounts: Model.StorageAccount[]
+        let storageAccounts: Model.StorageAccount[];
 
         let response = await this.client.beginRequest(storageAccountsRequest);
         if (response.statusCode !== 200) {
-            throw azureServiceClientBase.ToError(response)
+            throw azureServiceClientBase.ToError(response);
         }
 
         storageAccounts = response.body.value;
@@ -153,7 +153,7 @@ export class StorageAccounts {
         }
 
         storageAccounts = response.body.value;
-        return storageAccounts.find(sa => sa.name === accountName);
+        return storageAccounts?.find(sa => sa.name === accountName);
     }
 
     public async listKeys(resourceGroupName: string, accountName: string, options, storageAccountType?: string): Promise<string[]> {
