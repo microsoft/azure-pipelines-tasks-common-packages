@@ -1,13 +1,13 @@
 {
   "loc.messages.Error_ApiKeyNotSupported": "DotNetCore unterstützt die Verwendung eines verschlüsselten API-Schlüssels derzeit nicht.",
   "loc.messages.Error_ExpectedConfigurationElement": "Ungültiges XML. Es wurde ein Element mit dem Namen \"configuration\" erwartet.",
-  "loc.messages.Error_NoMatchingFilesFoundForPattern": "Es wurden keine mit dem Suchmuster übereinstimmenden Dateien gefunden: %s.",
+  "loc.messages.Error_NoMatchingFilesFoundForPattern": "Keine mit dem Suchmuster übereinstimmenden Dateien gefunden: %s",
   "loc.messages.Error_NoUrlWasFoundWhichMatches": "Keine Download-URL für %s gefunden",
   "loc.messages.Error_NoVersionWasFoundWhichMatches": "Keine Version gefunden, die mit der Eingabe %s übereinstimmt",
-  "loc.messages.Error_NuGetToolInstallerFailer": "Fehler bei der Toolinstallation: %s.",
+  "loc.messages.Error_NuGetToolInstallerFailer": "Fehler bei der Toolinstallation: %s",
   "loc.messages.Info_AvailableVersions": "Die verfügbaren Versionen sind: %s",
   "loc.messages.Info_ExpectBehaviorChangeWhenUsingVersionQuery": "Sie verwenden eine Übereinstimmungsabfrage in der Versionszeichenfolge. Änderungen im Verhalten oder Fehler verursachende Änderungen können bei NuGet-Aktualisierungen auf eine neue Version auftreten.",
-  "loc.messages.Info_MatchingUrlWasFoundSettingAuth": "Die Authentifizierungsinformation wird für den folgenden URI verwendet:",
+  "loc.messages.Info_MatchingUrlWasFoundSettingAuth": "Die Authentifizierungsinformation wird für den folgenden URI verwendet: ",
   "loc.messages.Info_ResolvedToolFromCache": "Aus Toolcache aufgelöst: %s",
   "loc.messages.Info_SavingTempConfig": "\"NuGet.config\" wird in einer temporären Konfigurationsdatei gespeichert.",
   "loc.messages.Info_UsingToolPath": "Verwendeter Toolpfad: %s",
@@ -26,5 +26,5 @@
   "loc.messages.NGCommon_UnabletoDetectNuGetVersion": "Unbekannte NuGet-Version ausgewählt.",
   "loc.messages.NGCommon_UnableToFindTool": "Das Tool %s wurde nicht gefunden.",
   "loc.messages.Warning_SessionCreationFailed": "Die Herkunftssitzung konnte nicht erstellt werden.",
-  "loc.messages.Warning_UpdatingNuGetVersion": "Die Version von \"NuGet.exe\" wird auf %s aktualisiert (von %s). Änderungen im Verhalten oder Fehler verursachende Änderungen können bei NuGet-Aktualisierungen auf eine neue Version auftreten. Wenn dies nicht gewünscht ist, deaktivieren Sie die Option \"Check for Latest Version\" (Auf aktuelle Version überprüfen) in der Aufgabe."
+  "loc.messages.Warning_UpdatingNuGetVersion": "Die Version von \"NuGet.exe\" wird auf %s aktualisiert (von %s). Änderungen im Verhalten oder Fehler verursachende Änderungen können bei NuGet-Aktualisierungen auf eine neue Version auftreten. Wenn dies nicht gewünscht ist, deaktivieren Sie die Option \"Auf aktuelle Version überprüfen\" in der Aufgabe."
 }

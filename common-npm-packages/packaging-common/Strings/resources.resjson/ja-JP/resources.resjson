@@ -23,8 +23,8 @@
   "loc.messages.NGCommon_NuGetConfigIsPackagesConfig": "%s で NuGet.config ファイルが想定されていますが、そのコンテンツは packages.config のようです。%s タスクの設定をチェックし、packages.config ではなく NuGet.config を選択したことを確認してください。",
   "loc.messages.NGCommon_RemovingSources": "NuGet.config での資格情報の設定準備",
   "loc.messages.NGCommon_SpsNotFound": "'%s' [%s] の領域が見つかりません。Team Foundation Server のインストールで問題が発生した可能性があります。",
-  "loc.messages.NGCommon_UnabletoDetectNuGetVersion": "不明な NuGet バージョンが選ばれました。",
+  "loc.messages.NGCommon_UnabletoDetectNuGetVersion": "不明な NuGet バージョンが選択されました。",
   "loc.messages.NGCommon_UnableToFindTool": "ツール %s が見つかりません",
   "loc.messages.Warning_SessionCreationFailed": "来歴セッションを作成できませんでした。",
-  "loc.messages.Warning_UpdatingNuGetVersion": "NuGet.exe のバージョンを %s に更新しています (現在のバージョンは %s)。NuGet を新しいバージョンに更新すると、動作の変更やビルド ブレークを起こす変更が発生することがあります。これを避けるには、タスクの [最新バージョンのチェック] オプションをオフにします。"
+  "loc.messages.Warning_UpdatingNuGetVersion": "NuGet.exe のバージョンを %s から %s に更新しています。NuGet を新しいバージョンに更新すると、動作変更や破壊的変更を起こす可能性があります。これを避けるには、タスクの [最新バージョンのチェック] オプションをオフにします。"
 }
