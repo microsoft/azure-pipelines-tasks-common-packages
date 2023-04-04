@@ -185,13 +185,13 @@ export async function cacheBundledNuGet(
     nugetPathSuffix?: string): Promise<string> {
     if (cachedVersionToUse == null) {
         const msbuildSemVer = await getMSBuildVersion();
-        // Default to 6.5.0 if we're using MSBuild 17.0.0 or higher
+        // Default to 6.4.0 if we're using MSBuild 17.0.0 or higher
         // Default to 5.9.3 if we're using MSBuild 16.11.0 or higher, older MSBuild versions are not supported
         // Default to 4.9.6 if we're using MSBuild older than 16.11.0
         if (msbuildSemVer && semver.gte(msbuildSemVer, '17.0.0')) {
-            taskLib.debug('Snapping to v6.5.0');
-            cachedVersionToUse = '6.5.0';
-            nugetPathSuffix = 'NuGet/6.5.0/';
+            taskLib.debug('Snapping to v6.4.0');
+            cachedVersionToUse = '6.4.0';
+            nugetPathSuffix = 'NuGet/6.4.0/';
         } else if (msbuildSemVer && semver.gte(msbuildSemVer, '16.11.0')) {
             taskLib.debug('Snapping to v5.9.3');
             cachedVersionToUse = '5.9.3';
@@ -241,7 +241,7 @@ async function getLatestMatchVersionInfo(versionSpec: string): Promise<INuGetVer
 
     let nugetVersions: INuGetVersionInfo[] = (await rest.get<INuGetVersionInfo[]>(versionsUrl, GetRestClientOptions())).result;
     // x.stage is the string representation of the enum, NuGetReleaseStage.Value = number, NuGetReleaseStage[NuGetReleaseStage.Value] = string, NuGetReleaseStage[x.stage] = number
-    let releasedVersions: INuGetVersionInfo[] = nugetVersions.filter(x => x.stage.toString() !== NuGetReleaseStage[NuGetReleaseStage.EarlyAccessPreview]);
+    let releasedVersions: INuGetVersionInfo[] = nugetVersions.filter(x => x.stage.toString() === NuGetReleaseStage[NuGetReleaseStage.ReleasedAndBlessed]);
     let versionStringsFromDist: string[] = releasedVersions.map(x => x.version);
 
     let version: string = toolLib.evaluateVersions(versionStringsFromDist, versionSpec);
