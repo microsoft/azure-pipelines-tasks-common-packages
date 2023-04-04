@@ -184,16 +184,18 @@ export async function cacheBundledNuGet(
     cachedVersionToUse?: string,
     nugetPathSuffix?: string): Promise<string> {
     if (cachedVersionToUse == null) {
-        // Attempt to match nuget.exe version with msbuild.exe version
         const msbuildSemVer = await getMSBuildVersion();
-        if (msbuildSemVer && semver.gte(msbuildSemVer, '16.8.0')) {
-            taskLib.debug('Snapping to v5.8.0');
-            cachedVersionToUse = '5.8.0';
-            nugetPathSuffix = 'NuGet/5.8.0/';
-        } else if (msbuildSemVer && semver.gte(msbuildSemVer, '16.5.0')) {
-            taskLib.debug('Snapping to v5.4.0');
-            cachedVersionToUse = '5.4.0';
-            nugetPathSuffix = 'NuGet/5.4.0/';
+        // Default to 6.5.0 if we're using MSBuild 17.0.0 or higher
+        // Default to 5.9.3 if we're using MSBuild 16.11.0 or higher, older MSBuild are not supported
+        // Default to 4.9.4 if we're using MSBuild older than 16.11.0
+        if (msbuildSemVer && semver.gte(msbuildSemVer, '17.0.0')) {
+            taskLib.debug('Snapping to v6.5.0');
+            cachedVersionToUse = '6.5.0';
+            nugetPathSuffix = 'NuGet/6.5.0/';
+        } else if (msbuildSemVer && semver.gte(msbuildSemVer, '16.11.0')) {
+            taskLib.debug('Snapping to v5.9.3');
+            cachedVersionToUse = '5.9.3';
+            nugetPathSuffix = 'NuGet/5.9.3/';
         } else {
             cachedVersionToUse = DEFAULT_NUGET_VERSION;
         }
