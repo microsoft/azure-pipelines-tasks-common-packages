@@ -186,8 +186,8 @@ export async function cacheBundledNuGet(
     if (cachedVersionToUse == null) {
         const msbuildSemVer = await getMSBuildVersion();
         // Default to 6.5.0 if we're using MSBuild 17.0.0 or higher
-        // Default to 5.9.3 if we're using MSBuild 16.11.0 or higher, older MSBuild are not supported
-        // Default to 4.9.4 if we're using MSBuild older than 16.11.0
+        // Default to 5.9.3 if we're using MSBuild 16.11.0 or higher, older MSBuild versions are not supported
+        // Default to 4.9.6 if we're using MSBuild older than 16.11.0
         if (msbuildSemVer && semver.gte(msbuildSemVer, '17.0.0')) {
             taskLib.debug('Snapping to v6.5.0');
             cachedVersionToUse = '6.5.0';
