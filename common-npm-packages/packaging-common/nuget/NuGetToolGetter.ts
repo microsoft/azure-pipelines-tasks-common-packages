@@ -188,10 +188,6 @@ export async function cacheBundledNuGet(
         nugetPathSuffix = `NuGet/${cachedVersionToUse}/`;
     }
 
-    if (nugetPathSuffix == null) {
-        nugetPathSuffix = DEFAULT_NUGET_PATH_SUFFIX;
-    }
-
     if (taskLib.getVariable(FORCE_NUGET_4_0_0) &&
         taskLib.getVariable(FORCE_NUGET_4_0_0).toLowerCase() === "true"){
         cachedVersionToUse = NUGET_VERSION_4_0_0;
