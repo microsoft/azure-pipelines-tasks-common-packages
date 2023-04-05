@@ -184,21 +184,8 @@ export async function cacheBundledNuGet(
     cachedVersionToUse?: string,
     nugetPathSuffix?: string): Promise<string> {
     if (cachedVersionToUse == null) {
-        const msbuildSemVer = await getMSBuildVersion();
-        // Default to 6.4.0 if we're using MSBuild 17.0.0 or higher
-        // Default to 5.9.3 if we're using MSBuild 16.11.0 or higher, older MSBuild versions are not supported
-        // Default to 4.9.6 if we're using MSBuild older than 16.11.0
-        if (msbuildSemVer && semver.gte(msbuildSemVer, '17.0.0')) {
-            taskLib.debug('Snapping to v6.4.0');
-            cachedVersionToUse = '6.4.0';
-            nugetPathSuffix = 'NuGet/6.4.0/';
-        } else if (msbuildSemVer && semver.gte(msbuildSemVer, '16.11.0')) {
-            taskLib.debug('Snapping to v5.9.3');
-            cachedVersionToUse = '5.9.3';
-            nugetPathSuffix = 'NuGet/5.9.3/';
-        } else {
-            cachedVersionToUse = DEFAULT_NUGET_VERSION;
-        }
+        cachedVersionToUse = await resolveNuGetVersion();
+        nugetPathSuffix = `NuGet/${cachedVersionToUse}/`;
     }
 
     if (nugetPathSuffix == null) {
@@ -219,6 +206,26 @@ export async function cacheBundledNuGet(
     }
 
     return cachedVersionToUse;
+}
+
+export async function resolveNuGetVersion() : Promise<string>
+{
+    let nugetVersionToUse : string;
+    const msbuildSemVer = await getMSBuildVersion();
+    // Default to 6.4.0 if we're using MSBuild 17.0.0 or higher
+    // Default to 5.9.3 if we're using MSBuild 16.11.0 or higher, older MSBuild versions are not supported
+    // Default to 4.9.6 if we're using MSBuild older than 16.11.0
+    if (msbuildSemVer && semver.gte(msbuildSemVer, '17.0.0')) {
+        taskLib.debug('Snapping to v6.4.0');
+        nugetVersionToUse = '6.4.0';
+    } else if (msbuildSemVer && semver.gte(msbuildSemVer, '16.11.0')) {
+        taskLib.debug('Snapping to v5.9.3');
+        nugetVersionToUse = '5.9.3';
+    } else {
+        nugetVersionToUse = DEFAULT_NUGET_VERSION;
+    }
+
+    return nugetVersionToUse;
 }
 
 function GetRestClientOptions(): restm.IRequestOptions
