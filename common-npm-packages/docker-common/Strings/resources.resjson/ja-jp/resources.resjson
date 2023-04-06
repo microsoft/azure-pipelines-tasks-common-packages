@@ -1,8 +1,8 @@
 {
   "loc.messages.AddingNewAuthToExistingConfig": "Docker 構成ファイルにレジストリの認証データを追加しています。レジストリ: %s。",
   "loc.messages.ConnectingToDockerHost": "DOCKER_HOST 変数が設定されています。Docker により、Docker ホスト %s への接続が試みられます",
-  "loc.messages.ContainerPatternFound": "Docker filepath パラメーターにパターンが見つかりました",
-  "loc.messages.ContainerPatternNotFound": "Docker filepath パラメーターにパターンが見つかりませんでした",
+  "loc.messages.ContainerPatternFound": "Docker ファイルパス パラメーターにパターンが見つかりました",
+  "loc.messages.ContainerPatternNotFound": "Docker ファイルパス パラメーターにパターンが見つかりませんでした",
   "loc.messages.ContainerDockerFileNotFound": "%s に一致する Dockerfile は見つかりませんでした。",
   "loc.messages.CantWriteDataToFile": "ファイル %s にデータを書き込めません。エラー: %s",
   "loc.messages.CouldNotFindDockerConfig": "Docker 構成が見つかりませんでした。DOCKER_CONFIG 変数が設定されていないか、構成ファイルが一時ディレクトリ外にあるか、ファイルが存在しません。DOCKER_CONFIG: %s",
