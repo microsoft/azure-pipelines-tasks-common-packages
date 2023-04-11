@@ -6,6 +6,8 @@ import * as semver from 'semver';
 import * as commandHelper from './CommandHelper';
 import * as fs from "fs";
 import * as os from "os";
+import {VersionInfo} from "../pe-parser/VersionResource";
+import * as peParser from "../pe-parser";
 
 interface INuGetTools {
     nugetexe: INuGetVersionInfo[]
@@ -161,16 +163,13 @@ export async function getMSBuildVersionString(): Promise<string> {
 
     if (path) {
         taskLib.debug('Found msbuild.exe at: ' + path);
-        const getVersionTool = taskLib.tool(path);
-        getVersionTool.arg(['/version', '/nologo']);
-        getVersionTool.on('stdout', (data: string) => {
-            if (data) {
-                version = data.toString().trim();
-                taskLib.debug('Found msbuild version: ' + version);
-            }
-        });
-        await getVersionTool.exec();
-        taskLib.debug('Finished running msbuild /version /nologo');
+        try {
+            const msbuildVersion: VersionInfo = await peParser.getFileVersionInfoAsync(path);
+            version = msbuildVersion.productVersion.toString();
+        }
+        catch (err) {
+            taskLib.debug('Unable to find msbuild version');
+        }
     }
     return version;
 }
