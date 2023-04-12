@@ -166,6 +166,7 @@ export async function getMSBuildVersionString(): Promise<string> {
         try {
             const msbuildVersion: VersionInfo = await peParser.getFileVersionInfoAsync(path);
             version = msbuildVersion.productVersion.toString();
+            taskLib.debug('Found msbuild version: ' + version);
         }
         catch (err) {
             taskLib.debug('Unable to find msbuild version');
