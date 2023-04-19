@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import * as mockery from "mockery";
-import { INuGetXmlHelper } from "../nuget/INuGetXmlHelper";
-import { InternalAuthInfo, IPackageSourceBase, IPackageSource, NuGetExtendedAuthInfo } from "../nuget/Authentication";
+import { INuGetXmlHelper } from "../../nuget/INuGetXmlHelper";
+import { InternalAuthInfo, IPackageSourceBase, IPackageSource, NuGetExtendedAuthInfo } from "../../nuget/Authentication";
 
 class MockedTask {
     private _proxyUrl: string;
@@ -58,7 +58,7 @@ export function nugetcommon() {
 
     it("No HTTP_PROXY", (done: MochaDone) => {
         mockedTask.setMockedValues();
-        let ngToolRunner = require("../nuget/NuGetToolRunner");
+        let ngToolRunner = require("../../nuget/NuGetToolRunner");
 
         let httpProxy: string = ngToolRunner.getNuGetProxyFromEnvironment();
         assert.strictEqual(httpProxy, undefined);
@@ -68,7 +68,7 @@ export function nugetcommon() {
 
     it("Finds HTTP_PROXY", (done: MochaDone) => {
         mockedTask.setMockedValues(mockedProxy);
-        let ngToolRunner = require("../nuget/NuGetToolRunner");
+        let ngToolRunner = require("../../nuget/NuGetToolRunner");
 
         let httpProxy: string = ngToolRunner.getNuGetProxyFromEnvironment();
         assert.strictEqual(httpProxy, mockedProxy);
@@ -78,7 +78,7 @@ export function nugetcommon() {
 
     it("Finds HTTP_PROXYUSERNAME", (done: MochaDone) => {
         mockedTask.setMockedValues(mockedProxy, mockedUsername);
-        let ngToolRunner = require("../nuget/NuGetToolRunner");
+        let ngToolRunner = require("../../nuget/NuGetToolRunner");
 
         let httpProxy: string = ngToolRunner.getNuGetProxyFromEnvironment();
         assert.strictEqual(httpProxy, `http://${mockedUsername}@proxy/`);
@@ -88,7 +88,7 @@ export function nugetcommon() {
 
     it("Finds HTTP_PROXYPASSWORD", (done: MochaDone) => {
         mockedTask.setMockedValues(mockedProxy, mockedUsername, mockedPassword);
-        let ngToolRunner = require("../nuget/NuGetToolRunner");
+        let ngToolRunner = require("../../nuget/NuGetToolRunner");
 
         let httpProxy: string = ngToolRunner.getNuGetProxyFromEnvironment();
         assert.strictEqual(httpProxy, `http://${mockedUsername}:${mockedPassword}@proxy/`);
@@ -102,7 +102,7 @@ export function nugetcommon() {
             getSourcesFromNuGetConfig: () => packageSourceBase
         });
 
-        let ngConfig = require("../nuget/NuGetConfigHelper2");
+        let ngConfig = require("../../nuget/NuGetConfigHelper2");
 
         packageSourceBase = [
             { feedName: "SourceName", feedUri: "http://source/foo" },
@@ -133,7 +133,7 @@ export function nugetcommon() {
             readFileSync: () => configFile
         });
 
-        let ngutil = require("../nuget/Utility");
+        let ngutil = require("../../nuget/Utility");
 
         configFile = `
 <?xml version="1.0" encoding="utf-8"?>
@@ -168,7 +168,7 @@ export function nugetcommon() {
             readFileSync: () => configFile
         });
 
-        let ngutil = require("../nuget/Utility");
+        let ngutil = require("../../nuget/Utility");
 
         configFile = `
 <?xml version="1.0" encoding="utf-8"?>
@@ -188,7 +188,7 @@ export function nugetcommon() {
             readFileSync: () => configFile
         });
 
-        let ngutil = require("../nuget/Utility");
+        let ngutil = require("../../nuget/Utility");
 
         configFile = `
 <?xml version="1.0" encoding="utf-8"?>
@@ -210,7 +210,7 @@ not xml
             writeFileSync: (path, content) => { configFile = content; }
         });
 
-        let nugetXmlHelper = require("../nuget/NuGetXmlHelper");
+        let nugetXmlHelper = require("../../nuget/NuGetXmlHelper");
         let helper: INuGetXmlHelper = new nugetXmlHelper.NuGetXmlHelper();
 
         configFile = "<configuration/>";
@@ -244,7 +244,7 @@ not xml
             writeFileSync: (path, content) => { configFile = content; }
         });
 
-        let nugetXmlHelper = require("../nuget/NuGetXmlHelper");
+        let nugetXmlHelper = require("../../nuget/NuGetXmlHelper");
         let helper: INuGetXmlHelper = new nugetXmlHelper.NuGetXmlHelper();
 
         configFile = "<configuration/>";
@@ -267,7 +267,7 @@ not xml
 
     it("getProxyBypassForUri doesn't match regex", () => {
         mockedTask.setMockedValues(mockedProxy, mockedUsername, mockedPassword, '["mydomain\.com"]');
-        let ngToolRunner = require("../nuget/NuGetToolRunner2");
+        let ngToolRunner = require("../../nuget/NuGetToolRunner2");
 
         let bypass: string = ngToolRunner.getProxyBypassForUri("http://pkgs.mydomain2.com/registry");
         assert.strictEqual(bypass, undefined);
@@ -275,7 +275,7 @@ not xml
 
     it("getProxyBypassForUri matches regex", () => {
         mockedTask.setMockedValues(mockedProxy, mockedUsername, mockedPassword, '["mydomain\.com"]');
-        let ngToolRunner = require("../nuget/NuGetToolRunner2");
+        let ngToolRunner = require("../../nuget/NuGetToolRunner2");
 
         let bypass: string = ngToolRunner.getProxyBypassForUri("http://pkgs.mydomain.com/registry");
         assert.strictEqual(bypass, `pkgs.mydomain.com`);
@@ -283,7 +283,7 @@ not xml
 
     it("getProxyBypassForUri matches multiple regex", () => {
         mockedTask.setMockedValues(mockedProxy, mockedUsername, mockedPassword, '["mydomain\.com", "pkgs\.mydomain\.com", "github\.com"]');
-        let ngToolRunner = require("../nuget/NuGetToolRunner2");
+        let ngToolRunner = require("../../nuget/NuGetToolRunner2");
 
         let bypass: string = ngToolRunner.getProxyBypassForUri("http://pkgs.mydomain.com/registry");
         assert.strictEqual(bypass, `pkgs.mydomain.com`);
@@ -297,7 +297,7 @@ not xml
             getSourcesFromNuGetConfig: () => packageSourceBase
         });
 
-        let ngToolRunner = require("../nuget/NuGetToolRunner2");
+        let ngToolRunner = require("../../nuget/NuGetToolRunner2");
 
         packageSourceBase = [
             { feedName: "Foo", feedUri: "http://pkgs.foo.com/foo" },
@@ -316,7 +316,7 @@ not xml
             getSourcesFromNuGetConfig: () => packageSourceBase
         });
 
-        let ngToolRunner = require("../nuget/NuGetToolRunner2");
+        let ngToolRunner = require("../../nuget/NuGetToolRunner2");
 
         packageSourceBase = [
             { feedName: "Foo", feedUri: "http://pkgs.foo.com/foo" },
@@ -336,7 +336,7 @@ not xml
             getSourcesFromNuGetConfig: () => packageSourceBase
         });
 
-        let ngToolRunner = require("../nuget/NuGetToolRunner2");
+        let ngToolRunner = require("../../nuget/NuGetToolRunner2");
 
         packageSourceBase = [
             { feedName: "Foo", feedUri: "http://pkgs.foo.com/foo" },
