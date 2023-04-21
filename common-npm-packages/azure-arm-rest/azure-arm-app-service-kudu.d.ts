@@ -11,7 +11,7 @@ export declare class KuduServiceManagementClient {
 }
 export declare class Kudu {
     private _client;
-    constructor(scmUri: string, username: string, password: string);
+    constructor(scmUri: string, accessToken: string, scmPolicyCheck: boolean);
     updateDeployment(requestBody: any): Promise<string>;
     getContinuousJobs(): Promise<Array<WebJob>>;
     startContinuousWebJob(jobName: string): Promise<WebJob>;
