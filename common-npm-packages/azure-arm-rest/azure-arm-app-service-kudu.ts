@@ -23,6 +23,9 @@ export class KuduServiceManagementClient {
     public async beginRequest(request: webClient.WebRequest, reqOptions?: webClient.WebRequestOptions): Promise<webClient.WebResponse> {
         request.headers = request.headers || {};
         
+        if(!request.headers['Content-Type']) {
+            request.headers['Content-Type'] = 'application/json; charset=utf-8';
+        }
         request.headers["Authorization"] = this._authHeader;
         
         if(!!this._cookie) {
