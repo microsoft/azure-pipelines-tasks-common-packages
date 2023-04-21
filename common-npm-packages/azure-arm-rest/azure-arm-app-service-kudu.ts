@@ -12,20 +12,18 @@ tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
 export class KuduServiceManagementClient {
     private _scmUri;
-    private _accesssToken: string;
+    private _authHeader: string;
     private _cookie: string[] = undefined;
 
-    constructor(scmUri: string, accessToken: string) {
-        this._accesssToken = accessToken;
+    constructor(scmUri: string, authHeader: string) {
+        this._authHeader = authHeader;
         this._scmUri = scmUri;
     }
 
     public async beginRequest(request: webClient.WebRequest, reqOptions?: webClient.WebRequestOptions): Promise<webClient.WebResponse> {
         request.headers = request.headers || {};
-        request.headers["Authorization"] = "Basic " + this._accesssToken;
-        if(!request.headers['Content-Type']) {
-            request.headers['Content-Type'] = 'application/json; charset=utf-8';
-        }
+        
+        request.headers["Authorization"] = this._authHeader;
         
         if(!!this._cookie) {
             tl.debug(`setting affinity cookie ${JSON.stringify(this._cookie)}`);
@@ -82,9 +80,8 @@ export class KuduServiceManagementClient {
 export class Kudu {
     private _client: KuduServiceManagementClient;
 
-    constructor(scmUri: string, username: string, password: string) {
-        var base64EncodedCredential = (new Buffer(username + ':' + password).toString('base64'));
-        this._client = new KuduServiceManagementClient(scmUri, base64EncodedCredential);
+    constructor(scmUri: string, authHeader: string) {
+        this._client = new KuduServiceManagementClient(scmUri, authHeader);
     }
 
     public async updateDeployment(requestBody: any): Promise<string> {
