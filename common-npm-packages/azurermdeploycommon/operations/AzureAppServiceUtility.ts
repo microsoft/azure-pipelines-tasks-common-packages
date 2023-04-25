@@ -150,6 +150,7 @@ export class AzureAppServiceUtility {
         const authMethodtelemetry = {
             authMethod: method
         };
+        tl.debug(`Using ${method} authentication method for Kudu service.`);
         console.log("##vso[telemetry.publish area=TaskDeploymentMethod;feature=AzureAppServiceDeployment]" + JSON.stringify(authMethodtelemetry));
 
         return method + " " + token;
