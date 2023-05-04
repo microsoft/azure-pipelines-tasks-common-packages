@@ -23,7 +23,7 @@ export class ContainerBasedDeploymentUtility {
         this._appServiceUtility = new AzureAppServiceUtility(appService);
     }
 
-    public async deployWebAppImage(properties: any, restart:boolean=true): Promise<void> {
+    public async deployWebAppImage(properties: any, restart: boolean = true): Promise<void> {
         let imageName: string = properties["ImageName"];
         let multicontainerConfigFile: string = properties["MulticontainerConfigFile"];
         let isMultiContainer: boolean = properties["isMultiContainer"];
