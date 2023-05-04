@@ -1,4 +1,5 @@
 import * as os from 'os';
+import * as path from 'path';
 
 export const jacocoGradleSingleModule = `
 allprojects {
@@ -345,15 +346,15 @@ export const jacocoAntReportConfiguration = `<?xml version="1.0"?>
     <target name="CodeCoverage_9064e1d0">
         <jacoco:report xmlns:jacoco="antlib:org.jacoco.ant">
             <executiondata>
-                <file file="report\\dir\\jacoco.exec"/>
+                <file file="report${path.sep}dir${path.sep}jacoco.exec"/>
             </executiondata>
             <structure name="Jacoco report">
                 <classfiles>some/folder/with/classes</classfiles>
                 <sourcefiles>source/dir</sourcefiles>
             </structure>
             <html destdir="report/dir" />
-            <csv destfile="report/dir\\summary.csv" />
-            <xml destfile="report/dir\\summary.xml" />
+            <csv destfile="report/dir${path.sep}summary.csv" />
+            <xml destfile="report/dir${path.sep}summary.xml" />
         </jacoco:report>
     </target>
 </project>
@@ -362,7 +363,7 @@ export const jacocoAntReportConfiguration = `<?xml version="1.0"?>
 export const jacocoAntCoverageEnableConfiguration = {
     $:
     {
-        'destfile': 'report\\dir\\jacoco.exec',
+        'destfile': `report${path.sep}dir${path.sep}jacoco.exec`,
         'xmlns:jacoco': 'antlib:org.jacoco.ant'
     }
 };
@@ -378,21 +379,21 @@ export const coberturaAntReportConfiguration = `<?xml version="1.0"?>
   </path>
   <taskdef classpathref="cobertura-classpath" resource="tasks.properties" />
   <target name="CodeCoverage_9064e1d0">
-    <cobertura-report format="html" destdir="report/dir" datafile="report/dir\\cobertura.ser" srcdir="source/dir" />
-    <cobertura-report format="xml" destdir="report/dir" datafile="report/dir\\cobertura.ser" srcdir="source/dir" />
+    <cobertura-report format="html" destdir="report/dir" datafile="report/dir${path.sep}cobertura.ser" srcdir="source/dir" />
+    <cobertura-report format="xml" destdir="report/dir" datafile="report/dir${path.sep}cobertura.ser" srcdir="source/dir" />
   </target>
 </project>
     `;
 
 export const coberturaAntInstrumentedClassesConfiguration = `
-<cobertura-instrument todir="base\\dir\\InstrumentedClasses" datafile="report\\dir\\cobertura.ser">
+<cobertura-instrument todir="base${path.sep}dir${path.sep}InstrumentedClasses" datafile="report${path.sep}dir${path.sep}cobertura.ser">
     some/folder/with/classes
 </cobertura-instrument>
   `;
 
 export const coberturaAntPropertiesConfiguration = `
-        <sysproperty key="net.sourceforge.cobertura.datafile" file="report\\dir\\cobertura.ser" />
-        <classpath location="base\\dir\\InstrumentedClasses" />
+        <sysproperty key="net.sourceforge.cobertura.datafile" file="report${path.sep}dir${path.sep}cobertura.ser" />
+        <classpath location="base${path.sep}dir${path.sep}InstrumentedClasses" />
 `;
 
 export const sortedStringArray = ['a', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];

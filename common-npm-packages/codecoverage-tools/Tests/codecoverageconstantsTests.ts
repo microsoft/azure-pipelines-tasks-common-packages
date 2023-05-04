@@ -111,11 +111,6 @@ export function codecoverageconstantsTests() {
             assert.strictEqual(actual, expectedResults.jacocoAntReportConfiguration);
         });
 
-        it('function jacocoAntReport should return correct configuration', () => {
-            const actual = codecoverageconstantsRewire.jacocoAntReport(fakeData.reportDir, fakeData.classDir, fakeData.sourceDir);
-            assert.strictEqual(actual, expectedResults.jacocoAntReportConfiguration);
-        });
-
         it('function jacocoAntCoverageEnable should return correct configuration', () => {
             const actual = codecoverageconstantsRewire.jacocoAntCoverageEnable(fakeData.reportDir);
             assert.deepStrictEqual(actual, expectedResults.jacocoAntCoverageEnableConfiguration);
