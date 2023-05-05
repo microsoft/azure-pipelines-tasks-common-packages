@@ -91,6 +91,72 @@ task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
     }
 }`;
 
+export const jacocoGradleAndroidSingleModuleConfiguration = `
+allprojects {
+    apply plugin: 'jacoco'
+}
+gradle.projectsEvaluated {
+    def jacocoExcludes = ['**/R.class','**/R$.class']
+    def jacocoIncludes = ['**/*$ViewInjector.class','**/*$ViewBinder.class']
+    task jacocoTestReport (type:JacocoReport, dependsOn: 'test') {
+        group = "Reporting"
+        description = "Generates Jacoco coverage report for rootProject."
+        rootProject.tasks.getByName('test').finalizedBy jacocoTestReport
+        
+        fileCollectionAssign fileTree(dir: "\${rootProject.buildDir}/some/folder/with/classes",  excludes: jacocoExcludes, includes: jacocoIncludes)
+        fileCollectionAssign fileTree(dir: "\${rootProject.buildDir}/jacoco", includes: ['**/*.exec'])
+        fileCollectionAssign files("\${rootProject.projectDir}/src/main/java")
+        reports {
+            xml.required  = true
+            xml.outputLocation = file("report/dir/summary.xml")
+            html.required  = true
+            html.outputLocation = file("report/dir")
+        }
+    }
+}`;
+
+export const jacocoGradleAndroidMultiModuleConfiguration = `
+allprojects {
+    apply plugin: 'jacoco'
+}
+subprojects {
+    apply plugin: 'com.android.application'
+    afterEvaluate {
+        def jacocoExcludes = ['**/R.class','**/R$.class']
+        def jacocoIncludes = ['**/*$ViewInjector.class','**/*$ViewBinder.class']
+        task jacocoTestReport (type:JacocoReport, dependsOn: 'test') {
+            group = "Reporting"
+            description = "Generates Jacoco coverage report for project."
+            project.tasks.getByName('test').finalizedBy jacocoTestReport
+            
+            fileCollectionAssign fileTree(dir: "\${project.buildDir}/some/folder/with/classes",  excludes: jacocoExcludes, includes: jacocoIncludes)
+            fileCollectionAssign fileTree(dir: "\${project.buildDir}/outputs/unit_test_code_coverage", includes: ['**/*.exec'])
+            fileCollectionAssign files("\${project.projectDir}/src/main/java")
+            reports {
+                xml.required  = true
+                xml.outputLocation = file("\${project.buildDir}/jacocoHtml/summary.xml")
+                html.required  = true
+                html.outputLocation = file("\${project.buildDir}/jacocoHtml")
+            }
+        }
+    }
+}
+gradle.projectsEvaluated {
+    task jacocoRootReport(type: JacocoReport, dependsOn: subprojects.test) {
+        group = "Reporting"
+        description = "Generates overall Jacoco coverage report."
+        fileCollectionAssign files(subprojects.jacocoTestReport.executionData)
+        fileCollectionAssign files(subprojects.jacocoTestReport.sourceDirectories)
+        fileCollectionAssign files(subprojects.jacocoTestReport.classDirectories)
+        reports {
+            html.required = true
+            xml.required = true
+            xml.destination file("report/dir/summary.xml")
+            html.destination file("report/dir")
+        }
+    }
+}`;
+
 export const coberturaGradleSingleModule = `
 allprojects {
     repositories {
@@ -396,7 +462,21 @@ export const coberturaAntPropertiesConfiguration = `
         <classpath location="base${path.sep}dir${path.sep}InstrumentedClasses" />
 `;
 
+export const emptyFilters = {
+    includeFilter: '',
+    excludeFilter: ''
+}
+
+export const correctFilters = {
+    includeFilter: ':**/R:**/R$:**/BuildConfig',
+    excludeFilter: ':**/*$ViewInjector:**/*$ViewBinder:**/Manifest'
+}
+
 export const sortedStringArray = ['a', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
+
+export const emptyObjectWithAddedProperty = {
+    someProperty: 108
+}
 
 export const objectWithAddedProperty = {
     firstProperty: 'First Value',
@@ -432,3 +512,221 @@ export const arrayWithAppendedProperty = [
         someProperty: [42, 108]
     }
 ];
+
+export const jacocoGradleCorrectedAppliedFilterPatter = [
+    "'**/R.class'",
+    "'**/R$.class'",
+    "'**/BuildConfig*/**'"
+]
+
+export const coberturaGradleCorrectedAppliedFilterPatter = [
+    "'.***/R'",
+    "'.***/R$'",
+    "'.***/BuildConfig.*'"
+]
+
+export const jacocoAntCorrectedAppliedFilterPatter = [
+    '**/**/R.class',
+    '**/**/R$.class',
+    '**/**/BuildConfig*/**'
+]
+
+export const coberturaAntCorrectedAppliedFilterPatter = [
+    '**/**/R.class',
+    '**/**/R$.class',
+    '**/**/BuildConfig*/**'
+]
+
+export const jacocoMavenCorrectedAppliedFilterPatter = [
+    '**/**/R.class',
+    '**/**/R$.class',
+    '**/**/BuildConfig*/**'
+]
+
+export const coberturaMavenCorrectedAppliedFilterPatter = [
+    '**/R.class',
+    '**/R$.class',
+    '**/BuildConfig*/**'
+]
+
+export const getSourceFilterResultSourceDirsNull = `<fileset dir="."/>${os.EOL}`;
+export const getSourceFilterResult = `<fileset dir="source/dir1"/>${os.EOL}<fileset dir="source/dir2"/>${os.EOL}`;
+export const addCodeCoverageDataJacoco = [
+    'addCodeCoveragePluginData result',
+    'createReportFile result'
+]
+export const addCodeCoverageDataCobertura = [
+    'addCodeCoverageNodes result',
+    'createReportFile result'
+]
+export const addCodeCoverageNodesTargetString = {
+    project: {
+        target: {
+            enableForking: true
+        }
+    }
+}
+export const addCodeCoverageNodesTargetArray = {
+    project: {
+        target: [
+            {
+                'enableForking': true
+            },
+            {
+                'enableForking': true
+            },
+            {
+                'enableForking': true
+            }
+        ]
+    }
+}
+
+export const enableForkingWithoutFilters = {
+  'jacoco:coverage': {
+    $: {
+      destfile: 'some/dir/with/file.build',
+      'xmlns:jacoco': 'antlib:org.jacoco.ant'
+    },
+    junit: {
+      enableForkOnTestNodes: true
+    }
+  }
+}
+
+export const enableForkingWithIncludingFilter = {
+  'jacoco:coverage': {
+    $: {
+      destfile: 'some/dir/with/file.build',
+      includes: [
+        '**/*$ViewInjector.class',
+        '**/*$ViewBinder.class'
+      ],
+      'xmlns:jacoco': 'antlib:org.jacoco.ant'
+    },
+    junit: {
+      enableForkOnTestNodes: true
+    }
+  }
+}
+
+export const enableForkingWithExcludingFilter = {
+  'jacoco:coverage': {
+    $: {
+      destfile: 'some/dir/with/file.build',
+      excludes: [
+        '**/R.class',
+        '**/R$.class'
+      ],
+      'xmlns:jacoco': 'antlib:org.jacoco.ant'
+    },
+    junit: {
+      enableForkOnTestNodes: true
+    }
+  }
+}
+
+export const enableForkOnTestNodesNotArrayWithForkModeEnabled = {
+    $: {
+        fork: 'true',
+        forkmode: 'once'
+    }
+}
+
+export const enableForkOnTestNodesNotArrayWithForkModeDisabled = {
+    $: {
+        fork: 'true'
+    }
+}
+
+export const enableForkOnTestNodesArrayWithForkModeEnabled = [
+    {
+        element: 'first',
+        $: {
+            fork: 'true',
+            forkmode: 'once'
+        }
+    },
+    {
+        element: 'second',
+        $: {
+            fork: 'true',
+            forkmode: 'once'
+        }
+    }
+]
+
+export const enableForkOnTestNodesArrayWithForkModeDisabled = [
+    {
+        element: 'first',
+        '$': {
+            fork: 'true'
+        }
+    },
+    {
+        element: 'second',
+        '$': {
+            fork: 'true'
+        }
+    }
+]
+
+export const getClassDataResult = `
+            <fileset dir="some/folder1/with/classes" includes="'**/*$ViewInjector.class','**/*$ViewBinder.class'" excludes="'**/R.class','**/R$.class'" />
+            
+            <fileset dir="some/folder2/with/classes" includes="'**/*$ViewInjector.class','**/*$ViewBinder.class'" excludes="'**/R.class','**/R$.class'" />
+            `;
+            
+export const getClassDataResultWhenClassDirsEmpty = `
+            <fileset dir="." includes="'**/*$ViewInjector.class','**/*$ViewBinder.class'" excludes="'**/R.class','**/R$.class'" />
+            `;
+            
+export const addCodeCoverageNodesCoberturaResult = `<project>
+    <coberturaAntCoverageEnable/>
+    <target/>
+    <target/>
+    <target/>
+</project>`
+
+export const enableForkOnTestNodesCoberturaResult = '<node forkmode="once" fork="true" />'
+export const enableForkingWithoutCoberturaInstrument = '<project><target><cobertura-instrument>some/folder/with/classes</cobertura-instrument><junit><coberturaAntProperties/><coberturaAntClasspathRef/></junit></target></project>';
+export const enableForkingWithCoberturaInstrument = '<project><target><cobertura-instrument>exist cobertura node</cobertura-instrument><junit><coberturaAntProperties/><coberturaAntClasspathRef/></junit></target></project>';
+export const enableForkingWithoutTarget = '<project><target/></project>';
+export const enableForkingWithJavac = '<project><target><javac debug="true"/></target></project>';
+export const addCodeCoverageDataSingleProject = 'report\\target\\site\\jacoco';
+export const addCodeCoverageDataSingleProjectConfig = { project: {} };
+export const addCodeCoverageDataMultiProject = 'report\\dir\\target\\site\\jacoco-aggregate';
+export const addCodeCoverageDataMultiProjectConfig = { project: { modules: [{ module: ['dir'] }] }};
+export const getBuildDataNodeBuildString = {};
+export const getBuildDataNodeBuildJsonContentBuildString = { project: { build: {} } };
+export const getBuildDataNodeBuildArray = { element: 'some value' };
+export const getBuildDataNodeBuildJsonContentBuildArray = { project: { build: [{ element: 'some value' }] } };
+export const getBuildDataNodeBuildArrayWithStringElement = {};
+export const getBuildDataNodeBuildJsonContentBuildArrayWithStringElement = { project: { build: [{}] } };
+export const getPluginDataNodeWithoutPluginsNode = {};
+export const getPluginDataNodeWithoutPluginsNodeConfig = { project: {}, plugins: {}};
+export const getPluginDataNodePluginsString = {};
+export const getPluginDataNodePluginsStringConfig = { project: {}, plugins: {}};
+export const getPluginDataNodePluginsStringArray = {};
+export const getPluginDataNodePluginsStringArrayConfig = { project: {}, plugins: [{}]};
+export const getPluginDataNodePluginsArray = { name: 'some name' };
+export const getPluginDataNodePluginsArrayConfig = { project: {}, plugins: [{ name: 'some name' }]};
+export const getPluginDataNodePluginsAnother = { name: 'some name' };
+export const getPluginDataNodePluginsAnotherConfig = { project: {}, plugins: { name: 'some name' }};
+export const getReportingPluginNodeArray = { node: 'some value' };
+export const getReportingPluginNodeAnother = { node: 'some value' };
+export const addCodeCoverageNodesSingleModule = {
+    project: {
+        build: {
+            plugins: {
+                name: 'plugin'
+            }
+        }
+    }
+};
+export const addCodeCoverageNodesMultiModule = {
+    project: {
+        build: {},
+        modules: {}
+    }
+};
