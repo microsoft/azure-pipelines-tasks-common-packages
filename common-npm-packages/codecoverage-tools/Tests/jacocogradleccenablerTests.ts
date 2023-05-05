@@ -56,6 +56,8 @@ export function jacocogradleccenablerTests() {
                 .returns(fakeData.excludeFilter)
                 .onCall(1)
                 .returns(fakeData.includeFilter);
+                sandbox.stub(ccc, 'jacocoGradleAndroidSingleModuleEnable').returns('Single-MOdule Configuration for Android project');
+                sandbox.stub(ccc, 'jacocoGradleAndroidMultiModuleEnable').returns('Single-MOdule Configuration for Android project');
             sandbox.stub(ccc, 'jacocoGradleMultiModuleEnable').returns('Multi-Module Configuration');
             sandbox.stub(ccc, 'jacocoGradleSingleModuleEnable').returns('Single-MOdule Configuration');
             appendTextToFileSync = sandbox.stub(util, 'appendTextToFileSync').callsFake();
@@ -96,6 +98,38 @@ export function jacocogradleccenablerTests() {
                     gradle5xOrHigher: 'true'
                 });
             sandbox.assert.calledOnce(ccc.jacocoGradleSingleModuleEnable);
+            assert.strictEqual(actual, '');
+        });
+        
+        it('should call \'jacocoGradleAndroidSingleModuleEnable\' if project is single-module and android related', async () => {
+            const actual = await jacocoGradleCodeCoverageEnablerInstance.enableCodeCoverage(
+                {
+                    buildfile: fakeData.buildFile,
+                    classfilter: fakeData.classFilter,
+                    classfilesdirectories: fakeData.classDir,
+                    summaryfile: fakeData.summaryFile,
+                    reportdirectory: fakeData.reportDir,
+                    ismultimodule: 'false',
+                    gradle5xOrHigher: 'true',
+                    isAndroidProject: 'true'
+                });
+            sandbox.assert.calledOnce(ccc.jacocoGradleAndroidSingleModuleEnable);
+            assert.strictEqual(actual, '');
+        });
+
+        it('should call \'jacocoGradleAndroidMultiModuleEnable\' if project is multi-module and android related', async () => {
+            const actual = await jacocoGradleCodeCoverageEnablerInstance.enableCodeCoverage(
+                {
+                    buildfile: fakeData.buildFile,
+                    classfilter: fakeData.classFilter,
+                    classfilesdirectories: fakeData.classDir,
+                    summaryfile: fakeData.summaryFile,
+                    reportdirectory: fakeData.reportDir,
+                    ismultimodule: 'true',
+                    gradle5xOrHigher: 'true',
+                    isAndroidProject: 'true'
+                });
+            sandbox.assert.calledOnce(ccc.jacocoGradleAndroidMultiModuleEnable);
             assert.strictEqual(actual, '');
         });
 

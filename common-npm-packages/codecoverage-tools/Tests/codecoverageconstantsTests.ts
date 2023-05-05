@@ -135,5 +135,27 @@ export function codecoverageconstantsTests() {
             const actual = codecoverageconstantsRewire.coberturaAntProperties(fakeData.reportDir, fakeData.baseDir);
             assert.deepStrictEqual(actual, expectedResults.coberturaAntPropertiesConfiguration);
         });
+        
+        it('function jacocoGradleAndroidSingleModuleEnable should return correct configuration', () => {
+            const actual = codecoverageconstantsRewire.jacocoGradleAndroidSingleModuleEnable(
+                fakeData.excludeFilterStringified,
+                fakeData.includeFilterStringified,
+                fakeData.classDir,
+                fakeData.reportDir,
+                true
+            );
+            assert.deepStrictEqual(actual, expectedResults.jacocoGradleAndroidSingleModuleConfiguration);
+        });
+
+        it('function jacocoGradleAndroidMultiModuleEnable should return correct configuration', () => {
+            const actual = codecoverageconstantsRewire.jacocoGradleAndroidMultiModuleEnable(
+                fakeData.excludeFilterStringified,
+                fakeData.includeFilterStringified,
+                fakeData.classDir,
+                fakeData.reportDir,
+                true
+            );
+            assert.deepStrictEqual(actual, expectedResults.jacocoGradleAndroidMultiModuleConfiguration);
+        });
     });
 }
