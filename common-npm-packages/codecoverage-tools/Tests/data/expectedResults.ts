@@ -693,9 +693,9 @@ export const enableForkingWithoutCoberturaInstrument = '<project><target><cobert
 export const enableForkingWithCoberturaInstrument = '<project><target><cobertura-instrument>exist cobertura node</cobertura-instrument><junit><coberturaAntProperties/><coberturaAntClasspathRef/></junit></target></project>';
 export const enableForkingWithoutTarget = '<project><target/></project>';
 export const enableForkingWithJavac = '<project><target><javac debug="true"/></target></project>';
-export const addCodeCoverageDataSingleProject = 'report\\target\\site\\jacoco';
+export const addCodeCoverageDataSingleProject = `report${path.sep}target${path.sep}site${path.sep}jacoco`;
 export const addCodeCoverageDataSingleProjectConfig = { project: {} };
-export const addCodeCoverageDataMultiProject = 'report\\dir\\target\\site\\jacoco-aggregate';
+export const addCodeCoverageDataMultiProject = `report${path.sep}dir${path.sep}target${path.sep}site${path.sep}jacoco-aggregate`;
 export const addCodeCoverageDataMultiProjectConfig = { project: { modules: [{ module: ['dir'] }] }};
 export const getBuildDataNodeBuildString = {};
 export const getBuildDataNodeBuildJsonContentBuildString = { project: { build: {} } };
