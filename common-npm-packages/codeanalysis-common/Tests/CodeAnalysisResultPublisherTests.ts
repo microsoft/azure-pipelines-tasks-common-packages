@@ -17,6 +17,7 @@ export function CodeAnalysisResultPublisherTests() {
         
         before(() => {
             sandbox.stub(tl, 'debug');
+            sandbox.stub(tl, 'loc');
             analysisResultsStub = sandbox.stub(codeAnalysisResultPublisherInstance, 'analysisResults');
             sandbox.stub(path, 'join');
             sandbox.stub(path, 'extname');
