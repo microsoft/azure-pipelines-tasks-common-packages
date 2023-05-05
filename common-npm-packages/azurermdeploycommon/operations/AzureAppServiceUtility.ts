@@ -209,7 +209,7 @@ export class AzureAppServiceUtility {
         console.log(tl.loc('UpdatedAppServiceConfigurationSettings'));
     }
 
-    public async updateAndMonitorAppSettings(addProperties?: any, deleteProperties?: any, formatJSON?: boolean): Promise<boolean> {
+    public async updateAndMonitorAppSettings(addProperties?: any, deleteProperties?: any, formatJSON?: boolean, perSlot: boolean = true): Promise<boolean> {
         if(formatJSON) {
             var appSettingsProperties = {};
             for(var property in addProperties) {
@@ -251,7 +251,9 @@ export class AzureAppServiceUtility {
             console.log(tl.loc('AppServiceApplicationSettingsAlreadyPresent'));
         }
 
-        await this._appService.patchApplicationSettingsSlot(addProperties);
+        if (perSlot) {
+            await this._appService.patchApplicationSettingsSlot(addProperties);
+        } 
         return isNewValueUpdated;
     }
 
@@ -411,6 +413,23 @@ export class AzureAppServiceUtility {
         }
 
         return newProperties;
+    }
+
+    public async isFunctionAppOnCentauri(): Promise<boolean>{
+        try{
+            let details: any =  await this._appService.get();
+            if (details.properties["managedEnvironmentId"]){
+                tl.debug("Function Container app is on Centauri.");
+                return true;
+            }
+            else{                
+                return false;    
+            }
+        }
+        catch(error){
+            tl.debug(`Skipping Centauri check: ${error}`);
+            return false;
+        }        
     }
 
 }
