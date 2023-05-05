@@ -67,7 +67,7 @@ export function FileSystemInteractionsTests() {
             statSyncStub.callsFake(() => { throw new FakeFsException('ENOENT') });
             const directoryToCreate = getLongDirectoryPath(10);
             assert.throws(() => fileSystemInteractionsClass.createDirectory(directoryToCreate));
-            sinon.assert.calledOnceWithExactly(locStub, 'LIB_MkdirFailedInvalidDriveRoot', directoryToCreate, 'C:\\');
+            sinon.assert.calledOnceWithExactly(locStub, 'LIB_MkdirFailedInvalidDriveRoot', directoryToCreate, getRootDir());
         });
         
         it('should throw exception if there is exception with code \'UNKNOWN\'', () => {
@@ -93,6 +93,10 @@ export function FileSystemInteractionsTests() {
     });
     
     function getLongDirectoryPath(countNestedDirectories: number) {
-        return 'C:\\' + [...Array(countNestedDirectories)].map((_, i) => `folder${i}`).join('\\');
+        return getRootDir() + [...Array(countNestedDirectories)].map((_, i) => `folder${i}`).join(path.sep);
+    }
+    
+    function getRootDir() {
+        return path.parse(process.cwd()).root;
     }
 }
