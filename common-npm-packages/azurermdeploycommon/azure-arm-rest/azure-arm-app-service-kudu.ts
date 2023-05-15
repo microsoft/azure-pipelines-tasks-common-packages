@@ -7,17 +7,17 @@ import { KUDU_DEPLOYMENT_CONSTANTS } from './constants';
 
 export class KuduServiceManagementClient {
     private _scmUri;
-    private _accesssToken: string;
+    private _authHeader: string;
     private _cookie: string[];
 
-    constructor(scmUri: string, accessToken: string) {
-        this._accesssToken = accessToken;
+    constructor(scmUri: string, authHeader: string) {
+        this._authHeader = authHeader;
         this._scmUri = scmUri;
     }
 
     public async beginRequest(request: webClient.WebRequest, reqOptions?: webClient.WebRequestOptions, contentType?: string): Promise<webClient.WebResponse> {
         request.headers = request.headers || {};
-        request.headers["Authorization"] = "Basic " + this._accesssToken;
+        request.headers["Authorization"] = this._authHeader;
         request.headers['Content-Type'] = contentType || 'application/json; charset=utf-8';
         
         if(!!this._cookie) {
@@ -75,9 +75,8 @@ export class KuduServiceManagementClient {
 export class Kudu {
     private _client: KuduServiceManagementClient;
 
-    constructor(scmUri: string, username: string, password: string) {
-        var base64EncodedCredential = (new Buffer(username + ':' + password).toString('base64'));
-        this._client = new KuduServiceManagementClient(scmUri, base64EncodedCredential);
+    constructor(scmUri: string, authHeader: string) {
+        this._client = new KuduServiceManagementClient(scmUri, authHeader);
     }
 
     public async updateDeployment(requestBody: any): Promise<string> {
