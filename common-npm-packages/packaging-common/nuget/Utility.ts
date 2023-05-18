@@ -3,6 +3,7 @@ import * as ltx from "ltx";
 import * as path from "path";
 import * as tl from "azure-pipelines-task-lib/task";
 import * as locationUtilities from "../locationUtilities";
+import { getVersionFallback } from "./ProductVersionHelper";
 import { VersionInfo } from "../pe-parser/VersionResource";
 
 import { IPackageSourceBase } from "./Authentication";
@@ -194,6 +195,10 @@ export async function getNuGetFeedRegistryUrl(
     accessToken?: string,
     useSession?: boolean): Promise<string>
 {
+    if (nuGetVersion) {
+        nuGetVersion = getVersionFallback(nuGetVersion);
+    }
+    
     // If no version is received, V3 is assumed
     const registryType: locationUtilities.RegistryType = nuGetVersion && nuGetVersion.productVersion.a < 3
         ? locationUtilities.RegistryType.NuGetV2

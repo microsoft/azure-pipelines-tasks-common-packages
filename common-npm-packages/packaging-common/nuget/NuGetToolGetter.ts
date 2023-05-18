@@ -8,6 +8,7 @@ import * as fs from "fs";
 import * as os from "os";
 import {VersionInfo} from "../pe-parser/VersionResource";
 import * as peParser from "../pe-parser";
+import { getVersionFallback } from './ProductVersionHelper';
 
 interface INuGetTools {
     nugetexe: INuGetVersionInfo[]
@@ -164,7 +165,8 @@ export async function getMSBuildVersionString(): Promise<string> {
     if (path) {
         taskLib.debug('Found msbuild.exe at: ' + path);
         try {
-            const msbuildVersion: VersionInfo = await peParser.getFileVersionInfoAsync(path);
+            let msbuildVersion: VersionInfo = await peParser.getFileVersionInfoAsync(path);
+            msbuildVersion = getVersionFallback(msbuildVersion);
             version = msbuildVersion.productVersion.toString();
             taskLib.debug('Found msbuild version: ' + version);
         }
