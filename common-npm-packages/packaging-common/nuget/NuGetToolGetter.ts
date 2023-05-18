@@ -165,9 +165,8 @@ export async function getMSBuildVersionString(): Promise<string> {
     if (path) {
         taskLib.debug('Found msbuild.exe at: ' + path);
         try {
-            let msbuildVersion: VersionInfo = await peParser.getFileVersionInfoAsync(path);
-            msbuildVersion = getVersionFallback(msbuildVersion);
-            version = msbuildVersion.productVersion.toString();
+            const msbuildVersion: VersionInfo = await peParser.getFileVersionInfoAsync(path);
+            version = getVersionFallback(msbuildVersion).toString();
             taskLib.debug('Found msbuild version: ' + version);
         }
         catch (err) {

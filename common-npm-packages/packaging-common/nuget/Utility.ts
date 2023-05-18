@@ -195,12 +195,8 @@ export async function getNuGetFeedRegistryUrl(
     accessToken?: string,
     useSession?: boolean): Promise<string>
 {
-    if (nuGetVersion) {
-        nuGetVersion = getVersionFallback(nuGetVersion);
-    }
-    
     // If no version is received, V3 is assumed
-    const registryType: locationUtilities.RegistryType = nuGetVersion && nuGetVersion.productVersion.a < 3
+    const registryType: locationUtilities.RegistryType = nuGetVersion && getVersionFallback(nuGetVersion).a < 3
         ? locationUtilities.RegistryType.NuGetV2
         : locationUtilities.RegistryType.NuGetV3;
 

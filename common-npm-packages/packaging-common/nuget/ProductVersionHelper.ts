@@ -1,12 +1,10 @@
+import VersionInfoVersion from "../pe-parser/VersionInfoVersion";
 import {VersionInfo} from "../pe-parser/VersionResource";
 
-export function getVersionFallback(version: VersionInfo): VersionInfo {
-    const productVersion = version.productVersion;
-    if ((productVersion.a === 0) && (productVersion.b === 0) && (productVersion.c === 0) && (productVersion.d === 0)) {
-        version.productVersion.a = version.fileVersion.a;
-        version.productVersion.b = version.fileVersion.b;
-        version.productVersion.c = version.fileVersion.c;
-        version.productVersion.d = version.fileVersion.d;
+export function getVersionFallback(version: VersionInfo): VersionInfoVersion {
+    const {a, b, c, d} = version.productVersion;
+    if (a === 0 && b === 0 && c === 0 && d === 0) {
+        return version.fileVersion;
     }
-    return version;
+    return version.productVersion;
 }
