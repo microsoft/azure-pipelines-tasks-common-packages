@@ -176,16 +176,16 @@ export function enhancedFileTransformations(isFolderBasedDeployment: boolean, xm
 export async function applyTransformations(webPackage: string, parameters: string, packageType: PackageType): Promise<string> {
     tl.debug("WebConfigParameters is "+ parameters);
     if (parameters) {
-        var isFolderBasedDeployment: boolean = tl.stats(webPackage).isDirectory();
-        var folderPath = await deployUtility.generateTemporaryFolderForDeployment(isFolderBasedDeployment, webPackage, packageType);
+        const isFolderBasedDeployment: boolean = tl.stats(webPackage).isDirectory();
+        const folderPath = await deployUtility.generateTemporaryFolderForDeployment(isFolderBasedDeployment, webPackage, packageType);
         if (parameters) {
             tl.debug('parsing web.config parameters');
-            var webConfigParameters = parse(parameters);
+            const webConfigParameters = parse(parameters);
             const rootDirectoryPath: string = "D:\\home\\site\\wwwroot";
             generateWebConfigUtil.addWebConfigFile(folderPath, webConfigParameters, rootDirectoryPath);
         }
 
-        var output = await deployUtility.archiveFolderForDeployment(isFolderBasedDeployment, folderPath);
+        const output = await deployUtility.archiveFolderForDeployment(isFolderBasedDeployment, folderPath);
         webPackage = output.webDeployPkg;
     }
     else {
