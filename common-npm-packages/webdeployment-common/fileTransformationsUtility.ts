@@ -1,6 +1,9 @@
 import tl = require('azure-pipelines-task-lib/task');
 import * as ParameterParser from './ParameterParserUtility';
-
+import { PackageType } from './packageUtility';
+import { parse } from './ParameterParserUtility';
+var deployUtility = require('./utility.js');
+var generateWebConfigUtil = require('./webconfigutil.js');
 var jsonSubstitutionUtility = require('azure-pipelines-tasks-webdeployment-common/jsonvariablesubstitutionutility.js');
 var xmlSubstitutionUtility = require('azure-pipelines-tasks-webdeployment-common/xmlvariablesubstitutionutility.js');
 var xdtTransformationUtility = require('azure-pipelines-tasks-webdeployment-common/xdttransformationutility.js');
@@ -24,12 +27,12 @@ export function fileTransformations(isFolderBasedDeployment: boolean, JSONFiles:
                 transformConfigs.push(environmentName + ".config");
             }
             var isTransformationApplied: boolean = xdtTransformationUtility.basicXdtTransformation(folderPath, transformConfigs);
-            
+
             if(isTransformationApplied)
             {
                 console.log(tl.loc("XDTTransformationsappliedsuccessfully"));
             }
-            
+
         }
         else {
             throw new Error(tl.loc("CannotPerformXdtTransformationOnNonWindowsPlatform"));
@@ -55,7 +58,7 @@ export function advancedFileTransformations(isFolderBasedDeployment: boolean, ta
         }
         else {
             let isTransformationApplied: boolean = true;
-            if(transformationRules.length > 0) {                
+            if(transformationRules.length > 0) {
                 transformationRules.forEach(function(rule) {
                     var args = ParameterParser.parse(rule);
                     if(Object.keys(args).length < 2 || !args["transform"] || !args["xml"]) {
@@ -69,7 +72,7 @@ export function advancedFileTransformations(isFolderBasedDeployment: boolean, ta
                     }
                 });
             }
-            else{   
+            else{
                 var environmentName = tl.getVariable('Release.EnvironmentName');
                 let transformConfigs = ["Release.config"];
                 if(environmentName && environmentName.toLowerCase() != 'release') {
@@ -88,11 +91,11 @@ export function advancedFileTransformations(isFolderBasedDeployment: boolean, ta
     }
 
     if(variableSubstitutionFileFormat === "xml") {
-        if(targetFiles.length == 0) { 
+        if(targetFiles.length == 0) {
             xmlSubstitutionUtility.substituteAppSettingsVariables(folderPath, isFolderBasedDeployment);
         }
-        else {            
-            targetFiles.forEach(function(fileName) { 
+        else {
+            targetFiles.forEach(function(fileName) {
                 xmlSubstitutionUtility.substituteAppSettingsVariables(folderPath, isFolderBasedDeployment, fileName);
             });
         }
@@ -138,34 +141,56 @@ export function enhancedFileTransformations(isFolderBasedDeployment: boolean, xm
             }
             else {
                 tl.error(tl.loc('FailedToApplySpecialTransformationReason1'));
-            }          
+            }
         }
     }
 
     let isSubstitutionApplied: boolean = true;
-    if(xmlTargetFiles.length > 0) 
-    {     
-        xmlTargetFiles.forEach(function(fileName) { 
+    if(xmlTargetFiles.length > 0)
+    {
+        xmlTargetFiles.forEach(function(fileName) {
             isSubstitutionApplied = xmlSubstitutionUtility.substituteAppSettingsVariables(folderPath, isFolderBasedDeployment, fileName) || isSubstitutionApplied;
         });
-        
+
         if(isSubstitutionApplied) {
-            console.log(tl.loc('XMLvariablesubstitutionappliedsuccessfully')); 
-        } 
+            console.log(tl.loc('XMLvariablesubstitutionappliedsuccessfully'));
+        }
         else {
             tl.error(tl.loc('FailedToApplyXMLvariablesubstitutionReason1'));
         }
     }
 
     isSubstitutionApplied = true;
-    if(jsonTargetFiles.length > 0) 
+    if(jsonTargetFiles.length > 0)
     {
         isSubstitutionApplied = jsonSubstitutionUtility.jsonVariableSubstitution(folderPath, jsonTargetFiles, true);
         if(isSubstitutionApplied) {
-            console.log(tl.loc('JSONvariablesubstitutionappliedsuccessfully')); 
-        } 
+            console.log(tl.loc('JSONvariablesubstitutionappliedsuccessfully'));
+        }
         else {
             tl.error(tl.loc('FailedToApplyJSONvariablesubstitutionReason1'));
         }
     }
+}
+
+export async function applyTransformations(webPackage: string, parameters: string, packageType: PackageType): Promise<string> {
+    tl.debug("WebConfigParameters is "+ parameters);
+    if (parameters) {
+        var isFolderBasedDeployment: boolean = tl.stats(webPackage).isDirectory();
+        var folderPath = await deployUtility.generateTemporaryFolderForDeployment(isFolderBasedDeployment, webPackage, packageType);
+        if (parameters) {
+            tl.debug('parsing web.config parameters');
+            var webConfigParameters = parse(parameters);
+            const rootDirectoryPath: string = "D:\\home\\site\\wwwroot";
+            generateWebConfigUtil.addWebConfigFile(folderPath, webConfigParameters, rootDirectoryPath);
+        }
+
+        var output = await deployUtility.archiveFolderForDeployment(isFolderBasedDeployment, folderPath);
+        webPackage = output.webDeployPkg;
+    }
+    else {
+        tl.debug('File Tranformation not enabled');
+    }
+
+    return webPackage;
 }
