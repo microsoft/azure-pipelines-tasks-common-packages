@@ -172,7 +172,7 @@ export function enhancedFileTransformations(isFolderBasedDeployment: boolean, xm
         }
     }
 }
-
+/** Generate web config file from parameters object, add it to temp directory that is archived afterwards and returned as a package */
 export async function applyTransformations(webPackage: string, parameters: string, packageType: PackageType): Promise<string> {
     tl.debug("WebConfigParameters is "+ parameters);
     if (parameters) {
