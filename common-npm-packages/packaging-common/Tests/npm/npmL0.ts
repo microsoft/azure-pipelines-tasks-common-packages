@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import * as mockery from "mockery";
 
-import Lazy_NpmRegistry = require('../npm/npmregistry');
+import Lazy_NpmRegistry = require('../../npm/npmregistry');
 
 const BASIC_AUTH_PAT_PASSWD_REGEX = /\/\/.*\/:_password=.*/g;
 const BEARER_AUTH_REGEX = /\/\/.*\/:_authToken=AUTHTOKEN.*/g;
@@ -51,7 +51,7 @@ export function npmcommon() {
         };
         mockery.registerMock('fs', mockFs);
 
-        let npmrcParser = require('../npm/npmrcparser');
+        let npmrcParser = require('../../npm/npmrcparser');
         let registries = npmrcParser.GetRegistries('');
 
         assert.equal(registries.length, 3);
@@ -67,7 +67,7 @@ export function npmcommon() {
             debug: message => {}
         };
         mockery.registerMock('vsts-task-lib/task', mockTask);
-        let npmutil = require('../npm/npmutil');
+        let npmutil = require('../../npm/npmutil');
 
         assert.equal(npmutil.getFeedIdFromRegistry(
             'https://account.visualstudio.com/_packaging/feedId/npm/registry'),
@@ -112,7 +112,7 @@ export function npmcommon() {
         };
         mockery.registerMock('azure-pipelines-task-lib/task', mockTask);
 
-        let npmutil = require('../npm/npmutil');
+        let npmutil = require('../../npm/npmutil');
 
         return npmutil.getLocalRegistries(['http://example.pkgs.visualstudio.com/', 'http://example.com'], '').then((registries: string[]) => {
             assert.equal(registries.length, 1);
@@ -172,7 +172,7 @@ export function npmcommon() {
             }
         });
 
-        const npmregistry = require("../npm/npmregistry");
+        const npmregistry = require("../../npm/npmregistry");
         let registry = await npmregistry.NpmRegistry.FromServiceEndpoint('endpointId');
 
         assert(registry.auth.match(BASIC_AUTH_PAT_PASSWD_REGEX), `Auth must contain a password. Auth is: (${registry.auth})`);
@@ -225,7 +225,7 @@ export function npmcommon() {
             }
         });
 
-        const npmregistry = require("../npm/npmregistry");
+        const npmregistry = require("../../npm/npmregistry");
         let registry = await npmregistry.NpmRegistry.FromServiceEndpoint('endpointId');
 
         assert(registry.auth.match(BEARER_AUTH_REGEX), `Auth must contain _authToken. Auth is: (${registry.auth})`);
@@ -256,7 +256,7 @@ export function npmcommon() {
         mockery.registerMock('azure-pipelines-task-lib/task', mockTask);
         mockery.registerMock('./npmrcparser', mockParser);
         
-        const npmutil = require('../npm/npmutil');
+        const npmutil = require('../../npm/npmutil');
         const registries = await npmutil.getLocalNpmRegistries("foobarPath", ['https://mytfsserver.pkgs.visualstudio.com']);
 
         assert.equal(registries.length, 1, "Expected one response");
