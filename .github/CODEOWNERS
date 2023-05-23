@@ -3,7 +3,7 @@ ci/  @microsoft/akvelon-build-task-team
 
 common-npm-packages/artifacts-common/            @microsoft/azure-artifacts-packages
 
-common-npm-packages/az-blobstorage-provider/     @omeshp  @hiyadav  @bishal-pdmsft
+common-npm-packages/az-blobstorage-provider/     @hiyadav  @bishal-pdmsft
 
 common-npm-packages/azure-arm-rest/              @rvairavelu  @manolerazvan  @pipeline-environment-team
 
