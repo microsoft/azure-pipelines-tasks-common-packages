@@ -14,7 +14,7 @@
   "loc.messages.FailedToApplyTransformationReason1": "1. 在生成期间是否已对 MSBuild 生成的包应用转换。如果已应用，请删除 csproj 文件中每个配置的 <DependentUpon> 标记，然后重新生成。",
   "loc.messages.FailedToApplyTransformationReason2": "2. 确保配置文件和转换文件位于包内的同一个文件夹中。",
   "loc.messages.FailedToApplyXMLvariablesubstitutionReason1": "未能应用 XML 变量替换。包中已存在更改。",
-  "loc.messages.MissingArgumentsforXMLTransformation": "参数不完整或缺失。格式应为 -transform <transform file> -xml <source file> -result <destinamtion file>。转换文件和源文件为必需的输入。",
+  "loc.messages.MissingArgumentsforXMLTransformation": "Incomplete or missing arguments. Expected format -transform <transform file> -xml <source file> -result <destination file>. Transformation and source file are mandatory inputs.",
   "loc.messages.MorethanonepackagematchedwithspecifiedpatternPleaserestrainthesearchpattern": "指定的模式 %s 有多个匹配的包。请限制搜索模式。",
   "loc.messages.JSONvariableSubstitution": "正在对 %s 应用 JSON 变量替换",
   "loc.messages.SubstitutingValueonKey": "正在替换键值: %s",
