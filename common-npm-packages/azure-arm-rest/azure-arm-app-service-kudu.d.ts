@@ -4,14 +4,14 @@ export declare class KuduServiceManagementClient {
     private _scmUri;
     private _accesssToken;
     private _cookie;
-    constructor(scmUri: string, accessToken: string);
+    constructor(scmUri: string, authHeader: string);
     beginRequest(request: webClient.WebRequest, reqOptions?: webClient.WebRequestOptions): Promise<webClient.WebResponse>;
     getRequestUri(uriFormat: string, queryParameters?: Array<string>): string;
     getScmUri(): string;
 }
 export declare class Kudu {
     private _client;
-    constructor(scmUri: string, username: string, password: string);
+    constructor(scmUri: string, authHeader: string);
     updateDeployment(requestBody: any): Promise<string>;
     getContinuousJobs(): Promise<Array<WebJob>>;
     startContinuousWebJob(jobName: string): Promise<WebJob>;
