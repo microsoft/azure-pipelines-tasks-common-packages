@@ -128,10 +128,13 @@
       </Item>
       <Item ItemId=";loc.messages.MissingArgumentsforXMLTransformation" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
-          <Val><![CDATA[Incomplete or missing arguments. Expected format -transform <transform file> -xml <source file> -result <destinamtion file>. Transformation and source file are mandatory inputs.]]></Val>
+          <Val><![CDATA[Incomplete or missing arguments. Expected format -transform <transform file> -xml <source file> -result <destination file>. Transformation and source file are mandatory inputs.]]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
-            <Val><![CDATA[인수가 불완전하거나 누락되었습니다. -transform <transform file> -xml <source file> -result <destinamtion file> 형식이 필요합니다. 변환 및 소스 파일은 필수 입력입니다.]]></Val>
+            <Val><![CDATA[인수가 불완전하거나 누락되었습니다. -transform <transform file> -xml <source file> -result <destination file> 형식이 필요합니다. 변환 및 소스 파일은 필수 입력입니다.]]></Val>
           </Tgt>
+          <Prev Cat="Text">
+            <Val><![CDATA[Incomplete or missing arguments. Expected format -transform <transform file> -xml <source file> -result <destinamtion file>. Transformation and source file are mandatory inputs.]]></Val>
+          </Prev>
         </Str>
         <Disp Icon="Str" />
       </Item>
