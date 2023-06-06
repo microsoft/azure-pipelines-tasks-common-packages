@@ -10,6 +10,8 @@ import * as ngToolRunner from "./NuGetToolRunner2";
 import { NuGetExeXmlHelper } from "./NuGetExeXmlHelper";
 import { NuGetXmlHelper } from "./NuGetXmlHelper";
 import * as ngutil from "./Utility";
+import { getVersionFallback } from "./ProductVersionHelper";
+import peParser = require('../pe-parser/index');
 
 // NuGetConfigHelper2 handles authenticated scenarios where the user selects a source from the UI or from a service connection.
 // It is used by the NuGetCommand >= v2.0.0 and DotNetCoreCLI >= v2.0.0
@@ -27,8 +29,7 @@ export class NuGetConfigHelper2 {
         private authInfo: auth.NuGetExtendedAuthInfo,
         private environmentSettings: ngToolRunner.NuGetEnvironmentSettings,
         tempConfigPath: string /*optional*/,
-        useNuGetToModifyConfigFile?: boolean /* optional */)
-    {
+        useNuGetToModifyConfigFile?: boolean /* optional */) {
         this.tempNugetConfigPath = tempConfigPath || this.getTempNuGetConfigPath();
         useNuGetToModifyConfigFile = useNuGetToModifyConfigFile === undefined ? true : useNuGetToModifyConfigFile;
         this.nugetXmlHelper = useNuGetToModifyConfigFile ?
@@ -38,8 +39,8 @@ export class NuGetConfigHelper2 {
 
     public static getTempNuGetConfigBasePath() {
         return tl.getVariable("Agent.BuildDirectory")
-        || tl.getVariable("Agent.TempDirectory");
-     }
+            || tl.getVariable("Agent.TempDirectory");
+    }
 
     public ensureTempConfigCreated() {
         // save nuget config file to agent build directory
@@ -50,8 +51,7 @@ export class NuGetConfigHelper2 {
             tl.mkdirP(tempNuGetConfigDir);
         }
 
-        if (!tl.exist(this.tempNugetConfigPath))
-        {
+        if (!tl.exist(this.tempNugetConfigPath)) {
             if (this.nugetConfigPath) {
                 // don't use cp as that copies the read-only flag, and tfvc sets that on files
                 let content = fs.readFileSync(this.nugetConfigPath);
@@ -64,78 +64,86 @@ export class NuGetConfigHelper2 {
         }
     }
 
-    public addSourcesToTempNuGetConfig(packageSources: IPackageSource[]): void
-    {
+    public addSourcesToTempNuGetConfig(packageSources: IPackageSource[]): void {
         tl.debug('Adding sources to nuget.config');
         this.ensureTempConfigCreated();
         this.addSourcesToTempNugetConfigInternal(packageSources);
     }
 
-    public setAuthForSourcesInTempNuGetConfig(): void
-    {
+    public setAuthForSourcesInTempNuGetConfig(): void {
         tl.debug('Setting auth in the temp nuget.config');
         this.ensureTempConfigCreated();
 
         let sources = this.getSourcesFromTempNuGetConfig();
-        if (sources.length < 1)
-        {
+        if (sources.length < 1) {
             tl.debug('Not setting up auth for temp nuget.config as there are no sources');
             return;
         }
+        const versionPromise = peParser.getFileVersionInfoAsync(this.nugetPath);
+        versionPromise.then((version) => {
+            const parsedVersion = getVersionFallback(version);
+            let append = parsedVersion.a <= 4 && parsedVersion.b <= 9 && parsedVersion.c <= 1;
 
-        sources.forEach((source) => {
-            tl.debug(`considering source ${source.feedUri}. Internal: ${source.isInternal}`)
-            if (source.isInternal)
-            {
-                if(this.authInfo.internalAuthInfo.useCredConfig)
-                {
-                    tl.debug('Setting auth for internal source ' + source.feedUri);
-                    // Removing source first
-                    this.removeSourceFromTempNugetConfig(source);
+            sources.forEach((source) => {
+                tl.debug(`considering source ${source.feedUri}. Internal: ${source.isInternal}`)
+                if (source.isInternal) {
+                    if (this.authInfo.internalAuthInfo.useCredConfig) {
+                        tl.debug('Setting auth for internal source ' + source.feedUri);
+                        // Removing source first
+                        this.removeSourceFromTempNugetConfig(source);
+                        if (append) {
+                            // Cannot add tag that starts with number as a child node of PackageSourceCredentials because of
+                            // Bug in nuget 4.9.1 and dotnet 2.1.500
+                            // https://github.com/NuGet/Home/issues/7517
+                            // https://github.com/NuGet/Home/issues/7524
+                            // so working around this by prefixing source with string
+                            tl.debug('Prefixing internal source feed name ' + source.feedName + ' with feed-');
+                            source.feedName = 'feed-' + source.feedName;
+                        }
 
-                    // Re-adding source with creds
-                    this.addSourceWithUsernamePasswordToTempNuGetConfig(source, "VssSessionToken", this.authInfo.internalAuthInfo.accessToken);
-                }
-            }
-            // Source is external
-            else
-            {
-                if (!this.authInfo.externalAuthInfo || this.authInfo.externalAuthInfo.length < 1)
-                {
-                    tl.debug('No external auth information');
-                    return;
-                }
-
-                let indexAuthInfo: number = this.authInfo.externalAuthInfo.findIndex(externalEndpoint => url.parse(externalEndpoint.packageSource.feedUri).href.toLowerCase() === url.parse(source.feedUri).href.toLowerCase());
-                if(indexAuthInfo > -1)
-                {
-                    let externalEndpointAuthInfo: auth.ExternalAuthInfo = this.authInfo.externalAuthInfo[indexAuthInfo];
-                    tl.debug('Setting auth for external source ' + source.feedUri);
-                    console.log(tl.loc("Info_MatchingUrlWasFoundSettingAuth") + source.feedUri);
-                    switch(externalEndpointAuthInfo.authType)
-                    {
-                        case (auth.ExternalAuthType.UsernamePassword):
-                            let usernamePwdAuthInfo =  externalEndpointAuthInfo as auth.UsernamePasswordExternalAuthInfo;
-                            this.removeSourceFromTempNugetConfig(source);
-                            this.addSourceWithUsernamePasswordToTempNuGetConfig(source, usernamePwdAuthInfo.username, usernamePwdAuthInfo.password);
-                            break;
-                        case (auth.ExternalAuthType.Token):
-                            let tokenAuthInfo =  externalEndpointAuthInfo as auth.TokenExternalAuthInfo;
-                            this.removeSourceFromTempNugetConfig(source);
-                            this.addSourceWithUsernamePasswordToTempNuGetConfig(source, "CustomToken", tokenAuthInfo.token);
-                            break;
-                        case (auth.ExternalAuthType.ApiKey):
-                            let apiKeyAuthInfo =  externalEndpointAuthInfo as auth.ApiKeyExternalAuthInfo;
-                            this.setApiKeyForSourceInTempNuGetConfig(source, apiKeyAuthInfo.apiKey);
-                            break;
-                        default:
-                            break;
+                        // Re-adding source with creds
+                        this.addSourceWithUsernamePasswordToTempNuGetConfig(source, "VssSessionToken", this.authInfo.internalAuthInfo.accessToken);
                     }
-                } else {
-                    tl.debug(`No auth information found for source ${source.feedUri}`);
                 }
-            }
+                // Source is external
+                else {
+                    if (!this.authInfo.externalAuthInfo || this.authInfo.externalAuthInfo.length < 1) {
+                        tl.debug('No external auth information');
+                        return;
+                    }
+
+                    let indexAuthInfo: number = this.authInfo.externalAuthInfo.findIndex(externalEndpoint => url.parse(externalEndpoint.packageSource.feedUri).href.toLowerCase() === url.parse(source.feedUri).href.toLowerCase());
+                    if (indexAuthInfo > -1) {
+                        let externalEndpointAuthInfo: auth.ExternalAuthInfo = this.authInfo.externalAuthInfo[indexAuthInfo];
+                        tl.debug('Setting auth for external source ' + source.feedUri);
+                        console.log(tl.loc("Info_MatchingUrlWasFoundSettingAuth") + source.feedUri);
+                        switch (externalEndpointAuthInfo.authType) {
+                            case (auth.ExternalAuthType.UsernamePassword):
+                                let usernamePwdAuthInfo = externalEndpointAuthInfo as auth.UsernamePasswordExternalAuthInfo;
+                                this.removeSourceFromTempNugetConfig(source);
+                                this.addSourceWithUsernamePasswordToTempNuGetConfig(source, usernamePwdAuthInfo.username, usernamePwdAuthInfo.password);
+                                break;
+                            case (auth.ExternalAuthType.Token):
+                                let tokenAuthInfo = externalEndpointAuthInfo as auth.TokenExternalAuthInfo;
+                                this.removeSourceFromTempNugetConfig(source);
+                                this.addSourceWithUsernamePasswordToTempNuGetConfig(source, "CustomToken", tokenAuthInfo.token);
+                                break;
+                            case (auth.ExternalAuthType.ApiKey):
+                                let apiKeyAuthInfo = externalEndpointAuthInfo as auth.ApiKeyExternalAuthInfo;
+                                this.setApiKeyForSourceInTempNuGetConfig(source, apiKeyAuthInfo.apiKey);
+                                break;
+                            default:
+                                break;
+                        }
+                    } else {
+                        tl.debug(`No auth information found for source ${source.feedUri}`);
+                    }
+                }
+            });
+
         });
+
+
     }
 
     private getTempNuGetConfigPath(): string {
@@ -147,8 +155,7 @@ export class NuGetConfigHelper2 {
     public getSourcesFromTempNuGetConfig(): IPackageSource[] {
         // load content of the user's nuget.config
         let configPath: string = this.tempNugetConfigPath ? this.tempNugetConfigPath : this.nugetConfigPath;
-        if (!configPath)
-        {
+        if (!configPath) {
             return [];
         }
 
@@ -181,13 +188,11 @@ export class NuGetConfigHelper2 {
         });
     }
 
-    private addSourceWithUsernamePasswordToTempNuGetConfig(source: IPackageSource, username: string, password: string)
-    {
+    private addSourceWithUsernamePasswordToTempNuGetConfig(source: IPackageSource, username: string, password: string) {
         this.nugetXmlHelper.AddSourceToNuGetConfig(source.feedName, source.feedUri, username, password);
     }
 
-    private setApiKeyForSourceInTempNuGetConfig(source: IPackageSource, apiKey: string)
-    {
+    private setApiKeyForSourceInTempNuGetConfig(source: IPackageSource, apiKey: string) {
         this.nugetXmlHelper.SetApiKeyInNuGetConfig(source.feedName, apiKey);
     }
 
