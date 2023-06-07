@@ -128,10 +128,13 @@
       </Item>
       <Item ItemId=";loc.messages.MissingArgumentsforXMLTransformation" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
-          <Val><![CDATA[Incomplete or missing arguments. Expected format -transform <transform file> -xml <source file> -result <destinamtion file>. Transformation and source file are mandatory inputs.]]></Val>
+          <Val><![CDATA[Incomplete or missing arguments. Expected format -transform <transform file> -xml <source file> -result <destination file>. Transformation and source file are mandatory inputs.]]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
-            <Val><![CDATA[Faltan argumentos o están incompletos. Formato esperado: -transform <transform file> -xml <source file> -result <destinamtion file>. El archivo de transformación y de origen son entradas obligatorias.]]></Val>
+            <Val><![CDATA[Faltan argumentos o están incompletos. Formato esperado: -transform <transform file> -xml <source file> -result <destination file>. El archivo de transformación y de origen son entradas obligatorias.]]></Val>
           </Tgt>
+          <Prev Cat="Text">
+            <Val><![CDATA[Incomplete or missing arguments. Expected format -transform <transform file> -xml <source file> -result <destinamtion file>. Transformation and source file are mandatory inputs.]]></Val>
+          </Prev>
         </Str>
         <Disp Icon="Str" />
       </Item>
