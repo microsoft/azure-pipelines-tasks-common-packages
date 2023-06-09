@@ -13,6 +13,7 @@ import * as ngutil from "./Utility";
 import { getVersionFallback } from "./ProductVersionHelper";
 import peParser = require('../pe-parser/index');
 import * as nuGetGetter from "./NuGetToolGetter";
+import VersionInfoVersion from "../pe-parser/VersionInfoVersion";
 
 // NuGetConfigHelper2 handles authenticated scenarios where the user selects a source from the UI or from a service connection.
 // It is used by the NuGetCommand >= v2.0.0 and DotNetCoreCLI >= v2.0.0
@@ -71,7 +72,15 @@ export class NuGetConfigHelper2 {
         this.addSourcesToTempNugetConfigInternal(packageSources);
     }
 
-    public setAuthForSourcesInTempNuGetConfig(): void {
+    /**
+ * Set authentication for source in a temporary nuget config file.
+ *
+ *
+ * @param nugetVersion - Optional.  If nugetVersion is provided, will use it to check if version is equal to 4.9.2.  Nuget 4.9.2 has a bug that requires a special work around.  If nugetVersion is not provided, will assusm that nuget version is not 4.9.2.
+ * @returns void. This method set authentication for source in a temporary nuget config file.
+ *
+ */
+    public setAuthForSourcesInTempNuGetConfig(nugetVersion?: VersionInfoVersion): void {
         tl.debug('Setting auth in the temp nuget.config');
         this.ensureTempConfigCreated();
 
@@ -81,35 +90,31 @@ export class NuGetConfigHelper2 {
             return;
         }
         let append = false;
-        let nuGetPath = this.nugetPath;
-        if (!nuGetPath) {
-            nuGetPath = tl.getVariable(nuGetGetter.NUGET_EXE_TOOL_PATH_ENV_VAR) || tl.getVariable("NuGetExeCustomLocation");
-        }
-        if (nuGetPath) {
-            const versionPromise = peParser.getFileVersionInfoAsync(nuGetPath);
-            versionPromise.then((version) => {
-                const parsedVersion = getVersionFallback(version);
-                append = parsedVersion.a == 4 && parsedVersion.b == 9 && parsedVersion.c <= 2;
-                tl.debug(`NuGet Version ${parsedVersion.toString()} detected.  Appending "feed-" to the key`);
-                this.setAuthForSourcesInTempNuGetConfigHelper(sources, append);
-            });
-        } else {
-            const dotnetPath = tl.which('dotnet', false);
-            if (dotnetPath) {
-                try {
-                    let dotnet = tl.tool(dotnetPath);
-                    dotnet.arg('--version');
-                    let version = dotnet.execSync().stdout.trim();
-                    let versionArr = version.split(".");
-                    append = (versionArr[0] == "2")  && (versionArr[1] == "1") && (versionArr[2] == "500");
-                    tl.debug(`Dotnet Version ${version} detected.  Appending "feed-" to the key`);
-                } catch (err) {
-                    tl.debug(err.message);
-                    append = false;
-                }
+
+        if (nugetVersion) {
+            if (nugetVersion.a == 4 && nugetVersion.b == 9 && nugetVersion.c == 2) {
+                append = true;
+                tl.debug(`NuGet Version ${nugetVersion.toString()} detected.  Appending "feed-" to the key`);
             }
-            this.setAuthForSourcesInTempNuGetConfigHelper(sources, append);
         }
+        const dotnetPath = tl.which('dotnet', false);
+        if (dotnetPath) {
+            try {
+                let dotnet = tl.tool(dotnetPath);
+                dotnet.arg('--version');
+                let version = dotnet.execSync().stdout.trim();
+                let versionArr = version.split(".");
+                if ((versionArr[0] == "2") && (versionArr[1] == "1") && (versionArr[2] == "500")) {
+                    append = true;
+                    tl.debug(`Dotnet Version ${version} detected.  Appending "feed-" to the key`);
+                }
+
+            } catch (err) {
+                tl.debug(err.message);
+                append = false;
+            }
+        }
+        this.setAuthForSourcesInTempNuGetConfigHelper(sources, append);
     }
 
     private setAuthForSourcesInTempNuGetConfigHelper(sources: auth.IPackageSource[], append: boolean) {
