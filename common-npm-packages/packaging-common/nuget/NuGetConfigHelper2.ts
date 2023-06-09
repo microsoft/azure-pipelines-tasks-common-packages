@@ -90,6 +90,7 @@ export class NuGetConfigHelper2 {
             versionPromise.then((version) => {
                 const parsedVersion = getVersionFallback(version);
                 append = parsedVersion.a == 4 && parsedVersion.b == 9 && parsedVersion.c <= 2;
+                tl.debug(`NuGet Version ${parsedVersion.toString()} detected.  Appending "feed-" to the key`);
                 this.setAuthForSourcesInTempNuGetConfigHelper(sources, append);
             });
         } else {
@@ -101,6 +102,7 @@ export class NuGetConfigHelper2 {
                     let version = dotnet.execSync().stdout.trim();
                     let versionArr = version.split(".");
                     append = (versionArr[0] == "2")  && (versionArr[1] == "1") && (versionArr[2] == "500");
+                    tl.debug(`Dotnet Version ${version} detected.  Appending "feed-" to the key`);
                 } catch (err) {
                     tl.debug(err.message);
                     append = false;
