@@ -14,7 +14,7 @@
   "loc.messages.FailedToApplyTransformationReason1": "1. 빌드 중 생성된 MSBuild 패키지에 대해 변환이 이미 적용되었는지 여부를 확인합니다. 그런 경우 csproj 파일에서 각 구성에 대해 <DependentUpon> 태그를 제거하고 다시 빌드합니다. ",
   "loc.messages.FailedToApplyTransformationReason2": "2. 구성 파일 및 변환 파일이 패키지 내의 동일한 폴더에 있는지 확인합니다.",
   "loc.messages.FailedToApplyXMLvariablesubstitutionReason1": "XML 변수 대체를 적용하지 못했습니다. 변경 내용이 패키지에 이미 있습니다.",
-  "loc.messages.MissingArgumentsforXMLTransformation": "인수가 불완전하거나 누락되었습니다. -transform <transform file> -xml <source file> -result <destinamtion file> 형식이 필요합니다. 변환 및 소스 파일은 필수 입력입니다.",
+  "loc.messages.MissingArgumentsforXMLTransformation": "인수가 불완전하거나 누락되었습니다. -transform <transform file> -xml <source file> -result <destination file> 형식이 필요합니다. 변환 및 소스 파일은 필수 입력입니다.",
   "loc.messages.MorethanonepackagematchedwithspecifiedpatternPleaserestrainthesearchpattern": "지정한 %s 패턴과 일치하는 패키지가 두 개 이상 있습니다. 검색 패턴을 제한하세요.",
   "loc.messages.JSONvariableSubstitution": "%s의 대체 JSON 변수를 적용하는 중",
   "loc.messages.SubstitutingValueonKey": "키 %s의 값을 대체하는 중",
