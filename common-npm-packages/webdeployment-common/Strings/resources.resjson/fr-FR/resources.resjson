@@ -14,7 +14,7 @@
   "loc.messages.FailedToApplyTransformationReason1": "1. La transformation est-elle déjà appliquée pour le package MSBuild généré durant la build ? Si la réponse est oui, supprimez la balise <DependentUpon> pour chaque configuration dans le fichier csproj, puis effectuez une regénération. ",
   "loc.messages.FailedToApplyTransformationReason2": "2. Vérifiez que le fichier config et les fichiers de transformation sont présents dans le même dossier à l’intérieur du package.",
   "loc.messages.FailedToApplyXMLvariablesubstitutionReason1": "Échec de l’application de la substitution de variable XML. Des changements sont déjà présents dans le package.",
-  "loc.messages.MissingArgumentsforXMLTransformation": "Arguments incomplets ou manquants. Format attendu -transform <transform file> -xml <source file> -résultat<destinamtion file>. La transformation et le fichier source sont des entrées obligatoires.",
+  "loc.messages.MissingArgumentsforXMLTransformation": "Arguments incomplets ou manquants. Format attendu -transform <transform file> -xml <source file> -résultat<destination file>. La transformation et le fichier source sont des entrées obligatoires.",
   "loc.messages.MorethanonepackagematchedwithspecifiedpatternPleaserestrainthesearchpattern": "Plusieurs packages correspondent au modèle spécifié : %s. Affinez le modèle de recherche.",
   "loc.messages.JSONvariableSubstitution": "Application de la substitution de variable JSON pour %s",
   "loc.messages.SubstitutingValueonKey": "Substitution de la valeur de la clé %s",

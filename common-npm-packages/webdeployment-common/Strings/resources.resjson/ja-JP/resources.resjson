@@ -14,7 +14,7 @@
   "loc.messages.FailedToApplyTransformationReason1": "1. ビルド中、MSBuild によって生成されたパッケージに対して変換が既に適用されたかどうか。適用された場合は、csproj ファイル内の各構成の <DependentUpon> タグを削除してから、リビルドします。 ",
   "loc.messages.FailedToApplyTransformationReason2": "2. 構成ファイルと変換ファイルがパッケージ内の同じフォルダーに存在すること。",
   "loc.messages.FailedToApplyXMLvariablesubstitutionReason1": "XML 変数置換を適用できませんでした。パッケージには変更が既に存在します。",
-  "loc.messages.MissingArgumentsforXMLTransformation": "引数が不完全であるか、見つかりません。-transform <transform file> -xml <source file> -result <destinamtion file> の形式である必要があります。変換ファイルとソース ファイルは必須の入力です。",
+  "loc.messages.MissingArgumentsforXMLTransformation": "引数が不完全であるか、見つかりません。-transform <transform file> -xml <source file> -result <destination file> の形式である必要があります。変換ファイルとソース ファイルは必須の入力です。",
   "loc.messages.MorethanonepackagematchedwithspecifiedpatternPleaserestrainthesearchpattern": "指定したパターンと一致するパッケージが複数あります: %s。検索パターンを絞り込んでください。",
   "loc.messages.JSONvariableSubstitution": "%s の JSON 変数置換を適用しています",
   "loc.messages.SubstitutingValueonKey": "キーの値を置き換えています: %s",
