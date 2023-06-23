@@ -107,7 +107,7 @@ export class Kubelogin {
     const api: ITaskApi = await connection.getTaskApi();
     const response: TaskHubOidcToken = await api.createOidcToken({}, projectId, hub, planId, jobId, connectedService);
     if (response == null) {
-      taskLib.debug('Response failed to fetch access token for AAD: reponse is null');
+      taskLib.debug('Response failed to fetch access token for AAD: response is null');
       return null;
     } else if (response.oidcToken == null) {
       taskLib.debug('Failed to fetch access token for AAD');
