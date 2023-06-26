@@ -63,9 +63,7 @@ export class Kubelogin {
 
       if (authType == 'spnCertificate') {
         taskLib.debug('certificate based endpoint');
-        let certificateContent: string = taskLib.getEndpointAuthorizationParameter(connectedService, 'servicePrincipalCertificate', false);
-        servicePrincipalKey = path.join(taskLib.getVariable('Agent.TempDirectory') || taskLib.getVariable('system.DefaultWorkingDirectory'), 'spnCert.pem');
-        fs.writeFileSync(servicePrincipalKey, certificateContent);
+        throw taskLib.loc('AuthSchemeNotSupported', `${authScheme} with a certificate`);
       } else {
         taskLib.debug('key based endpoint');
         servicePrincipalKey = taskLib.getEndpointAuthorizationParameter(connectedService, 'serviceprincipalkey', false);
