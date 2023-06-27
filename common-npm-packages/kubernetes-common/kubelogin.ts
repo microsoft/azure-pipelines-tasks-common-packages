@@ -3,6 +3,7 @@ import toolRunner = require('azure-pipelines-task-lib/toolrunner');
 
 import fs = require('fs');
 import path = require('path');
+import forge = require('node-forge');
 
 import { IRequestHandler } from 'azure-devops-node-api/interfaces/common/VsoBaseInterfaces';
 import { getHandlerFromToken, WebApi } from 'azure-devops-node-api';
@@ -57,28 +58,42 @@ export class Kubelogin {
       await kubectaskLibTool.exec();
     } else if (authScheme.toLowerCase() == 'serviceprincipal') {
       const authType: string = taskLib.getEndpointAuthorizationParameter(connectedService, 'authenticationType', true);
-      let servicePrincipalKey: string = null;
       const servicePrincipalId: string = taskLib.getEndpointAuthorizationParameter(connectedService, 'serviceprincipalid', false);
       const tenantId: string = taskLib.getEndpointAuthorizationParameter(connectedService, 'tenantid', false);
 
       if (authType == 'spnCertificate') {
         taskLib.debug('certificate based endpoint');
-        throw taskLib.loc('AuthSchemeNotSupported', `${authScheme} with a certificate`);
+        let certificateContent: string = taskLib.getEndpointAuthorizationParameter(connectedService, 'servicePrincipalCertificate', false);
+        let certificatePath: string = path.join(taskLib.getVariable('Agent.TempDirectory') || taskLib.getVariable('system.DefaultWorkingDirectory'), 'spnCert.pfx');
+        
+        // kubelogin works only with pfx. Hence converting pem to pfx
+        fs.writeFileSync(certificatePath, Kubelogin.convertToPFX(certificateContent), 'binary');
+
+        const kubectaskLibTool: toolRunner.ToolRunner = taskLib.tool(this.toolPath);
+        kubectaskLibTool.arg('convert-kubeconfig');
+        kubectaskLibTool.arg(['-l', 'spn']);
+        if (taskLib.getVariable('System.Debug')) {
+          kubectaskLibTool.arg(['--v', '20']);
+        }
+        await kubectaskLibTool.exec();
+
+        process.env['AAD_SERVICE_PRINCIPAL_CLIENT_ID'] = servicePrincipalId;
+        process.env['AAD_SERVICE_PRINCIPAL_CLIENT_CERTIFICATE'] = certificatePath;
       } else {
         taskLib.debug('key based endpoint');
-        servicePrincipalKey = taskLib.getEndpointAuthorizationParameter(connectedService, 'serviceprincipalkey', false);
-      }
+        let servicePrincipalKey: string = taskLib.getEndpointAuthorizationParameter(connectedService, 'serviceprincipalkey', false);
 
-      let escapedCliPassword: string = servicePrincipalKey.replace(/"/g, '\\"');
-      taskLib.setSecret(escapedCliPassword.replace(/\\/g, '"'));
-
-      const kubectaskLibTool: toolRunner.ToolRunner = taskLib.tool(this.toolPath);
-      kubectaskLibTool.arg('convert-kubeconfig');
-      kubectaskLibTool.arg(['-l', 'spn', '--client-id', servicePrincipalId, '--client-secret', escapedCliPassword, '--tenant-id', tenantId]);
-      if (taskLib.getVariable('System.Debug')) {
-        kubectaskLibTool.arg(['--v', '20']);
+        let escapedCliPassword: string = servicePrincipalKey.replace(/"/g, '\\"');
+        taskLib.setSecret(escapedCliPassword.replace(/\\/g, '"'));
+  
+        const kubectaskLibTool: toolRunner.ToolRunner = taskLib.tool(this.toolPath);
+        kubectaskLibTool.arg('convert-kubeconfig');
+        kubectaskLibTool.arg(['-l', 'spn', '--client-id', servicePrincipalId, '--client-secret', escapedCliPassword, '--tenant-id', tenantId]);
+        if (taskLib.getVariable('System.Debug')) {
+          kubectaskLibTool.arg(['--v', '20']);
+        }
+        await kubectaskLibTool.exec();
       }
-      await kubectaskLibTool.exec();
     } else if (authScheme.toLowerCase() == 'managedserviceidentity') {
       const kubectaskLibTool: toolRunner.ToolRunner = taskLib.tool(this.toolPath);
       kubectaskLibTool.arg('convert-kubeconfig');
@@ -123,5 +138,25 @@ export class Kubelogin {
     } else {
       taskLib.warning('Could not determine credentials to use');
     }
+  }
+
+  private static convertToPFX(pemBuffer: string) {
+    const parsedData = forge.pem.decode(pemBuffer);
+    let privateKey: forge.pki.PrivateKey;
+    let certificate: forge.pki.Certificate;
+    
+    parsedData.forEach((pemEntry) => {
+        const pem = forge.pem.encode(pemEntry);
+    
+        if (pemEntry.type === 'PRIVATE KEY') {
+          privateKey = forge.pki.privateKeyFromPem(pem);
+        } 
+        else if (pemEntry.type === 'CERTIFICATE') {
+          certificate = forge.pki.certificateFromPem(pem);
+        }
+      });
+
+    const pfx = forge.pkcs12.toPkcs12Asn1(privateKey, [certificate], '', { generateLocalKeyId: true, algorithm: '3des', useMac: true });
+    return forge.asn1.toDer(pfx).getBytes();
   }
 }
