@@ -44,10 +44,10 @@ export class Kubelogin {
       const idTokenFile: string = path.join(this.userDir, 'id_token');
       fs.writeFileSync(idTokenFile, token);
 
-      process.env['AZURE_CLIENT_ID'] = servicePrincipalId;
-      process.env['AZURE_TENANT_ID'] = tenantId;
-      process.env['AZURE_FEDERATED_TOKEN_FILE'] = idTokenFile;
-      process.env['AZURE_AUTHORITY_HOST'] = 'https://login.microsoftonline.com/';
+      taskLib.setVariable('AZURE_CLIENT_ID', servicePrincipalId);
+      taskLib.setVariable('AZURE_TENANT_ID', tenantId);
+      taskLib.setVariable('AZURE_FEDERATED_TOKEN_FILE', idTokenFile);
+      taskLib.setVariable('AZURE_AUTHORITY_HOST', 'https://login.microsoftonline.com/');
 
       const kubectaskLibTool: toolRunner.ToolRunner = taskLib.tool(this.toolPath);
       kubectaskLibTool.arg('convert-kubeconfig');
@@ -77,18 +77,17 @@ export class Kubelogin {
         }
         await kubectaskLibTool.exec();
 
-        process.env['AAD_SERVICE_PRINCIPAL_CLIENT_ID'] = servicePrincipalId;
-        process.env['AAD_SERVICE_PRINCIPAL_CLIENT_CERTIFICATE'] = certificatePath;
+        taskLib.setVariable('AAD_SERVICE_PRINCIPAL_CLIENT_ID', servicePrincipalId);
+        taskLib.setVariable('AAD_SERVICE_PRINCIPAL_CLIENT_CERTIFICATE', certificatePath);
       } else {
         taskLib.debug('key based endpoint');
         let servicePrincipalKey: string = taskLib.getEndpointAuthorizationParameter(connectedService, 'serviceprincipalkey', false);
 
-        let escapedCliPassword: string = servicePrincipalKey.replace(/"/g, '\\"');
-        taskLib.setSecret(escapedCliPassword.replace(/\\/g, '"'));
+        taskLib.setSecret(servicePrincipalKey);
   
         const kubectaskLibTool: toolRunner.ToolRunner = taskLib.tool(this.toolPath);
         kubectaskLibTool.arg('convert-kubeconfig');
-        kubectaskLibTool.arg(['-l', 'spn', '--client-id', servicePrincipalId, '--client-secret', escapedCliPassword, '--tenant-id', tenantId]);
+        kubectaskLibTool.arg(['-l', 'spn', '--client-id', servicePrincipalId, '--client-secret', servicePrincipalKey, '--tenant-id', tenantId]);
         if (taskLib.getVariable('System.Debug')) {
           kubectaskLibTool.arg(['--v', '20']);
         }
