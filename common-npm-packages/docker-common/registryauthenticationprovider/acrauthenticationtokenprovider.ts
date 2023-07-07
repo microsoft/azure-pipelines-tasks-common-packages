@@ -1,11 +1,12 @@
 "use strict";
 
-import { ApplicationTokenCredentials } from "azure-pipelines-tasks-azure-arm-rest-v2/azure-arm-common";
-import AuthenticationTokenProvider from "./authenticationtokenprovider";
 import Q = require('q');
-import RegistryAuthenticationToken from "./registryauthenticationtoken";
-import * as tl from "azure-pipelines-task-lib/task";
+import { ApplicationTokenCredentials } from "azure-pipelines-tasks-azure-arm-rest-v2/azure-arm-common";
+import { AzureRMEndpoint } from "azure-pipelines-tasks-azure-arm-rest-v2/azure-arm-endpoint";
 import * as webClient from "azure-pipelines-tasks-azure-arm-rest-v2/webClient";
+import * as tl from "azure-pipelines-task-lib/task";
+import AuthenticationTokenProvider from "./authenticationtokenprovider";
+import RegistryAuthenticationToken from "./registryauthenticationtoken";
 
 export default class ACRAuthenticationTokenProvider extends AuthenticationTokenProvider{
 
@@ -21,29 +22,30 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
     constructor(endpointName?: string, registerNameValue?: string) {
         super();
 
-        if(endpointName && registerNameValue) 
-        {
-            try
-            {
+        if (endpointName && registerNameValue) {
+            try {
               tl.debug("Reading the acr registry in old versions");
-              var obj = JSON.parse(registerNameValue);  
+              var obj = JSON.parse(registerNameValue);
               this.registryURL = obj.loginServer;
               this.acrFragmentUrl = obj.id;
-            }  
-            catch(e)
-            {
+            }
+            catch(e) {
               tl.debug("Reading the acr registry in kubernetesV1");
               this.registryURL = registerNameValue;
             }
-  
+
             this.endpointName = endpointName;
         }
     }
-    
-    public getAuthenticationToken(): RegistryAuthenticationToken
-    {
-        if(this.registryURL && this.endpointName) {      
-            return new RegistryAuthenticationToken(tl.getEndpointAuthorizationParameter(this.endpointName, 'serviceprincipalid', true), tl.getEndpointAuthorizationParameter(this.endpointName, 'serviceprincipalkey', true), this.registryURL, "ServicePrincipal@AzureRM", this.getXMetaSourceClient());
+
+    public getAuthenticationToken(): RegistryAuthenticationToken {
+        if (this.registryURL && this.endpointName) {
+            return new RegistryAuthenticationToken(
+                tl.getEndpointAuthorizationParameter(this.endpointName, 'serviceprincipalid', true),
+                tl.getEndpointAuthorizationParameter(this.endpointName, 'serviceprincipalkey', true),
+                this.registryURL,
+                "ServicePrincipal@AzureRM",
+                this.getXMetaSourceClient());
         }
         return null;
     }
@@ -69,7 +71,19 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
             // Parameter 1: retryCount - the current retry count of the method to get the ACR token through MSI authentication
             // Parameter 2: timeToWait - the current time wait of the method to get the ACR token through MSI authentication
             return await this._getMSIAuthenticationToken(0, 0);
-        } else {
+        }
+        else if (authType === 'WorkloadIdentityFederation') {
+            const endpoint = await new AzureRMEndpoint(this.endpointName).getEndpoint();
+            const aadToken = await endpoint.applicationTokenCredentials.getToken();
+            let acrToken = await ACRAuthenticationTokenProvider._getACRToken(aadToken, this.endpointName, this.registryURL, 0, 0);
+            return new RegistryAuthenticationToken(
+                "00000000-0000-0000-0000-000000000000",
+                acrToken,
+                this.registryURL,
+                "WorkloadIdentityFederation@AzureRM",
+                this.getXMetaSourceClient());
+        }
+        else {
             return this.getAuthenticationToken();
         }
     }
