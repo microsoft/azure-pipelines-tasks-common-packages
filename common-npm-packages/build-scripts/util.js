@@ -198,3 +198,47 @@ var renameFile = function (folderPath, oldName, newName) {
     }
 }
 exports.renameFile = renameFile;
+
+class CreateReleaseError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'CreateReleaseError';
+        Error.captureStackTrace(this, CreateReleaseError)
+    }
+}
+
+exports.CreateReleaseError = CreateReleaseError;
+/**
+ * Function to form task changes from PRs
+ * @param {Array<object>} PRs - PRs to get the release notes for
+ * @returns {Object} - Object containing the task changes where key is a task and values - changes for the task
+ */
+function getChangesFromPRs(PRs) {
+    const changes = [];
+    PRs.forEach(PR => {
+        if (!PR.packageExists) return;
+
+        const closedDate = PR.pull_request.merged_at;
+        const date = new Date(closedDate).toISOString().split('T')[0];
+        changes.push(` - ${PR.title} (#${PR.number}) (${date})`);
+    });
+    
+    return changes;
+}
+exports.getChangesFromPRs = getChangesFromPRs;
+
+/**
+ * Function to get current version of the package
+ * @param {String} package - Package name
+ * @returns {String} - version of the package
+ **/
+
+function getCurrentPackageVersion(package) {
+    const packagePath = path.join(__dirname, '..', package, 'package.json');
+    if (!fs.existsSync(packagePath)) {
+        throw new CreateReleaseError(`package.json for Package ${package} not found.`)
+    }
+    const packageJson = require(packagePath);
+    return packageJson.version;
+}
+exports.getCurrentPackageVersion = getCurrentPackageVersion;
