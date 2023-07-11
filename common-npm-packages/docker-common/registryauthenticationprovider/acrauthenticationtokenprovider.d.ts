@@ -6,4 +6,5 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
     private acrFragmentUrl;
     constructor(endpointName?: string, registerNameValue?: string);
     getAuthenticationToken(): RegistryAuthenticationToken;
+    getToken(): Promise<RegistryAuthenticationToken>;
 }
