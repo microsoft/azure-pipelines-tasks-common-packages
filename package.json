@@ -23,6 +23,7 @@
     "mocha": "^6.2.3",
     "mocha-junit-reporter": "^2.2.0",
     "nyc": "^15.1.0",
-    "shelljs": "^0.8.5"
+    "shelljs": "^0.8.5",
+    "@octokit/rest": "^16.43.2"
   }
 }
