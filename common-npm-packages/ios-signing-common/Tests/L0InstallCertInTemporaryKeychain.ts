@@ -27,7 +27,7 @@ const stdOuts = [
     { keychainPath: 'keychainPath2', keychainPwd: 'keychainPwd2', p12CertPath: 'p12CertPath2', p12Pwd: 'p12Pwd2', useKeychainIfExists: false, skipPartitionIdAclSetup: true },
     { keychainPath: 'keychainPath3', keychainPwd: 'keychainPwd3', p12CertPath: 'p12CertPath3', p12Pwd: 'p12Pwd3', useKeychainIfExists: true, skipPartitionIdAclSetup: true },
     { keychainPath: 'keychainPath4', keychainPwd: 'keychainPwd4', p12CertPath: 'p12CertPath4', p12Pwd: 'p12Pwd4', useKeychainIfExists: true, skipPartitionIdAclSetup: true },
-    { keychainPath: 'keychainPath5', keychainPwd: 'keychainPwd5', p12CertPath: 'p12CertPath5', p12Pwd: 'p12Pwd5', useKeychainIfExists: true, skipPartitionIdAclSetup: false},
+    { keychainPath: 'keychainPath5', keychainPwd: 'keychainPwd5', p12CertPath: 'p12CertPath5', p12Pwd: 'p12Pwd5', useKeychainIfExists: true, skipPartitionIdAclSetup: false },
     { keychainPath: 'keychainPath6', keychainPwd: 'keychainPwd6', p12CertPath: 'p12CertPath6', p12Pwd: 'p12Pwd6', useKeychainIfExists: true, skipPartitionIdAclSetup: false, opensslPkcsArgs: '-legacy' },
     { keychainPath: 'keychainPath7', keychainPwd: 'keychainPwd7', p12CertPath: 'p12CertPath7', p12Pwd: 'p12Pwd7', useKeychainIfExists: false, skipPartitionIdAclSetup: false },
     { keychainPath: 'keychainPath8', keychainPwd: 'keychainPwd8', p12CertPath: 'p12CertPath8', p12Pwd: 'p12Pwd8', useKeychainIfExists: false, skipPartitionIdAclSetup: false },
@@ -73,7 +73,7 @@ export function installCertInTemporaryKeychainTest() {
     });
 
     for (let i = 0; i < stdOuts.length; i++) {
-        const { keychainPath, keychainPwd, p12CertPath, p12Pwd, useKeychainIfExists, skipPartitionIdAclSetup, opensslPkcsArgs} = stdOuts[i];
+        const { keychainPath, keychainPwd, p12CertPath, p12Pwd, useKeychainIfExists, skipPartitionIdAclSetup, opensslPkcsArgs } = stdOuts[i];
         const paths = createKeychainCommandPaths(stdOuts[i])
 
         tmAnswers['exist'][keychainPath] = true;
