@@ -13,7 +13,7 @@ tl.setResourcePath(path.join(__dirname, 'module.json'));
  * @param useKeychainIfExists Pass false to delete and recreate a preexisting keychain
  * @param skipPartitionIdAclSetup Skip partition_id ACL set up for imported private key
  */
-export async function installCertInTemporaryKeychain(keychainPath: string, keychainPwd: string, p12CertPath: string, p12Pwd: string, useKeychainIfExists: boolean, skipPartitionIdAclSetup?: boolean): Promise<void> {
+export async function installCertInTemporaryKeychain(keychainPath: string, keychainPwd: string, p12CertPath: string, p12Pwd: string, useKeychainIfExists: boolean, skipPartitionIdAclSetup?: boolean, opensslPkcsArgs?: string): Promise<void> {
     let setupKeychain: boolean = true;
 
     if (useKeychainIfExists && tl.exist(keychainPath)) {
@@ -51,7 +51,7 @@ export async function installCertInTemporaryKeychain(keychainPath: string, keych
     //so codesign won't prompt to use the key for signing. This isn't necessary for temporary keychains, at least on High Sierra.
     //See https://stackoverflow.com/questions/39868578/security-codesign-in-sierra-keychain-ignores-access-control-settings-and-ui-p
     if (!setupKeychain && !skipPartitionIdAclSetup) {
-        const privateKeyName: string = await getP12PrivateKeyName(p12CertPath, p12Pwd);
+        const privateKeyName: string = await getP12PrivateKeyName(p12CertPath, p12Pwd, opensslPkcsArgs);
         await setKeyPartitionList(keychainPath, keychainPwd, privateKeyName);
     }
 
@@ -520,7 +520,7 @@ export function getTempKeychainPath(): string {
  * @param p12Path Path to the P12 file
  * @param p12Pwd Password for the P12 file
  */
-export async function getP12Properties(p12Path: string, p12Pwd: string): Promise<{ fingerprint: string, commonName: string, notBefore: Date, notAfter: Date}> {
+export async function getP12Properties(p12Path: string, p12Pwd: string, opensslPkcsArgs?: string): Promise<{ fingerprint: string, commonName: string, notBefore: Date, notAfter: Date}> {
     //openssl pkcs12 -in <p12Path> -nokeys -passin pass:"<p12Pwd>" | openssl x509 -noout -fingerprint –subject -dates
     let opensslPath: string = tl.which('openssl', true);
     let openssl1: ToolRunner = tl.tool(opensslPath);
@@ -528,7 +528,11 @@ export async function getP12Properties(p12Path: string, p12Pwd: string): Promise
         // if password is null or not defined, set it to empty
         p12Pwd = '';
     }
-    openssl1.arg(['pkcs12', '-in', p12Path, '-nokeys', '-passin', 'pass:' + p12Pwd]);
+    if (opensslPkcsArgs) {
+        openssl1.arg(['pkcs12', '-in', p12Path, '-nokeys', '-passin', 'pass:' + p12Pwd, opensslPkcsArgs]);
+    } else {
+        openssl1.arg(['pkcs12', '-in', p12Path, '-nokeys', '-passin', 'pass:' + p12Pwd]);
+    }
 
     let openssl2: ToolRunner = tl.tool(opensslPath);
     openssl2.arg(['x509', '-sha1', '-noout', '-fingerprint', '-subject', '-dates', '-nameopt', 'utf8,sep_semi_plus_space']);
@@ -545,11 +549,11 @@ export async function getP12Properties(p12Path: string, p12Pwd: string): Promise
             const key: string = tuple.key;
             const value: string = tuple.value;
 
-            if (key === 'SHA1 Fingerprint') {
+            if (key.toLocaleLowerCase() === 'sha1 fingerprint') {
                 // Example value: "BB:26:83:C6:AA:88:35:DE:36:94:F2:CF:37:0A:D4:60:BB:AE:87:0C"
                 // Remove colons separating each octet.
                 fingerprint = value.replace(/:/g, '').trim();
-            } else if (key === 'subject') {
+            } else if (key.toLocaleLowerCase() === 'subject') {
                 // Example value1: "UID=E848ASUQZY; CN=iPhone Developer: Chris Sidi (7RZ3N927YF); OU=DJ8T2973U7; O=Chris Sidi; C=US"
                 // Example value2: "UID=E848ASUQZY; CN=iPhone Developer: Chris / Sidi (7RZ3N927YF); OU=DJ8T2973U7; O=Chris Sidi; C=US"
                 // Example value3: "UID=E848ASUQZY; OU=DJ8T2973U7; O=Chris Sidi; C=US; CN=iPhone Developer: Chris Sidi (7RZ3N927YF)"
@@ -558,10 +562,10 @@ export async function getP12Properties(p12Path: string, p12Pwd: string): Promise
                 if (matches && matches[0]) {
                     commonName = matches[0].trim().replace("CN=", "");
                 }
-            } else if (key === 'notBefore') {
+            } else if (key.toLocaleLowerCase() === 'notbefore') {
                 // Example value: "Nov 13 03:37:42 2018 GMT"
                 notBefore = new Date(value);
-            } else if (key === 'notAfter') {
+            } else if (key.toLocaleLowerCase() === 'notafter') {
                 notAfter = new Date(value);
             }
         }
@@ -612,7 +616,7 @@ export async function deleteCert(keychainPath: string, certSha1Hash: string): Pr
  * @param p12Path Path to the P12 file
  * @param p12Pwd Password for the P12 file
  */
-export async function getP12PrivateKeyName(p12Path: string, p12Pwd: string): Promise<string> {
+export async function getP12PrivateKeyName(p12Path: string, p12Pwd: string, opensslPkcsArgs?: string): Promise<string> {
     //openssl pkcs12 -in <p12Path> -nocerts -passin pass:"<p12Pwd>" -passout pass:"<p12Pwd>" | grep 'friendlyName'
     tl.debug('getting the P12 private key name');
     const opensslPath: string = tl.which('openssl', true);
@@ -623,7 +627,12 @@ export async function getP12PrivateKeyName(p12Path: string, p12Pwd: string): Pro
     }
     // since we can't suppress the private key bytes, encrypt them before we pass them to grep.
     const privateKeyPassword = p12Pwd ? p12Pwd : generatePassword();
-    openssl.arg(['pkcs12', '-in', p12Path, '-nocerts', '-passin', 'pass:' + p12Pwd, '-passout', 'pass:' + privateKeyPassword]);
+    if (opensslPkcsArgs) {
+        openssl.arg(['pkcs12', '-in', p12Path, '-nocerts', '-passin', 'pass:' + p12Pwd, '-passout', 'pass:' + privateKeyPassword, opensslPkcsArgs]);
+    } else {
+        openssl.arg(['pkcs12', '-in', p12Path, '-nocerts', '-passin', 'pass:' + p12Pwd, '-passout', 'pass:' + privateKeyPassword]);
+    }
+    
 
     //we pipe through grep so we we don't log the private key to the console.
     //even if it's encrypted, it's noise and could cause concern for some users.

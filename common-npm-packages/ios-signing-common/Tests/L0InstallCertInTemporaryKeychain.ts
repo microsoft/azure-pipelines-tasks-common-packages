@@ -27,14 +27,16 @@ const stdOuts = [
     { keychainPath: 'keychainPath2', keychainPwd: 'keychainPwd2', p12CertPath: 'p12CertPath2', p12Pwd: 'p12Pwd2', useKeychainIfExists: false, skipPartitionIdAclSetup: true },
     { keychainPath: 'keychainPath3', keychainPwd: 'keychainPwd3', p12CertPath: 'p12CertPath3', p12Pwd: 'p12Pwd3', useKeychainIfExists: true, skipPartitionIdAclSetup: true },
     { keychainPath: 'keychainPath4', keychainPwd: 'keychainPwd4', p12CertPath: 'p12CertPath4', p12Pwd: 'p12Pwd4', useKeychainIfExists: true, skipPartitionIdAclSetup: true },
-    { keychainPath: 'keychainPath5', keychainPwd: 'keychainPwd5', p12CertPath: 'p12CertPath5', p12Pwd: 'p12Pwd5', useKeychainIfExists: true, skipPartitionIdAclSetup: false },
-    { keychainPath: 'keychainPath6', keychainPwd: 'keychainPwd6', p12CertPath: 'p12CertPath6', p12Pwd: 'p12Pwd6', useKeychainIfExists: true, skipPartitionIdAclSetup: false },
+    { keychainPath: 'keychainPath5', keychainPwd: 'keychainPwd5', p12CertPath: 'p12CertPath5', p12Pwd: 'p12Pwd5', useKeychainIfExists: true, skipPartitionIdAclSetup: false},
+    { keychainPath: 'keychainPath6', keychainPwd: 'keychainPwd6', p12CertPath: 'p12CertPath6', p12Pwd: 'p12Pwd6', useKeychainIfExists: true, skipPartitionIdAclSetup: false, opensslPkcsArgs: '-legacy' },
     { keychainPath: 'keychainPath7', keychainPwd: 'keychainPwd7', p12CertPath: 'p12CertPath7', p12Pwd: 'p12Pwd7', useKeychainIfExists: false, skipPartitionIdAclSetup: false },
     { keychainPath: 'keychainPath8', keychainPwd: 'keychainPwd8', p12CertPath: 'p12CertPath8', p12Pwd: 'p12Pwd8', useKeychainIfExists: false, skipPartitionIdAclSetup: false },
 ];
 
 const createKeychainCommandPaths = (args) => {
-    const { keychainPath, keychainPwd, p12CertPath, p12Pwd } = args;
+    const { keychainPath, keychainPwd, p12CertPath, p12Pwd, useKeychainIfExists, skipPartitionIdAclSetup, opensslPkcsArgs } = args;
+    const openSSLargs = useKeychainIfExists && !skipPartitionIdAclSetup && opensslPkcsArgs ? `${opensslPkcsArgs} ` : '';
+
     return [
         [`${tmAnswers['which']['security']} delete-keychain ${keychainPath}`],
         [`${tmAnswers['which']['security']} create-keychain -p ${keychainPwd} ${keychainPath}`],
@@ -44,7 +46,7 @@ const createKeychainCommandPaths = (args) => {
         [`${tmAnswers['which']['security']} set-key-partition-list -S apple-tool:,apple: -s -l ${p12CertPath} -k ${keychainPwd} ${keychainPath}`],
         [`${tmAnswers['which']['security']} list-keychain -d user`, keychainPath],
         [`${tmAnswers['which']['security']} list-keychain -d user -s ${keychainPath}`],
-        [`${tmAnswers['which']['openssl']} pkcs12 -in ${p12CertPath} -nocerts -passin pass:${p12Pwd} -passout pass:${p12Pwd} | grep friendlyName`, `friendlyName: ${p12CertPath}`],
+        [`${tmAnswers['which']['openssl']} pkcs12 -in ${p12CertPath} -nocerts -passin pass:${p12Pwd} -passout pass:${p12Pwd} ${openSSLargs}| grep friendlyName`, `friendlyName: ${p12CertPath}`],
     ]
 }
 
@@ -71,7 +73,7 @@ export function installCertInTemporaryKeychainTest() {
     });
 
     for (let i = 0; i < stdOuts.length; i++) {
-        const { keychainPath, keychainPwd, p12CertPath, p12Pwd, useKeychainIfExists, skipPartitionIdAclSetup } = stdOuts[i];
+        const { keychainPath, keychainPwd, p12CertPath, p12Pwd, useKeychainIfExists, skipPartitionIdAclSetup, opensslPkcsArgs} = stdOuts[i];
         const paths = createKeychainCommandPaths(stdOuts[i])
 
         tmAnswers['exist'][keychainPath] = true;
@@ -98,7 +100,7 @@ export function installCertInTemporaryKeychainTest() {
             mockery.registerMock('azure-pipelines-task-lib/task', tlClone);
             let iosSigning = require("../ios-signing-common");
 
-            iosSigning.installCertInTemporaryKeychain(keychainPath, keychainPwd, p12CertPath, p12Pwd, useKeychainIfExists, skipPartitionIdAclSetup).
+            iosSigning.installCertInTemporaryKeychain(keychainPath, keychainPwd, p12CertPath, p12Pwd, useKeychainIfExists, skipPartitionIdAclSetup, opensslPkcsArgs).
                 then(resp => {
                     if (!useKeychainIfExists) {
                         assert.ok(taskOutput.indexOf('delete-keychain') >= 0);

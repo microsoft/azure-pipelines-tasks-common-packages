@@ -26,13 +26,15 @@ const stdOuts = [
     { p12Path: 'some1/path1', p12Pwd: 'somepassword', fingerprint: 'BB:26:83:C6:AA:88:35:DE:36:94:F2:CF:37:0A:D4:60:BB:AE:87:0C', commonName: 'test common name', notBefore: 'Nov 14 03:37:42 2018 GMT', notAfter: 'Nov 14 03:37:42 2019 GMT', error: false },
     { p12Path: 'some2/path2', p12Pwd: 'smpwd', fingerprint: 'BB:26:83:C6:AA:88:35:DE:36:94:F5:CF:37:0A:D4:60:BB:AE:87:0C', commonName: 'another name', notBefore: 'Nov 15 03:37:42 2018 GMT', notAfter: 'Nov 15 03:37:42 2019 GMT', error: false },
     { p12Path: 'some3/path3', p12Pwd: 'somepwd', fingerprint: 'BB:26:83:C6:AA:88:35:DE:36:94:F2:CF:37:01:D4:60:BB:AE:87:0C', commonName: 'someotheronelinename', notBefore: 'Nov 16 03:37:42 2018 GMT', notAfter: 'Nov 16 03:37:42 2019 GMT', error: false },
+    { p12Path: 'som4/path4', p12Pwd: 'somepwd2', fingerprint: 'BB:26:83:C6:AA:28:65:DE:36:94:F2:CF:37:01:D4:60:BB:AE:87:0C', commonName: 'someothername', notBefore: 'Nov 16 03:37:42 2018 GMT', notAfter: 'Nov 16 03:37:42 2019 GMT', error: false, opensslPkcsArgs: '-testarg' },
     { p12Pwd: 'etst', error: true},
     { p12Pwd: '', error: true}
 ];
 
-const createOpenSSlCommand = (p12Path, p12Pwd, fingerprint, commonName, notBefore, notAfter) => {
+const createOpenSSlCommand = (p12Path, p12Pwd, fingerprint, commonName, notBefore, notAfter, opensslPkcsArgs) => {
+    const args = opensslPkcsArgs ? `${opensslPkcsArgs} ` : ''
     return {
-        command: `${tmAnswers['which']['openssl']} pkcs12 -in ${p12Path} -nokeys -passin pass:${p12Pwd} | ${tmAnswers['which']['openssl']} x509 -sha1 -noout -fingerprint -subject -dates -nameopt utf8,sep_semi_plus_space`,
+        command: `${tmAnswers['which']['openssl']} pkcs12 -in ${p12Path} -nokeys -passin pass:${p12Pwd} ${args}| ${tmAnswers['which']['openssl']} x509 -sha1 -noout -fingerprint -subject -dates -nameopt utf8,sep_semi_plus_space`,
         output: `SHA1 Fingerprint=${fingerprint}${EOL}subject=UID=E848ASUQZY; CN=${commonName}; OU=DJ8T2973U7; O=Chris Sidi; C=US${EOL}notBefore=${notBefore}${EOL}notAfter=${notAfter}`
     }
 }
@@ -60,8 +62,8 @@ export function getP12PropertiesTest() {
     });
 
     for ( let i = 0; i < stdOuts.length; i++) {
-        const { p12Path, p12Pwd, fingerprint, commonName, notBefore, notAfter, error } = stdOuts[i];
-        const { command, output } = createOpenSSlCommand(p12Path, p12Pwd, fingerprint, commonName, notBefore, notAfter);
+        const { p12Path, p12Pwd, fingerprint, commonName, notBefore, notAfter, error, opensslPkcsArgs } = stdOuts[i];
+        const { command, output } = createOpenSSlCommand(p12Path, p12Pwd, fingerprint, commonName, notBefore, notAfter, opensslPkcsArgs);
         tmAnswers['exec'][command] = {
             stdout: output || null,
             code: 0
@@ -72,7 +74,7 @@ export function getP12PropertiesTest() {
             mockery.registerMock('azure-pipelines-task-lib/task', tlClone);
             let iosSigning = require("../ios-signing-common");
             
-            iosSigning.getP12Properties(p12Path, p12Pwd).
+            iosSigning.getP12Properties(p12Path, p12Pwd, opensslPkcsArgs).
                 then(resp => {
                     assert.deepStrictEqual(resp, {
                         fingerprint: fingerprint.replace(/:/g, '').trim(),
