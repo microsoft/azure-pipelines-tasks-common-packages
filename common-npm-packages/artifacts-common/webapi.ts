@@ -1,10 +1,13 @@
 import Q = require('q');
+import path = require("path");
 import * as api from 'azure-devops-node-api';
 import { getHandlerFromToken, WebApi } from "azure-devops-node-api";
 import { ITaskApi } from "azure-devops-node-api/TaskApi";
 import { TaskHubOidcToken } from "azure-devops-node-api/interfaces/TaskAgentInterfaces";
 import { IRequestOptions } from 'azure-devops-node-api/interfaces/common/VsoBaseInterfaces';
 import * as tl from 'azure-pipelines-task-lib/task';
+
+tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
 export function getWebApiWithProxy(serviceUri: string, accessToken: string, options: IRequestOptions = {}): api.WebApi {
     const credentialHandler = api.getBasicHandler('vsts', accessToken);
