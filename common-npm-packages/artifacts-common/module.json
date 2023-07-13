@@ -1,5 +1,7 @@
 {
     "messages": {
+        "AuthSchemeNotSupported": "Auth Scheme %s is not supported",
+        "CouldNotFetchAccessTokenforAAD": "Could not fetch access token for AAD.",
         "CredProvider_AlreadyInstalled": "The credential provider is already installed. If there are package related authentication failures in later steps, consider setting this task's input 'forceReinstallCredentialProvider' to true to force reinstallation.",
         "CredProvider_Error_FailedCopy": "Failed to copy from '%s' to '%s' while installing the credential provider. Ensure that the destination directory is not in use and that the agent account has permission to write to it.",
         "CredProvider_Error_FailedRemoveDir": "Failed to remove the directory '%s' while installing the credential provider. Ensure that this directory is not in use and that the agent account has permission to delete this directory.",
@@ -10,7 +12,11 @@
         "CredProvider_InstallingNetFxTo": "Installing the Azure Artifacts Credential Provider (.NET Framework) to '%s'. This credential provider is compatible with nuget.exe 4.8.0.5385 or later, and MSBuild 15.8.166.59604 or later.",
         "CredProvider_SettingUpForOrgFeeds": "Setting up the credential provider to use the identity '%s' for feeds in your organization/collection starting with:",
         "CredProvider_SettingUpForServiceConnections": "Setting up the credential provider for these service connections:",
+        "ErrorInSettingUpSubscription": "Error in setting up subscription",
+        "LoginFailed": "Azure login failed",
+        "MSILoginFailed": "Azure login failed using Managed Service Identity",
         "ServiceConnections_Error_FailedToParseServiceEndpoint_MissingParameter": "Failed to parse the service endpoint '%s' because it was missing the parameter '%s'",
-        "ServiceConnections_Error_FailedToParseServiceEndpoint_BadScheme": "Failed to parse the service endpoint '%s' because the auth scheme '%s' was invalid"  
+        "ServiceConnections_Error_FailedToParseServiceEndpoint_BadScheme": "Failed to parse the service endpoint '%s' because the auth scheme '%s' was invalid",
+        "SettingAzureCloud": "Setting active cloud to: %s",
     }
 }
