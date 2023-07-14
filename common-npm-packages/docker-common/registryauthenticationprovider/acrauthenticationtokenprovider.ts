@@ -1,9 +1,9 @@
 "use strict";
 
 import Q = require('q');
-import { ApplicationTokenCredentials } from "azure-pipelines-tasks-azure-arm-rest-v2/azure-arm-common";
-import { AzureRMEndpoint } from "azure-pipelines-tasks-azure-arm-rest-v2/azure-arm-endpoint";
-import * as webClient from "azure-pipelines-tasks-azure-arm-rest-v2/webClient";
+import { ApplicationTokenCredentials } from "azure-pipelines-tasks-azure-arm-rest/azure-arm-common";
+import { AzureRMEndpoint } from "azure-pipelines-tasks-azure-arm-rest/azure-arm-endpoint";
+import * as webClient from "azure-pipelines-tasks-azure-arm-rest/webClient";
 import * as tl from "azure-pipelines-task-lib/task";
 import AuthenticationTokenProvider from "./authenticationtokenprovider";
 import RegistryAuthenticationToken from "./registryauthenticationtoken";
