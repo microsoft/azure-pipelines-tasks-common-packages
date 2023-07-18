@@ -1,6 +1,6 @@
 {
-  "loc.messages.AuthSchemeNotSupported": "Схема проверки подлинности %s не поддерживается",
-  "loc.messages.CouldNotFetchAccessTokenforAAD": "Не удалось получить маркер доступа для AAD.",
+  "loc.messages.AuthSchemeNotSupported": "Auth Scheme %s is not supported",
+  "loc.messages.CouldNotFetchAccessTokenforAAD": "Could not fetch access token for AAD.",
   "loc.messages.CredProvider_AlreadyInstalled": "Поставщик учетных данных уже установлен. Если в последующих шагах возникают проблемы проверки подлинности для пакета, рекомендуется задать для входного параметра forceReinstallCredentialProvider этой задачи значение true, чтобы выполнить принудительную переустановку.",
   "loc.messages.CredProvider_Error_FailedCopy": "Не удалось скопировать из \"%s\" в \"%s\" при установке поставщика учетных данных. Убедитесь, что целевой каталог не используется и учетная запись агента имеет разрешение на запись в него.",
   "loc.messages.CredProvider_Error_FailedRemoveDir": "Не удалось удалить каталог \"%s\" при установке поставщика учетных данных. Убедитесь, что этот каталог не используется и учетная запись агента имеет разрешение на его удаление.",
@@ -8,12 +8,12 @@
   "loc.messages.CredProvider_Error_InvalidServiceConnection_ApiKey": "Недопустимое подключение службы для \"%s\". Подключения к службе ApiKey в этой задаче не поддерживаются. Вместо этого используйте -ApiKey (NuGet) или --api-key (dotnet) при вызове самого инструмента. Дополнительные сведения см. в документации по задаче.",
   "loc.messages.CredProvider_InstallingNetCoreTo": "Идет установка поставщика учетных данных Azure Artifacts (.NET Core) в \"%s\". Этот поставщик учетных данных совместим с пакетом SDK для DotNet 2.1.400 или более поздней версии.",
   "loc.messages.CredProvider_InstallingNetFxTo": "Идет установка поставщика учетных данных Azure Artifacts (.NET Framework) в \"%s\". Этот поставщик учетных данных совместим с nuget.exe 4.8.0.5385 или более поздней версии и MSBuild 15.8.166.59604 или более поздней версии.",
+  "loc.messages.ErrorInSettingUpSubscription": "Error in setting up subscription",
+  "loc.messages.LoginFailed": "Azure login failed",
+  "loc.messages.MSILoginFailed": "Azure login failed using Managed Service Identity",
   "loc.messages.CredProvider_SettingUpForOrgFeeds": "Поставщик учетных данных будет настроен на использование удостоверения \"%s\" для веб-каналов вашей организации или коллекции, начинающихся с:",
   "loc.messages.CredProvider_SettingUpForServiceConnections": "Идет настройка поставщика учетных данных для следующих подключений службы:",
-  "loc.messages.ErrorInSettingUpSubscription": "Ошибка при настройке подписки",
-  "loc.messages.LoginFailed": "Не удалось войти в Azure",
-  "loc.messages.MSILoginFailed": "Сбой входа Azure с использованием Управляемого удостоверения службы",
   "loc.messages.ServiceConnections_Error_FailedToParseServiceEndpoint_MissingParameter": "Не удалось проанализировать конечную точку службы \"%s\", так как в ней отсутствует параметр \"%s\"",
   "loc.messages.ServiceConnections_Error_FailedToParseServiceEndpoint_BadScheme": "Не удалось проанализировать конечную точку службы \"%s\", так как схема проверки подлинности \"%s\" недопустима",
-  "loc.messages.SettingAzureCloud": "Задание активного облака: %s"
+  "loc.messages.SettingAzureCloud": "Setting active cloud to: %s"
 }

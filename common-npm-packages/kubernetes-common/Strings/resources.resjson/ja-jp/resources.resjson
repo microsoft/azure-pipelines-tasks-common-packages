@@ -15,5 +15,6 @@
   "loc.messages.AllContainersNotInReadyState": "一部のコンテナーが準備完了の状態ではありません。",
   "loc.messages.waitForServiceIpAssignment": "サービス %s の外部 IP 割り当てを待機しています",
   "loc.messages.waitForServiceIpAssignmentTimedOut": "サービス %s の外部 IP 割り当てがタイムアウトになるのを待機しています",
-  "loc.messages.EnvironmentLink": "詳細については、%s にアクセスしてください"
+  "loc.messages.EnvironmentLink": "詳細については、%s にアクセスしてください",
+  "loc.messages.AuthSchemeNotSupported": "Auth Scheme %s is not supported"
 }

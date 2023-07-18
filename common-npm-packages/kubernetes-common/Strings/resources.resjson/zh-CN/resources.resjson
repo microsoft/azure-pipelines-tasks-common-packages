@@ -15,5 +15,6 @@
   "loc.messages.AllContainersNotInReadyState": "所有容器均未处于就绪状态。",
   "loc.messages.waitForServiceIpAssignment": "正在等待服务 %s 外部 IP 分配",
   "loc.messages.waitForServiceIpAssignmentTimedOut": "等待服务 %s 外部 IP 分配超时",
-  "loc.messages.EnvironmentLink": "有关详细信息，请转到 %s"
+  "loc.messages.EnvironmentLink": "有关详细信息，请转到 %s",
+  "loc.messages.AuthSchemeNotSupported": "Auth Scheme %s is not supported"
 }

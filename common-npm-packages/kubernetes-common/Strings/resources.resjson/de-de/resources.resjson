@@ -15,5 +15,6 @@
   "loc.messages.AllContainersNotInReadyState": "Keiner der Container befindet sich im Zustand \"Bereit\".",
   "loc.messages.waitForServiceIpAssignment": "Es wird auf die Zuweisung einer externen IP-Adresse für den Dienst \"%s\" gewartet.",
   "loc.messages.waitForServiceIpAssignmentTimedOut": "Timeout beim Warten auf die Zuweisung einer externen IP-Adresse für den Dienst \"%s\".",
-  "loc.messages.EnvironmentLink": "Weitere Informationen finden Sie hier: %s"
+  "loc.messages.EnvironmentLink": "Weitere Informationen finden Sie hier: %s",
+  "loc.messages.AuthSchemeNotSupported": "Auth Scheme %s is not supported"
 }
