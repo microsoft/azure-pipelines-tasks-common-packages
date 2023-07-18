@@ -15,5 +15,6 @@
   "loc.messages.AllContainersNotInReadyState": "All the containers are not in a ready state.",
   "loc.messages.waitForServiceIpAssignment": "Waiting for service %s external IP assignment",
   "loc.messages.waitForServiceIpAssignmentTimedOut": "Wait for service %s external IP assignment timed out",
-  "loc.messages.EnvironmentLink": "For more information, go to %s"
+  "loc.messages.EnvironmentLink": "For more information, go to %s",
+  "loc.messages.AuthSchemeNotSupported": "Auth Scheme %s is not supported"
 }

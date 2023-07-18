@@ -23,12 +23,14 @@ const tmAnswers = {
 const stdOuts = [
     { p12CertPath: 'some1/path1', p12Pwd: 'somepassword', frendlyName: 'testName1', addOutput: true },
     { p12CertPath: 'some2/path2', p12Pwd: 'somepwd', frendlyName: 'testName2', addOutput: true },
-    { p12CertPath: 'some3/path3', p12Pwd: 'somepass', frendlyName: 'testName3', addOutput: false },
+    { p12CertPath: 'some3/path3', p12Pwd: 'somepwds', frendlyName: 'testName3', addOutput: true, opensslPkcsArgs: '-clcerts' },
+    { p12CertPath: 'some4/path4', p12Pwd: 'somepass', frendlyName: 'testName4', addOutput: false },
 ];
 
-const createOpenSSlCommand = (p12CertPath, p12Pwd, frendlyName, addOutput) => {
+const createOpenSSlCommand = (p12CertPath, p12Pwd, frendlyName, addOutput, opensslPkcsArgs) => {
+    const args = opensslPkcsArgs ? `${opensslPkcsArgs} ` : ''
     return {
-        command: `${tmAnswers['which']['openssl']} pkcs12 -in ${p12CertPath} -nocerts -passin pass:${p12Pwd} -passout pass:${p12Pwd} | grep friendlyName`,
+        command: `${tmAnswers['which']['openssl']} pkcs12 -in ${p12CertPath} -nocerts -passin pass:${p12Pwd} -passout pass:${p12Pwd} ${args}| grep friendlyName`,
         output: addOutput && `friendlyName: ${frendlyName}`
     }
 }
@@ -56,8 +58,8 @@ export function getP12PrivateKeyNameTest() {
     });
 
     for (let i = 0; i < stdOuts.length; i++) {
-        const { p12CertPath, p12Pwd, frendlyName, addOutput } = stdOuts[i];
-        const { command, output } = createOpenSSlCommand(p12CertPath, p12Pwd, frendlyName, addOutput);
+        const { p12CertPath, p12Pwd, frendlyName, addOutput, opensslPkcsArgs} = stdOuts[i];
+        const { command, output } = createOpenSSlCommand(p12CertPath, p12Pwd, frendlyName, addOutput, opensslPkcsArgs);
         tmAnswers['exec'][command] = {
             stdout: output || null,
             code: 0
@@ -72,10 +74,10 @@ export function getP12PrivateKeyNameTest() {
 
             mockery.registerMock('azure-pipelines-task-lib/task', tlClone);
             let iosSigning = require("../ios-signing-common");
-           
-            iosSigning.getP12PrivateKeyName(p12CertPath, p12Pwd).
+            const openPksRes = opensslPkcsArgs ? `,"${opensslPkcsArgs || ''}"` : '';
+            iosSigning.getP12PrivateKeyName(p12CertPath, p12Pwd, opensslPkcsArgs).
                 then(resp => {
-                    const resStr = `["pkcs12","-in","${p12CertPath}","-nocerts","-passin","pass:${p12Pwd}","-passout","pass:${p12Pwd}"]`;
+                    const resStr = `["pkcs12","-in","${p12CertPath}","-nocerts","-passin","pass:${p12Pwd}","-passout","pass:${p12Pwd}"${openPksRes}]`;
                     assert.ok(taskOutput.indexOf(resStr) >= 0)
                     assert.equal(resp, frendlyName);
                     done();
