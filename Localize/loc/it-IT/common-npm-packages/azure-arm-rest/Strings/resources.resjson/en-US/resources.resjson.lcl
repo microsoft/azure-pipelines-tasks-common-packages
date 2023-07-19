@@ -54,6 +54,15 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
+      <Item ItemId=";loc.messages.AppServiceApplicationSettingsAlreadyPresent" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[App Service Application settings are already present.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Le impostazioni applicazione del servizio app sono già presenti.]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
       <Item ItemId=";loc.messages.AppServiceState" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[App Service is in '%s' state.]]></Val>
@@ -189,6 +198,15 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
+      <Item ItemId=";loc.messages.DeletingAppServiceApplicationSettings" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Deleting App Service Application settings. Data: %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Eliminazione delle impostazioni applicazione del servizio app. Dati: %s]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
       <Item ItemId=";loc.messages.DeletingAppServiceSlot" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Deleting App Service slot: %s]]></Val>
@@ -239,6 +257,15 @@
           <Val><![CDATA[domain must be a non empty string.]]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
             <Val><![CDATA[dominio non deve essere una stringa vuota.]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";loc.messages.ErrorNoSuchDeployingMethodExists" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Error : No such deploying method exists]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Errore: non esiste alcun metodo di distribuzione di questo tipo]]></Val>
           </Tgt>
         </Str>
         <Disp Icon="Str" />
@@ -342,6 +369,15 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
+      <Item ItemId=";loc.messages.FailedToEnableRenameLockedFiles" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Failed to enable rename locked files. Error: %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Non è stato possibile abilitare la ridenominazione de file bloccati. Errore: %s]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
       <Item ItemId=";loc.messages.FailedToFetchAzureStackDependencyData" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Failed to fetch Azure stack dependency data. Status code: %s]]></Val>
@@ -387,6 +423,15 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
+      <Item ItemId=";loc.messages.FailedToGetAppServiceConnectionStrings" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Failed to get App service '%s' Connection strings. Error: %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Non è stato possibile ottenere le stringhe di connessione del servizio app '%s'. Errore: %s]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
       <Item ItemId=";loc.messages.FailedToGetAppServiceDetails" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Failed to fetch App Service '%s' details. Error: %s]]></Val>
@@ -419,6 +464,15 @@
           <Val><![CDATA[Failed to fetch App Service '%s' publishing profile. Error: %s]]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
             <Val><![CDATA[Non è stato possibile recuperare il profilo di pubblicazione del servizio app '%s'. Errore: %s]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";loc.messages.FailedToGetAppServiceSlotConfigurationNames" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Failed to get App service '%s' Slot Configuration Names. Error: %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Non è stato possibile ottenere i nomi di configurazione slot del servizio app '%s'. Errore: %s]]></Val>
           </Tgt>
         </Str>
         <Disp Icon="Str" />
@@ -630,6 +684,15 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
+      <Item ItemId=";loc.messages.FailedToSyncTriggers" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Failed to sync triggers for function app '%s'. Error: %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Non è stato possibile sincronizzare i trigger per l'app per le funzioni '%s'. Errore: %s]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
       <Item ItemId=";loc.messages.FailedToUpdateAppServiceApplicationSettings" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Failed to update App service '%s' application settings. Error: %s]]></Val>
@@ -639,11 +702,29 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
+      <Item ItemId=";loc.messages.FailedToUpdateAppServiceConfigSlotSettings" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Failed to update App service '%s' Configuration Slot Settings. Error: %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Non è stato possibile aggiornare le impostazioni dello slot di configurazione del servizio app '%s'. Errore: %s]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
       <Item ItemId=";loc.messages.FailedToUpdateAppServiceConfiguration" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Failed to update App service '%s' configuration. Error: %s]]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
             <Val><![CDATA[Non è stato possibile aggiornare la configurazione del servizio app '%s'. Errore: %s]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";loc.messages.FailedToUpdateAppServiceConnectionStrings" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Failed to update App service '%s' Connection Strings. Error: %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Non è stato possibile aggiornare le stringhe di connessione del servizio app '%s'. Errore: %s]]></Val>
           </Tgt>
         </Str>
         <Disp Icon="Str" />
@@ -905,6 +986,24 @@
           <Val><![CDATA[Preview the Phase 1 swap in the source slot by going to https://%s-%s.azurewebsites.net]]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
             <Val><![CDATA[Per visualizzare l'anteprima dello scambio della fase 1 nello slot di origine, vedere https://%s-%s.azurewebsites.net]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";loc.messages.RenameLockedFilesEnabled" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Rename locked files enabled for App Service.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[La ridenominazione dei file bloccati è abilitata per il servizio app.]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";loc.messages.ResourceDoesntExist" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Resource '%s' doesn't exist. Resource should exist before deployment.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[La risorsa '%s' non esiste. La risorsa deve esistere prima della distribuzione.]]></Val>
           </Tgt>
         </Str>
         <Disp Icon="Str" />
@@ -1404,11 +1503,44 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
+      <Item ItemId=";loc.messages.UpdatedAppServiceApplicationSettings" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Updated App Service Application settings and Kudu Application settings.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Le impostazioni applicazione del servizio app e le impostazioni applicazione Kudu sono state aggiornate.]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";loc.messages.UpdatedAppServiceConfigurationSettings" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Updated App Service Configuration settings.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Le impostazioni di configurazione del servizio app sono state aggiornate.]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
       <Item ItemId=";loc.messages.UpdatedRule" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Updated rule : '%s']]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
             <Val><![CDATA[Regola aggiornata: '%s']]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";loc.messages.UpdatingAppServiceApplicationSettings" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Updating App Service Application settings. Data: %s]]></Val>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";loc.messages.UpdatingAppServiceConfigurationSettings" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Trying to update App Service Configuration settings. Data: %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Tentativo di aggiornamento delle impostazioni di configurazione del servizio app in corso. Dati: %s]]></Val>
           </Tgt>
         </Str>
         <Disp Icon="Str" />
@@ -1463,6 +1595,15 @@
           <Val><![CDATA[Updating VMSS %s to use new image...]]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
             <Val><![CDATA[Aggiornamento del set di scalabilità di macchine virtuali (VMSS) %s per usare la nuova immagine in corso...]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";loc.messages.VirtualApplicationDoesNotExist" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Virtual application doesn't exists : %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[L'applicazione virtuale non esiste: %s]]></Val>
           </Tgt>
         </Str>
         <Disp Icon="Str" />
