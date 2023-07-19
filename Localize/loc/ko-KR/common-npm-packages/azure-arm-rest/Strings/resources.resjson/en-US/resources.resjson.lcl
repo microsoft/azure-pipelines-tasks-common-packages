@@ -1533,6 +1533,9 @@
       <Item ItemId=";loc.messages.UpdatingAppServiceApplicationSettings" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Updating App Service Application settings. Data: %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[App Service 애플리케이션 설정을 업데이트하는 중입니다. 데이터: %s]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
