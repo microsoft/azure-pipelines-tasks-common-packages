@@ -5,6 +5,7 @@ export interface SanitizeScriptArgsOptions {
     argsSplitSymbols: '``' | '\\\\';
     warningLocSymbol: string;
     telemetryFeature: string;
+    saniziteRegExp?: RegExp;
 }
 
 /**
@@ -13,7 +14,7 @@ export interface SanitizeScriptArgsOptions {
  * @returns sanitized input arguments
  */
 export function sanitizeScriptArgs(args: string, options: SanitizeScriptArgsOptions): string {
-    const { argsSplitSymbols, warningLocSymbol, telemetryFeature } = options;
+    const { argsSplitSymbols, warningLocSymbol, telemetryFeature, saniziteRegExp } = options;
     const removedSymbolSign = '_#removed#_';
 
     const featureFlags = {
@@ -25,7 +26,7 @@ export function sanitizeScriptArgs(args: string, options: SanitizeScriptArgsOpti
     // We're splitting by esc. symbol pairs, removing all suspicious characters and then join back
     const argsArr = args.split(argsSplitSymbols);
     // '?<!`' - checks if before a character is no escaping symbol. '^a-zA-Z0-9\`\\ _'"\-=/:' - checking if character is allowed. Instead replaces to _#removed#_
-    const regexp = new RegExp(`(?<!${argsSplitSymbols[0]})([^a-zA-Z0-9\\\`\\\\ _'"\\\-=\\\/:\.])`, 'g');
+    const regexp = saniziteRegExp ?? new RegExp(`(?<!${argsSplitSymbols[0]})([^a-zA-Z0-9\\\`\\\\ _'"\\\-=\\\/:\.])`, 'g');
     for (let i = 0; i < argsArr.length; i++) {
         argsArr[i] = argsArr[i].replace(regexp, removedSymbolSign);
     }
@@ -37,7 +38,7 @@ export function sanitizeScriptArgs(args: string, options: SanitizeScriptArgsOpti
             tl.warning(tl.loc(warningLocSymbol, resultArgs));
         }
 
-        if (featureFlags.telemetry) {
+        if (telemetryFeature && featureFlags.telemetry) {
             const removedSymbolsCount = (resultArgs.match(removedSymbolSign) || []).length;
             emitTelemetry('TaskHub', telemetryFeature, { removedSymbolsCount })
         }

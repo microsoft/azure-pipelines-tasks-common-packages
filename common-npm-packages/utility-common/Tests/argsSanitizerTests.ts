@@ -29,4 +29,14 @@ export function runArgsSanitizerTests() {
             assert.equal(result, expected);
         })
     });
+
+    it('Should use input reg exp', () => {
+        const regx = /2/;
+        const input = "1 2";
+        const expected = '1 _#removed#_';
+
+        const result = sanitizeScriptArgs(input, { argsSplitSymbols: '``', telemetryFeature: '', warningLocSymbol: '', saniziteRegExp: regx });
+
+        assert.equal(result, expected);
+    });
 }
