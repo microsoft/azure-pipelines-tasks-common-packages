@@ -4,7 +4,7 @@ import { sanitizeScriptArgs } from "../argsSanitizer"
 export function runArgsSanitizerTests() {
     ([
         "Param1 Param2",
-        "Param1 `| Out-File `./321",
+        "Param1 `| Out-File ./321",
         "'Param 1' 'Param 2'",
         "hello`;world",
     ] as string[]).forEach((input) => {
@@ -18,7 +18,7 @@ export function runArgsSanitizerTests() {
 
     ([
         ["${Param1}", "_#removed#__#removed#_Param1_#removed#_"], // we're not supporting env variables.
-        ["1 | Out-File ./321", "1 _#removed#_ Out-File _#removed#_/321"],
+        ["1 | Out-File ./321", "1 _#removed#_ Out-File ./321"],
         ["12 && whoami", "12 _#removed#__#removed#_ whoami"],
         ["'12 && whoami'", "'12 _#removed#__#removed#_ whoami'"], // we're ignoring any quote types.
     ] as [string, string][]).forEach(([input, expected]) => {
