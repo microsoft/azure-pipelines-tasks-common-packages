@@ -150,7 +150,7 @@ async function createRelease(releaseNotes, package, version, releaseBranch) {
     console.log(`Creating release ${tagName} on ${releaseBranch}`);
 
     const newRelease = await octokit.repos.createRelease({
-        owner: 'DmitriiBobreshev', //OWNER,
+        owner: OWNER,
         repo: REPO,
         tag_name: tagName,
         name: name,
@@ -172,7 +172,7 @@ async function isReleaseTagExists(package, version) {
     try {
         const tagName = `${package}-${version}`;
         await octokit.repos.getReleaseByTag({
-            owner: 'DmitriiBobreshev', //OWNER,
+            owner: OWNER,
             repo: REPO,
             tag: tagName
         });
