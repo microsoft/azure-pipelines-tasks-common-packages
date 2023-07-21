@@ -17,6 +17,34 @@ export function runArgsSanitizerTests() {
     });
 
     ([
+        "Param1 Param2",
+        "Param1 \\| Out-File ./321",
+        "'Param 1' 'Param 2'",
+        "hello`\\;world",
+    ] as string[]).forEach((input) => {
+        it(`Should process '${input}' with no replacement. With \\`, () => {
+
+            const result = sanitizeScriptArgs(input, { argsSplitSymbols: '\\\\', telemetryFeature: '', warningLocSymbol: '' });
+
+            assert.equal(result, input);
+        })
+    });
+
+    ([
+        ["1 ``; whoami", "``", "1 ``_#removed#_ whoami"],
+        ["'1 ``; whoami'", "\\\\", "'1 ``_#removed#_ whoami'"], // we're ignoring quotes
+        ["1 \\\\; whoami", "\\\\", "1 \\\\_#removed#_ whoami"],
+        ["1 `; whoami", "\\\\", "1 `_#removed#_ whoami"] // if trying to use not matched escaping symbol
+    ] as [string, '\\\\' | '``' , string][]).forEach(([input, argsSplitSymbols, expected] ) => {
+        it(`Should process '${input}' and replace to '${expected}'`, () => {
+
+            const result = sanitizeScriptArgs(input, { argsSplitSymbols, telemetryFeature: '', warningLocSymbol: '' });
+
+            assert.equal(result, expected);
+        })
+    });
+
+    ([
         ["${Param1}", "_#removed#__#removed#_Param1_#removed#_"], // we're not supporting env variables.
         ["1 | Out-File ./321", "1 _#removed#_ Out-File ./321"],
         ["12 && whoami", "12 _#removed#__#removed#_ whoami"],

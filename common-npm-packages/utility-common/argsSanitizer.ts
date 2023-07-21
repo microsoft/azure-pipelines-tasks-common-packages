@@ -1,8 +1,10 @@
 import * as tl from 'azure-pipelines-task-lib';
 import { emitTelemetry } from './telemetry';
 
+type ArgsSplitSymbols = '``' | '\\\\';
+
 export interface SanitizeScriptArgsOptions {
-    argsSplitSymbols: '``' | '\\\\';
+    argsSplitSymbols: ArgsSplitSymbols;
     warningLocSymbol: string;
     telemetryFeature: string;
     saniziteRegExp?: RegExp;
@@ -26,7 +28,7 @@ export function sanitizeScriptArgs(args: string, options: SanitizeScriptArgsOpti
     // We're splitting by esc. symbol pairs, removing all suspicious characters and then join back
     const argsArr = args.split(argsSplitSymbols);
     // '?<!`' - checks if before a character is no escaping symbol. '^a-zA-Z0-9\`\\ _'"\-=/:' - checking if character is allowed. Instead replaces to _#removed#_
-    const regexp = saniziteRegExp ?? new RegExp(`(?<!${argsSplitSymbols})([^a-zA-Z0-9\\\`\\\\ _'"\\\-=\\\/:\.])`, 'g');
+    const regexp = saniziteRegExp ?? new RegExp(`(?<!${getEscapingSymbol(argsSplitSymbols)})([^a-zA-Z0-9\\\`\\\\ _'"\\\-=\\\/:\.])`, 'g');
     for (let i = 0; i < argsArr.length; i++) {
         argsArr[i] = argsArr[i].replace(regexp, removedSymbolSign);
     }
@@ -45,4 +47,15 @@ export function sanitizeScriptArgs(args: string, options: SanitizeScriptArgsOpti
     }
 
     return resultArgs;
+}
+
+function getEscapingSymbol(argsSplitSymbols: ArgsSplitSymbols): string {
+    switch (argsSplitSymbols) {
+        case '\\\\':
+            return '\\\\';
+        case '``':
+            return '`';
+        default:
+            throw new Error('Unknown args splitting symbols.');
+    }
 }
