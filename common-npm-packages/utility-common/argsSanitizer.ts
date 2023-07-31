@@ -24,7 +24,7 @@ export function sanitizeScriptArgs(args: string, options: SanitizeScriptArgsOpti
 
     const { argsSplitSymbols } = options;
     const removedSymbolSign = options.removedSymbolSign ?? '_#removed#_';
-    const matchesChunks = [];
+    const matchesChunks: RegExpMatchArray[] = [];
 
     // '?<!`' - checks if before a character is no escaping symbol. '^a-zA-Z0-9\`\\ _'"\-=/:' - checking if character is allowed. Instead replaces to _#removed#_
     const saniziteRegExp = options.saniziteRegExp ?? new RegExp(`(?<!${getEscapingSymbol(argsSplitSymbols)})([^a-zA-Z0-9\\\`\\\\ _'"\\\-=\\\/:\.])`, 'g');
