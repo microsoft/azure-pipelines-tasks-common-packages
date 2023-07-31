@@ -20,10 +20,10 @@ interface ArgsSanitizerTelemetry {
 export function sanitizeScriptArgs(args: string, options: SanitizeScriptArgsOptions): [string, ArgsSanitizerTelemetry | null] {
     const { argsSplitSymbols } = options;
     const removedSymbolSign = options.removedSymbolSign ?? '_#removed#_';
-    const matchesArr = [];
+    const matchesChunks = [];
 
     // We're splitting by esc. symbol pairs, removing all suspicious characters and then join back
-    const argsArr = args.split(argsSplitSymbols);
+    const argsChunks = args.split(argsSplitSymbols);
 
     // '?<!`' - checks if before a character is no escaping symbol. '^a-zA-Z0-9\`\\ _'"\-=/:' - checking if character is allowed. Instead replaces to _#removed#_
     const saniziteRegExp = options.saniziteRegExp ?? new RegExp(`(?<!${getEscapingSymbol(argsSplitSymbols)})([^a-zA-Z0-9\\\`\\\\ _'"\\\-=\\\/:\.])`, 'g');
@@ -31,16 +31,16 @@ export function sanitizeScriptArgs(args: string, options: SanitizeScriptArgsOpti
         throw new Error("Only global regular expressions are allowed.");
     }
 
-    for (let i = 0; i < argsArr.length; i++) {
-        matchesArr[i] = argsArr[i].match(saniziteRegExp);
-        argsArr[i] = argsArr[i].replace(saniziteRegExp, removedSymbolSign);
+    for (let i = 0; i < argsChunks.length; i++) {
+        matchesChunks[i] = argsChunks[i].match(saniziteRegExp);
+        argsChunks[i] = argsChunks[i].replace(saniziteRegExp, removedSymbolSign);
     }
 
-    const resultArgs = argsArr.join(argsSplitSymbols);
+    const resultArgs = argsChunks.join(argsSplitSymbols);
 
     let telemetry: ArgsSanitizerTelemetry = null
     if (resultArgs != args) {
-        const matches = [].concat(...matchesArr ?? []);
+        const matches = [].concat(...matchesChunks ?? []);
         telemetry = {
             removedSymbols: combineMatches(matches),
             removedSymbolsCount: matches.length
