@@ -18,7 +18,7 @@ interface ArgsSanitizerTelemetry {
  * @param {SanitizeScriptArgsOptions} options - sanitizer options
  * @returns {[string, ArgsSanitizerTelemetry]} sanitized input arguments, and telemetry
  */
-export function sanitizeScriptArgs(args: string, options: SanitizeScriptArgsOptions): [string, ArgsSanitizerTelemetry | null] {
+export function sanitizeArgs(args: string, options: SanitizeScriptArgsOptions): [string, ArgsSanitizerTelemetry | null] {
     if (!args) {
         return [args, null];
     }

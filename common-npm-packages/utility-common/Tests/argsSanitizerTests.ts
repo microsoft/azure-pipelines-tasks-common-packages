@@ -1,5 +1,5 @@
 import assert = require("assert");
-import { sanitizeScriptArgs } from "../argsSanitizer"
+import { sanitizeArgs } from "../argsSanitizer"
 
 export function runArgsSanitizerTests() {
     ([
@@ -13,7 +13,7 @@ export function runArgsSanitizerTests() {
     ] as string[]).forEach((input) => {
         it(`Should return '${input}' with no replacement.`, () => {
 
-            const [result] = sanitizeScriptArgs(input, { argsSplitSymbols: '``' });
+            const [result] = sanitizeArgs(input, { argsSplitSymbols: '``' });
 
             assert.equal(result, input);
         })
@@ -27,7 +27,7 @@ export function runArgsSanitizerTests() {
     ] as string[]).forEach((input) => {
         it(`Should return '${input}' with no replacement. With \\`, () => {
 
-            const [result] = sanitizeScriptArgs(input, { argsSplitSymbols: '\\\\', });
+            const [result] = sanitizeArgs(input, { argsSplitSymbols: '\\\\', });
 
             assert.equal(result, input);
         })
@@ -41,7 +41,7 @@ export function runArgsSanitizerTests() {
     ] as [string, '\\\\' | '``', string][]).forEach(([input, argsSplitSymbols, expected]) => {
         it(`Should process '${input}' and replace to '${expected}'`, () => {
 
-            const [result] = sanitizeScriptArgs(input, { argsSplitSymbols });
+            const [result] = sanitizeArgs(input, { argsSplitSymbols });
 
             assert.equal(result, expected);
         })
@@ -55,7 +55,7 @@ export function runArgsSanitizerTests() {
     ] as [string, string][]).forEach(([input, expected]) => {
         it(`'${input}' should be replaced to '${expected}'.`, () => {
 
-            const [result] = sanitizeScriptArgs(input, { argsSplitSymbols: '``' });
+            const [result] = sanitizeArgs(input, { argsSplitSymbols: '``' });
 
             assert.equal(result, expected);
         })
@@ -66,7 +66,7 @@ export function runArgsSanitizerTests() {
         const input = "1 2";
         const expected = '1 _#removed#_';
 
-        const [result] = sanitizeScriptArgs(input, { argsSplitSymbols: '``', saniziteRegExp: regx });
+        const [result] = sanitizeArgs(input, { argsSplitSymbols: '``', saniziteRegExp: regx });
 
         assert.equal(result, expected);
     });
@@ -74,7 +74,7 @@ export function runArgsSanitizerTests() {
     it('Throws error if \'global\' flag not set', () => {
         const regx = /1/;
 
-        assert.throws(() => sanitizeScriptArgs('1', { argsSplitSymbols: '``', saniziteRegExp: regx }));
+        assert.throws(() => sanitizeArgs('1', { argsSplitSymbols: '``', saniziteRegExp: regx }));
     });
 }
 
@@ -93,7 +93,7 @@ export function runArgsSanitizerTelemetryTests() {
             removedSymbolsCount: 8
         };
 
-        const [, result] = sanitizeScriptArgs(input, { argsSplitSymbols: '``', saniziteRegExp: regx });
+        const [, result] = sanitizeArgs(input, { argsSplitSymbols: '``', saniziteRegExp: regx });
 
         assert.deepStrictEqual(result, expected);
     })
@@ -103,7 +103,7 @@ export function runArgsSanitizerTelemetryTests() {
         const input = "1 3 5";
         const expected = null
 
-        const [, result] = sanitizeScriptArgs(input, { argsSplitSymbols: '``', saniziteRegExp: regx });
+        const [, result] = sanitizeArgs(input, { argsSplitSymbols: '``', saniziteRegExp: regx });
 
         assert.deepStrictEqual(result, expected);
     })
