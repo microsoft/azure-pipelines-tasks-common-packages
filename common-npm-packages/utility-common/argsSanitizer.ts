@@ -14,8 +14,9 @@ interface ArgsSanitizerTelemetry {
 
 /**
  * This function sanitizes input arguments. We're sanitizing each symbol which we think is dangerous.
- * @param args original input arguments param
- * @returns sanitized input arguments
+ * @param {string} args - original input arguments param
+ * @param {SanitizeScriptArgsOptions} options - sanitizer options
+ * @returns {[string, ArgsSanitizerTelemetry]} sanitized input arguments, and telemetry
  */
 export function sanitizeScriptArgs(args: string, options: SanitizeScriptArgsOptions): [string, ArgsSanitizerTelemetry | null] {
     if (!args) {
