@@ -7,8 +7,11 @@ export function runArgsSanitizerTests() {
         "Param1 `| Out-File ./321",
         "'Param 1' 'Param 2'",
         "hello`;world",
+        null,
+        undefined,
+        ""
     ] as string[]).forEach((input) => {
-        it(`Should process '${input}' with no replacement.`, () => {
+        it(`Should return '${input}' with no replacement.`, () => {
 
             const [result] = sanitizeScriptArgs(input, { argsSplitSymbols: '``' });
 
@@ -22,7 +25,7 @@ export function runArgsSanitizerTests() {
         "'Param 1' 'Param 2'",
         "hello`\\;world",
     ] as string[]).forEach((input) => {
-        it(`Should process '${input}' with no replacement. With \\`, () => {
+        it(`Should return '${input}' with no replacement. With \\`, () => {
 
             const [result] = sanitizeScriptArgs(input, { argsSplitSymbols: '\\\\', });
 
@@ -71,8 +74,8 @@ export function runArgsSanitizerTests() {
     it('Throws error if \'global\' flag not set', () => {
         const regx = /1/;
 
-        assert.throws(() => sanitizeScriptArgs('', { argsSplitSymbols: '``', saniziteRegExp: regx }));
-    })
+        assert.throws(() => sanitizeScriptArgs('1', { argsSplitSymbols: '``', saniziteRegExp: regx }));
+    });
 }
 
 export function runArgsSanitizerTelemetryTests() {
