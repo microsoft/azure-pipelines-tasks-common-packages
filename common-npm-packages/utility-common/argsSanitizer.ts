@@ -1,4 +1,5 @@
 type ArgsSplitSymbols = '``' | '\\\\';
+type SymbolsDictionary = { [symbol: string]: number }
 
 export interface SanitizeScriptArgsOptions {
     argsSplitSymbols: ArgsSplitSymbols;
@@ -7,6 +8,7 @@ export interface SanitizeScriptArgsOptions {
 }
 
 interface ArgsSanitizerTelemetry {
+    removedSymbols: SymbolsDictionary;
     removedSymbolsCount: number;
 }
 
@@ -15,26 +17,34 @@ interface ArgsSanitizerTelemetry {
  * @param args original input arguments param
  * @returns sanitized input arguments
  */
-export function sanitizeScriptArgs(args: string, options: SanitizeScriptArgsOptions): [string, ArgsSanitizerTelemetry] {
+export function sanitizeScriptArgs(args: string, options: SanitizeScriptArgsOptions): [string, ArgsSanitizerTelemetry | null] {
     const { argsSplitSymbols } = options;
     const removedSymbolSign = options.removedSymbolSign ?? '_#removed#_';
+    const matchesArr = [];
 
     // We're splitting by esc. symbol pairs, removing all suspicious characters and then join back
     const argsArr = args.split(argsSplitSymbols);
+
     // '?<!`' - checks if before a character is no escaping symbol. '^a-zA-Z0-9\`\\ _'"\-=/:' - checking if character is allowed. Instead replaces to _#removed#_
     const saniziteRegExp = options.saniziteRegExp ?? new RegExp(`(?<!${getEscapingSymbol(argsSplitSymbols)})([^a-zA-Z0-9\\\`\\\\ _'"\\\-=\\\/:\.])`, 'g');
+    if (!saniziteRegExp.global) {
+        throw new Error("Only global regular expressions are allowed.");
+    }
+
     for (let i = 0; i < argsArr.length; i++) {
+        matchesArr[i] = argsArr[i].match(saniziteRegExp);
         argsArr[i] = argsArr[i].replace(saniziteRegExp, removedSymbolSign);
     }
 
     const resultArgs = argsArr.join(argsSplitSymbols);
 
-    const telemetry: ArgsSanitizerTelemetry = {
-        removedSymbolsCount: 0
-    }
-
+    let telemetry: ArgsSanitizerTelemetry = null
     if (resultArgs != args) {
-        telemetry.removedSymbolsCount = (resultArgs.match(removedSymbolSign) || []).length;
+        const matches = [].concat(...matchesArr ?? []);
+        telemetry = {
+            removedSymbols: combineMatches(matches),
+            removedSymbolsCount: matches.length
+        }
     }
 
     return [resultArgs, telemetry];
@@ -49,4 +59,20 @@ function getEscapingSymbol(argsSplitSymbols: ArgsSplitSymbols): string {
         default:
             throw new Error('Unknown args splitting symbols.');
     }
+}
+
+function combineMatches(matches: string[]): SymbolsDictionary {
+    const matchesData = {};
+
+    for (const m of matches) {
+        if (matchesData[m]) {
+            matchesData[m]++;
+
+            continue;
+        }
+
+        matchesData[m] = 1;
+    }
+
+    return matchesData;
 }

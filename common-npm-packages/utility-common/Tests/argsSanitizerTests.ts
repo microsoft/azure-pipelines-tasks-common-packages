@@ -59,7 +59,7 @@ export function runArgsSanitizerTests() {
     });
 
     it('Should use input reg exp', () => {
-        const regx = /2/;
+        const regx = /2/g;
         const input = "1 2";
         const expected = '1 _#removed#_';
 
@@ -67,4 +67,35 @@ export function runArgsSanitizerTests() {
 
         assert.equal(result, expected);
     });
+}
+
+export function runArgsSanitizerTelemetryTests() {
+    it('Should return correct telemetry', () => {
+        const regx = /[^2 ]/g;
+        const input = "1 2 4 3 3 3;;_";
+        const expected = {
+            removedSymbols: {
+                '1': 1,
+                '3': 3,
+                '4': 1,
+                ';': 2,
+                '_': 1,
+            },
+            removedSymbolsCount: 8
+        };
+
+        const [, result] = sanitizeScriptArgs(input, { argsSplitSymbols: '``', saniziteRegExp: regx });
+
+        assert.deepStrictEqual(result, expected);
+    })
+
+    it('Returns null if nothing changed', () => {
+        const regx = /2/g;
+        const input = "1 3 5";
+        const expected = null
+
+        const [, result] = sanitizeScriptArgs(input, { argsSplitSymbols: '``', saniziteRegExp: regx });
+
+        assert.deepStrictEqual(result, expected);
+    })
 }
