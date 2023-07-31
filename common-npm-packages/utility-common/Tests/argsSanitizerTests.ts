@@ -10,7 +10,7 @@ export function runArgsSanitizerTests() {
     ] as string[]).forEach((input) => {
         it(`Should process '${input}' with no replacement.`, () => {
 
-            const result = sanitizeScriptArgs(input, { argsSplitSymbols: '``', telemetryFeature: '', warningLocSymbol: '' });
+            const [result] = sanitizeScriptArgs(input, { argsSplitSymbols: '``' });
 
             assert.equal(result, input);
         })
@@ -24,7 +24,7 @@ export function runArgsSanitizerTests() {
     ] as string[]).forEach((input) => {
         it(`Should process '${input}' with no replacement. With \\`, () => {
 
-            const result = sanitizeScriptArgs(input, { argsSplitSymbols: '\\\\', telemetryFeature: '', warningLocSymbol: '' });
+            const [result] = sanitizeScriptArgs(input, { argsSplitSymbols: '\\\\', });
 
             assert.equal(result, input);
         })
@@ -35,10 +35,10 @@ export function runArgsSanitizerTests() {
         ["'1 ``; whoami'", "\\\\", "'1 ``_#removed#_ whoami'"], // we're ignoring quotes
         ["1 \\\\; whoami", "\\\\", "1 \\\\_#removed#_ whoami"],
         ["1 `; whoami", "\\\\", "1 `_#removed#_ whoami"] // if trying to use not matched escaping symbol
-    ] as [string, '\\\\' | '``' , string][]).forEach(([input, argsSplitSymbols, expected] ) => {
+    ] as [string, '\\\\' | '``', string][]).forEach(([input, argsSplitSymbols, expected]) => {
         it(`Should process '${input}' and replace to '${expected}'`, () => {
 
-            const result = sanitizeScriptArgs(input, { argsSplitSymbols, telemetryFeature: '', warningLocSymbol: '' });
+            const [result] = sanitizeScriptArgs(input, { argsSplitSymbols });
 
             assert.equal(result, expected);
         })
@@ -52,7 +52,7 @@ export function runArgsSanitizerTests() {
     ] as [string, string][]).forEach(([input, expected]) => {
         it(`'${input}' should be replaced to '${expected}'.`, () => {
 
-            const result = sanitizeScriptArgs(input, { argsSplitSymbols: '``', telemetryFeature: '', warningLocSymbol: '' });
+            const [result] = sanitizeScriptArgs(input, { argsSplitSymbols: '``' });
 
             assert.equal(result, expected);
         })
@@ -63,7 +63,7 @@ export function runArgsSanitizerTests() {
         const input = "1 2";
         const expected = '1 _#removed#_';
 
-        const result = sanitizeScriptArgs(input, { argsSplitSymbols: '``', telemetryFeature: '', warningLocSymbol: '', saniziteRegExp: regx });
+        const [result] = sanitizeScriptArgs(input, { argsSplitSymbols: '``', saniziteRegExp: regx });
 
         assert.equal(result, expected);
     });
