@@ -67,6 +67,12 @@ export function runArgsSanitizerTests() {
 
         assert.equal(result, expected);
     });
+
+    it('Throws error if \'global\' flag not set', () => {
+        const regx = /1/;
+
+        assert.throws(() => sanitizeScriptArgs('', { argsSplitSymbols: '``', saniziteRegExp: regx }));
+    })
 }
 
 export function runArgsSanitizerTelemetryTests() {
