@@ -1,48 +1,82 @@
-import * as tl from 'azure-pipelines-task-lib';
-import { emitTelemetry } from './telemetry';
+type ArgsSplitSymbols = '``' | '\\\\';
+type SymbolsDictionary = { [symbol: string]: number }
 
 export interface SanitizeScriptArgsOptions {
-    argsSplitSymbols: '``' | '\\\\';
-    warningLocSymbol: string;
-    telemetryFeature: string;
+    argsSplitSymbols: ArgsSplitSymbols;
     saniziteRegExp?: RegExp;
+    removedSymbolSign?: string
+}
+
+interface ArgsSanitizerTelemetry {
+    removedSymbols: SymbolsDictionary;
+    removedSymbolsCount: number;
 }
 
 /**
  * This function sanitizes input arguments. We're sanitizing each symbol which we think is dangerous.
- * @param args original input arguments param
- * @returns sanitized input arguments
+ * @param {string} args - original input arguments param
+ * @param {SanitizeScriptArgsOptions} options - sanitizer options
+ * @returns {[string, ArgsSanitizerTelemetry]} sanitized input arguments, and telemetry
  */
-export function sanitizeScriptArgs(args: string, options: SanitizeScriptArgsOptions): string {
-    const { argsSplitSymbols, warningLocSymbol, telemetryFeature, saniziteRegExp } = options;
-    const removedSymbolSign = '_#removed#_';
+export function sanitizeArgs(args: string, options: SanitizeScriptArgsOptions): [string, ArgsSanitizerTelemetry | null] {
+    if (!args) {
+        return [args, null];
+    }
 
-    const featureFlags = {
-        audit: tl.getBoolFeatureFlag('AZP_75787_ENABLE_NEW_LOGIC_LOG'),
-        activate: tl.getBoolFeatureFlag('AZP_75787_ENABLE_NEW_LOGIC'),
-        telemetry: tl.getBoolFeatureFlag('AZP_75787_ENABLE_COLLECT')
-    };
+    const { argsSplitSymbols } = options;
+    const removedSymbolSign = options.removedSymbolSign ?? '_#removed#_';
+    const matchesChunks: RegExpMatchArray[] = [];
+
+    // '?<!`' - checks if before a character is no escaping symbol. '^a-zA-Z0-9\`\\ _'"\-=/:' - checking if character is allowed. Instead replaces to _#removed#_
+    const saniziteRegExp = options.saniziteRegExp ?? new RegExp(`(?<!${getEscapingSymbol(argsSplitSymbols)})([^a-zA-Z0-9\\\`\\\\ _'"\\\-=\\\/:\.])`, 'g');
+    if (!saniziteRegExp.global) {
+        throw new Error("Only global regular expressions are allowed.");
+    }
 
     // We're splitting by esc. symbol pairs, removing all suspicious characters and then join back
-    const argsArr = args.split(argsSplitSymbols);
-    // '?<!`' - checks if before a character is no escaping symbol. '^a-zA-Z0-9\`\\ _'"\-=/:' - checking if character is allowed. Instead replaces to _#removed#_
-    const regexp = saniziteRegExp ?? new RegExp(`(?<!${argsSplitSymbols[0]})([^a-zA-Z0-9\\\`\\\\ _'"\\\-=\\\/:\.])`, 'g');
-    for (let i = 0; i < argsArr.length; i++) {
-        argsArr[i] = argsArr[i].replace(regexp, removedSymbolSign);
+    const argsChunks = args.split(argsSplitSymbols);
+    for (let i = 0; i < argsChunks.length; i++) {
+        matchesChunks[i] = argsChunks[i].match(saniziteRegExp);
+        argsChunks[i] = argsChunks[i].replace(saniziteRegExp, removedSymbolSign);
     }
 
-    const resultArgs = argsArr.join(argsSplitSymbols);
+    const resultArgs = argsChunks.join(argsSplitSymbols);
 
-    if (resultArgs.includes(removedSymbolSign)) {
-        if (featureFlags.audit || featureFlags.activate) {
-            tl.warning(tl.loc(warningLocSymbol, resultArgs));
-        }
-
-        if (telemetryFeature && featureFlags.telemetry) {
-            const removedSymbolsCount = (resultArgs.match(removedSymbolSign) || []).length;
-            emitTelemetry('TaskHub', telemetryFeature, { removedSymbolsCount })
+    let telemetry: ArgsSanitizerTelemetry = null
+    if (resultArgs != args) {
+        const matches = [].concat(...matchesChunks ?? []);
+        telemetry = {
+            removedSymbols: combineMatches(matches),
+            removedSymbolsCount: matches.length
         }
     }
 
-    return resultArgs;
+    return [resultArgs, telemetry];
+}
+
+function getEscapingSymbol(argsSplitSymbols: ArgsSplitSymbols): string {
+    switch (argsSplitSymbols) {
+        case '\\\\':
+            return '\\\\';
+        case '``':
+            return '`';
+        default:
+            throw new Error('Unknown args splitting symbols.');
+    }
+}
+
+function combineMatches(matches: string[]): SymbolsDictionary {
+    const matchesData = {};
+
+    for (const m of matches) {
+        if (matchesData[m]) {
+            matchesData[m]++;
+
+            continue;
+        }
+
+        matchesData[m] = 1;
+    }
+
+    return matchesData;
 }
