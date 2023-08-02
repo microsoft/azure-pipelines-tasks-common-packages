@@ -269,6 +269,15 @@ function updateXmlConnectionStringsNodeAttribute(xmlDomNode, variableMap, replac
                 replacableTokenValues[ConfigFileConnStringTokenName] = variableMap[connectionStringName].replace(/"/g, "'");
                 isSubstitutionApplied = true;
             }
+            else if (connectionStringName && variableMap["connectionStrings.".concat(xmlDomNode.getAttribute("name"))])
+            {
+                let configFileMatch = variableMap["connectionStrings.".concat(xmlDomNode.getAttribute("name"))];
+                let ConfigFileConnStringTokenName = ConfigFileConnStringToken + '(' + configFileMatch + ')';
+                tl.debug(tl.loc('SubstitutingConnectionStringValue' , connectionStringName , ConfigFileConnStringTokenName));
+                xmlDomNode.setAttribute("connectionString", ConfigFileConnStringTokenName);
+                replacableTokenValues[ConfigFileConnStringTokenName] = variableMap[configFileMatch].replace(/"/g, "'");
+                isSubstitutionApplied = true;
+            }
             else if(variableMap["connectionString"] != undefined) {
                 let ConfigFileConnStringTokenName = ConfigFileConnStringToken + '(connectionString)';
                 tl.debug(tl.loc('SubstitutingConnectionStringValue' , connectionStringName , ConfigFileConnStringTokenName));
