@@ -207,8 +207,15 @@ function updateXmlNodeAttribute(xmlDomNode, variableMap, replacableTokenValues):
             let attribute = xmlDomNodeAttributes[i];
             let attributeNameValue = (attribute.nodeName === "key" || attribute.nodeName == "name") ? attribute.nodeValue : attribute.nodeName;
             let attributeName = (attribute.nodeName === "key" || attribute.nodeName == "name") ? "value" : attribute.nodeName;
+            let absoluteAttributeNameValue = attributeNameValue;
+            for(let j = xmlDomNode; j.parentNode.nodeName != "configuration"; j = j.parentNode) {
+                absoluteAttributeNameValue = j.parentNode.nodeName + "." + absoluteAttributeNameValue;
+            }
 
-            if(variableMap[attributeNameValue] != undefined) {
+            if(variableMap[attributeNameValue] != undefined || variableMap[absoluteAttributeNameValue] != undefined) {
+                if (variableMap[absoluteAttributeNameValue] != undefined) {
+                    attributeNameValue = absoluteAttributenameValue;
+                }
                 let ConfigFileAppSettingsTokenName = ConfigFileAppSettingsToken + '(' + attributeNameValue + ')';
                 let isValueReplaced: boolean = false;
                 if (xmlDomNode.hasAttribute(attributeName)) {
