@@ -214,7 +214,7 @@ function updateXmlNodeAttribute(xmlDomNode, variableMap, replacableTokenValues):
 
             if(variableMap[attributeNameValue] != undefined || variableMap[absoluteAttributeNameValue] != undefined) {
                 if (variableMap[absoluteAttributeNameValue] != undefined) {
-                    attributeNameValue = absoluteAttributenameValue;
+                    attributeNameValue = absoluteAttributeNameValue;
                 }
                 let ConfigFileAppSettingsTokenName = ConfigFileAppSettingsToken + '(' + attributeNameValue + ')';
                 let isValueReplaced: boolean = false;
