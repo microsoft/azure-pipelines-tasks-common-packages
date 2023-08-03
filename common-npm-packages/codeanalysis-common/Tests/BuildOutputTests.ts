@@ -5,9 +5,7 @@ import * as path from 'path';
 import * as rewire from 'rewire';
 import * as sinon from 'sinon';
 import * as tl from 'azure-pipelines-task-lib/task';
-import { ModuleOutput } from '../Common/ModuleOutput';
 import { flattenObject } from './Helpers/flattenObject';
-import { getMaxListeners } from 'process';
 import { BuildEngine } from '../Common/BuildOutput';
 
 const buildOutputRewired = rewire('../Common/BuildOutput');
