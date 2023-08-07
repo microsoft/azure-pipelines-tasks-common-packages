@@ -6,7 +6,6 @@ import * as sinon from 'sinon';
 import * as tl from 'azure-pipelines-task-lib/task';
 
 import { BuildEngine, BuildOutput } from '../Common/BuildOutput';
-import { SSL_OP_NETSCAPE_CHALLENGE_BUG } from 'constants';
 
 export function CheckstyleToolTests() {
     const sandbox = sinon.createSandbox();
