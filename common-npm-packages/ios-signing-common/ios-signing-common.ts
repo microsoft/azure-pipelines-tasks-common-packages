@@ -1,6 +1,7 @@
 import path = require('path');
 import * as tl from 'azure-pipelines-task-lib/task';
 import { ToolRunner } from 'azure-pipelines-task-lib/toolrunner';
+import { OpenSSlError } from './errors/OpenSSlError';
 
 tl.setResourcePath(path.join(__dirname, 'module.json'));
 
@@ -51,8 +52,15 @@ export async function installCertInTemporaryKeychain(keychainPath: string, keych
     //so codesign won't prompt to use the key for signing. This isn't necessary for temporary keychains, at least on High Sierra.
     //See https://stackoverflow.com/questions/39868578/security-codesign-in-sierra-keychain-ignores-access-control-settings-and-ui-p
     if (!setupKeychain && !skipPartitionIdAclSetup) {
-        const privateKeyName: string = await getP12PrivateKeyName(p12CertPath, p12Pwd, opensslPkcsArgs);
-        await setKeyPartitionList(keychainPath, keychainPwd, privateKeyName);
+        try {
+            const privateKeyName: string = await getP12PrivateKeyName(p12CertPath, p12Pwd, opensslPkcsArgs);
+            await setKeyPartitionList(keychainPath, keychainPwd, privateKeyName);
+        } catch( err) {
+            if (err instanceof OpenSSlError) {
+                tl.warning(tl.loc('OpenSSLNotFound'));
+            }
+        }
+        
     }
 
     //list the keychains to get current keychains in search path
@@ -589,7 +597,7 @@ export async function getP12Properties(p12Path: string, p12Pwd: string, opensslP
         if (!p12Pwd) {
             tl.warning(tl.loc('NoP12PwdWarning'));
         }
-        throw err;
+        throw new OpenSSlError(err.message);
     }
 
     tl.debug(`P12 fingerprint: ${fingerprint}`);
@@ -654,8 +662,14 @@ export async function getP12PrivateKeyName(p12Path: string, p12Pwd: string, open
         }
     });
 
-    await openssl.exec();
+    try {
+        await openssl.exec();
+    } catch(err) {
+        throw new OpenSSlError(err.message);        
+    }
+
     tl.debug('P12 private key name = ' + privateKeyName);
+    
     if (!privateKeyName) {
         throw new Error(tl.loc('P12PrivateKeyNameNotFound', p12Path));
     }
