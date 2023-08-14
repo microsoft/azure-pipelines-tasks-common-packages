@@ -174,8 +174,9 @@ async function executeMSDeploy(msDeployCmdArgs) {
         for(var i = 0 ; i < msDeployCmdArgs.length ; i++ ) {
             tl.debug("arg#" + i + ": " + msDeployCmdArgs[i]);
         }
-        // for windowsVerbatimArguments: false see https://github.com/microsoft/azure-pipelines-tasks/issues/17634
-        await tl.exec("msdeploy", msDeployCmdArgs, <any>{failOnStdErr: true, errStream: errObj, windowsVerbatimArguments: false});
+        // set shell: true because C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe has folder with spaces 
+        // see https://github.com/microsoft/azure-pipelines-tasks/issues/17634
+        await tl.exec("msdeploy", msDeployCmdArgs, <any>{failOnStdErr: true, errStream: errObj, windowsVerbatimArguments: true, shell: true});
         deferred.resolve("Azure App service successfully deployed");
     } catch (error) {
         msDeployError = error;
