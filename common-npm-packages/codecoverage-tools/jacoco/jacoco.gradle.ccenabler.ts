@@ -25,6 +25,7 @@ export class JacocoGradleCodeCoverageEnabler extends cc.JacocoCodeCoverageEnable
         let reportDir = ccProps["reportdirectory"];
         let gradle5xOrHigher = ccProps["gradle5xOrHigher"] && ccProps["gradle5xOrHigher"] === "true";
         let codeCoveragePluginData = null;
+        let useJacocoGradleTemplateV2 = ccProps["useJacocoGradleTemplateV2"] && ccProps["useJacocoGradleTemplateV2"] === "true";
 
         let filter = _this.extractFilters(classFilter);
         let jacocoExclude = _this.applyFilterPattern(filter.excludeFilter);
@@ -33,7 +34,11 @@ export class JacocoGradleCodeCoverageEnabler extends cc.JacocoCodeCoverageEnable
         if (isMultiModule) {
             codeCoveragePluginData = ccc.jacocoGradleMultiModuleEnable(jacocoExclude.join(","), jacocoInclude.join(","), classFileDirs, reportDir, gradle5xOrHigher);
         } else {
-            codeCoveragePluginData = ccc.jacocoGradleSingleModuleEnable(jacocoExclude.join(","), jacocoInclude.join(","), classFileDirs, reportDir, gradle5xOrHigher);
+            if (useJacocoGradleTemplateV2) {
+                codeCoveragePluginData = ccc.jacocoGradleSingleModuleEnableV2(jacocoExclude.join(","), jacocoInclude.join(","), classFileDirs, reportDir, gradle5xOrHigher);
+            } else {
+                codeCoveragePluginData = ccc.jacocoGradleSingleModuleEnable(jacocoExclude.join(","), jacocoInclude.join(","), classFileDirs, reportDir, gradle5xOrHigher);
+            }
         }
 
         try {
