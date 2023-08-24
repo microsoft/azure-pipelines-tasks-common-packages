@@ -89,35 +89,7 @@ export class NuGetConfigHelper2 {
             tl.debug('Not setting up auth for temp nuget.config as there are no sources');
             return;
         }
-        let append = false;
-
-        if (nugetVersion) {
-            if (nugetVersion.a == 4 && nugetVersion.b == 9 && nugetVersion.c == 2) {
-                append = true;
-                tl.debug(`NuGet Version ${nugetVersion.toString()} detected.  Appending "feed-" to the key`);
-            }
-        }
-        const dotnetPath = tl.which('dotnet', false);
-        if (dotnetPath) {
-            try {
-                let dotnet = tl.tool(dotnetPath);
-                dotnet.arg('--version');
-                let version = dotnet.execSync().stdout.trim();
-                let versionArr = version.split(".");
-                if ((versionArr[0] == "2") && (versionArr[1] == "1") && (versionArr[2] == "500")) {
-                    append = true;
-                    tl.debug(`Dotnet Version ${version} detected.  Appending "feed-" to the key`);
-                }
-
-            } catch (err) {
-                tl.debug(err.message);
-                append = false;
-            }
-        }
-        this.setAuthForSourcesInTempNuGetConfigHelper(sources, append);
-    }
-
-    private setAuthForSourcesInTempNuGetConfigHelper(sources: auth.IPackageSource[], append: boolean) {
+        let append = this.validateToolsVersion();
         sources.forEach((source) => {
             tl.debug(`considering source ${source.feedUri}. Internal: ${source.isInternal}`);
             if (source.isInternal) {
@@ -175,6 +147,39 @@ export class NuGetConfigHelper2 {
                 }
             }
         });
+    }
+
+    private validateToolsVersion() {
+        let append = false;
+        let nugetVersion = tl.getInput('versionSpec', false);
+        if (nugetVersion) {
+            let versionArr = nugetVersion.split(".");
+            if ((versionArr[0] == "4") && (versionArr[1] == "9") && (versionArr[2] == "2")) {
+                append = true;
+                tl.debug(`NuGet Version ${nugetVersion} detected.  Appending "feed-" to the key`);
+            }
+        } else {
+            // if version is not specified, then the version is not 4.9.2 because user has to specify the version in order to use 4.9.2
+            append = false;
+        }
+        const dotnetPath = tl.which('dotnet', false);
+        if (dotnetPath) {
+            try {
+                let dotnet = tl.tool(dotnetPath);
+                dotnet.arg('--version');
+                let version = dotnet.execSync().stdout.trim();
+                let versionArr = version.split(".");
+                if ((versionArr[0] == "2") && (versionArr[1] == "1") && (versionArr[2] == "500")) {
+                    append = true;
+                    tl.debug(`Dotnet Version ${version} detected.  Appending "feed-" to the key`);
+                }
+
+            } catch (err) {
+                tl.debug(err.message);
+                append = false;
+            }
+        }
+        return append;
     }
 
     private getTempNuGetConfigPath(): string {
