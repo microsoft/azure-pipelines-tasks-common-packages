@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-webdeployment-common",
-    "version": "4.224.0",
+    "version": "4.227.0",
     "description": "Common Lib for MSDeploy Utility",
     "repository": {
         "type": "git",
@@ -25,7 +25,7 @@
         "ltx": "2.8.0",
         "q": "1.4.1",
         "winreg": "1.2.2",
-        "xml2js": "0.4.13"
+        "xml2js": "0.6.2"
     },
     "devDependencies": {
         "typescript": "4.0.2"

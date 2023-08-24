@@ -16,6 +16,7 @@
         "AllContainersNotInReadyState": "All the containers are not in a ready state.",
         "waitForServiceIpAssignment": "Waiting for service %s external IP assignment",
         "waitForServiceIpAssignmentTimedOut": "Wait for service %s external IP assignment timed out",
-        "EnvironmentLink": "For more information, go to %s"
+        "EnvironmentLink": "For more information, go to %s",
+        "AuthSchemeNotSupported": "Auth Scheme %s is not supported"
     }
 }
