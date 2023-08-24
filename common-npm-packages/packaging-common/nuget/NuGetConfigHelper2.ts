@@ -72,7 +72,7 @@ export class NuGetConfigHelper2 {
         this.addSourcesToTempNugetConfigInternal(packageSources);
     }
 
-    /**
+ /**
  * Set authentication for source in a temporary nuget config file.
  *
  *
@@ -80,7 +80,7 @@ export class NuGetConfigHelper2 {
  * @returns void. This method set authentication for source in a temporary nuget config file.
  *
  */
-    public setAuthForSourcesInTempNuGetConfig(nugetVersion?: VersionInfoVersion): void {
+    public setAuthForSourcesInTempNuGetConfig(): void {
         tl.debug('Setting auth in the temp nuget.config');
         this.ensureTempConfigCreated();
 
@@ -89,7 +89,6 @@ export class NuGetConfigHelper2 {
             tl.debug('Not setting up auth for temp nuget.config as there are no sources');
             return;
         }
-        let append = this.validateToolsVersion();
         sources.forEach((source) => {
             tl.debug(`considering source ${source.feedUri}. Internal: ${source.isInternal}`);
             if (source.isInternal) {
@@ -97,7 +96,7 @@ export class NuGetConfigHelper2 {
                     tl.debug('Setting auth for internal source ' + source.feedUri);
                     // Removing source first
                     this.removeSourceFromTempNugetConfig(source);
-                    if (append) {
+                    if (this.isSpecialVersion()) {
                         // Cannot add tag that starts with number as a child node of PackageSourceCredentials because of
                         // Bug in nuget 4.9.1 and dotnet 2.1.500
                         // https://github.com/NuGet/Home/issues/7517
@@ -149,19 +148,16 @@ export class NuGetConfigHelper2 {
         });
     }
 
-    private validateToolsVersion() {
+    private isSpecialVersion(): boolean {
         let append = false;
         let nugetVersion = tl.getInput('versionSpec', false);
         if (nugetVersion) {
             let versionArr = nugetVersion.split(".");
             if ((versionArr[0] == "4") && (versionArr[1] == "9") && (versionArr[2] == "2")) {
-                append = true;
                 tl.debug(`NuGet Version ${nugetVersion} detected.  Appending "feed-" to the key`);
+                return true;
             }
-        } else {
-            // if version is not specified, then the version is not 4.9.2 because user has to specify the version in order to use 4.9.2
-            append = false;
-        }
+        } 
         const dotnetPath = tl.which('dotnet', false);
         if (dotnetPath) {
             try {
@@ -170,13 +166,13 @@ export class NuGetConfigHelper2 {
                 let version = dotnet.execSync().stdout.trim();
                 let versionArr = version.split(".");
                 if ((versionArr[0] == "2") && (versionArr[1] == "1") && (versionArr[2] == "500")) {
-                    append = true;
                     tl.debug(`Dotnet Version ${version} detected.  Appending "feed-" to the key`);
+                    return true;
                 }
 
             } catch (err) {
                 tl.debug(err.message);
-                append = false;
+                return false;
             }
         }
         return append;
