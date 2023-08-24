@@ -175,5 +175,5 @@ export async function getHighestPackageVersionFromFeed(serviceUri: string, acces
         }
     }
     
-    return null;
+    return "0.0.0";
 }
