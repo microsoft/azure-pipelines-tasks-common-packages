@@ -1,6 +1,6 @@
 {
   "name": "azure-pipelines-tasks-codecoverage-tools",
-  "version": "3.226.0",
+  "version": "3.227.0",
   "author": "Microsoft Corporation",
   "description": "VSTS Tasks Code Coverage Tools",
   "license": "MIT",

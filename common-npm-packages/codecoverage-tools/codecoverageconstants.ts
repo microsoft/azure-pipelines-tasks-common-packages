@@ -122,6 +122,48 @@ test {
 }`;
 }
 
+export function jacocoGradleSingleModuleEnableV2(
+    excludeFilter: string,
+    includeFilter: string,
+    classFileDirectory: string,
+    reportDir: string,
+    gradle5xOrHigher: boolean
+) {
+    return `
+allprojects {
+    repositories {
+        mavenCentral()
+    }
+
+    apply plugin: 'jacoco'
+}
+
+def jacocoExcludes = [${excludeFilter}]
+def jacocoIncludes = [${includeFilter}]
+
+jacocoTestReport {
+    afterEvaluate {
+        classDirectories.setFrom files(
+            fileTree(dir: "${classFileDirectory}", exclude: jacocoExcludes, include: jacocoIncludes)
+        )
+    }
+
+    reports {
+        html.enabled = true
+        xml.enabled = true
+        xml.destination file("${reportDir}/summary.xml")
+        html.destination file("${reportDir}")
+    }
+}
+
+test {
+    finalizedBy jacocoTestReport
+    jacoco {
+        destinationFile = file("${reportDir}/jacoco.exec")
+    }
+}`;
+}
+
 
 // Enable Cobertura Code Coverage for Gradle builds using this props
 export function coberturaGradleSingleModuleEnable(excludeFilter: string, includeFilter: string, classDir: string, sourceDir: string, reportDir: string) {
