@@ -82,6 +82,73 @@ task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
 }`;
 }
 
+// Enable Jacoco Code Coverage for multi-module Gradle projects (for Gradle version 6 and higher). 
+export function jacocoGradleMultiModuleEnableV2(excludeFilter: string, includeFilter: string, classFileDirectory: string, reportDir: string) {
+    return `
+allprojects {
+    repositories {
+        mavenCentral()
+    }
+
+    apply plugin: 'jacoco'
+}
+
+def jacocoExcludes = [${excludeFilter}]
+def jacocoIncludes = [${includeFilter}]
+
+subprojects {
+    jacocoTestReport {
+        afterEvaluate {
+            classDirectories.setFrom files(
+                    fileTree(dir: "${classFileDirectory}", exclude: jacocoExcludes, include: jacocoIncludes)
+            )
+        }
+
+        reports {
+            html.required = true
+            html.destination file("\${buildDir}/jacocoHtml")
+            xml.required = true
+            xml.destination file("\${buildDir}/summary.xml")
+        }
+    }
+    test {
+        jacoco {
+            destinationFile = file("${reportDir}/jacoco.exec")
+        }
+    }
+}
+
+task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
+    dependsOn = subprojects.test
+    executionData.setFrom files(subprojects.jacocoTestReport.executionData)
+    sourceDirectories.setFrom files(subprojects.sourceSets.main.allSource.srcDirs)
+    classDirectories.setFrom files()
+    def fileCollection = files();
+
+    afterEvaluate {
+        subprojects.each {
+            def classPath = files(it.sourceSets.main.output.classesDirs).getAsPath()
+            if (new File("\${classPath}").exists()) {
+                logger.info("Class directory exists in sub project: \${it.name}")
+                logger.info("Adding class files \${classPath}")
+                def filteredFiles = files(fileTree(dir: "\${classPath}", includes: jacocoIncludes, excludes: jacocoExcludes))
+                fileCollection += filteredFiles
+            } else {
+                logger.error("Class directory does not exist in sub project: \${it.name}")
+            }
+            classDirectories.setFrom fileCollection;
+        }
+    }
+
+    reports {
+        html.required = true
+        xml.required = true
+        xml.destination file("${reportDir}/summary.xml")
+        html.destination file("${reportDir}/")
+    }
+}`;
+}
+
 export function jacocoGradleSingleModuleEnable(
     excludeFilter: string,
     includeFilter: string,
@@ -122,6 +189,7 @@ test {
 }`;
 }
 
+// Enable Jacoco Code Coverage for single-module Gradle projects (for Gradle version 6 and higher). 
 export function jacocoGradleSingleModuleEnableV2(
     excludeFilter: string,
     includeFilter: string,
