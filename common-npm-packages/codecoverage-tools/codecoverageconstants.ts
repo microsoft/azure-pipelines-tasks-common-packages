@@ -103,7 +103,6 @@ subprojects {
                     fileTree(dir: "${classFileDirectory}", exclude: jacocoExcludes, include: jacocoIncludes)
             )
         }
-
         reports {
             html.required = true
             html.destination file("\${buildDir}/jacocoHtml")
@@ -117,29 +116,18 @@ subprojects {
         }
     }
 }
-
-task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
+task jacocoRootReport(type: JacocoReport) {
     dependsOn = subprojects.test
     executionData.setFrom files(subprojects.jacocoTestReport.executionData)
     sourceDirectories.setFrom files(subprojects.sourceSets.main.allSource.srcDirs)
-    classDirectories.setFrom files()
-    def fileCollection = files();
-
+    classDirectories.setFrom files(subprojects.sourceSets.main.output)
     afterEvaluate {
-        subprojects.each {
-            def classPath = files(it.sourceSets.main.output.classesDirs).getAsPath()
-            if (new File("\${classPath}").exists()) {
-                logger.info("Class directory exists in sub project: \${it.name}")
-                logger.info("Adding class files \${classPath}")
-                def filteredFiles = files(fileTree(dir: "\${classPath}", includes: jacocoIncludes, excludes: jacocoExcludes))
-                fileCollection += filteredFiles
-            } else {
-                logger.error("Class directory does not exist in sub project: \${it.name}")
-            }
-            classDirectories.setFrom fileCollection;
-        }
+        classDirectories.setFrom(
+                files(classDirectories.files.collect {
+                    fileTree(dir: it, exclude: jacocoExcludes)
+                })
+        )
     }
-
     reports {
         html.required = true
         xml.required = true
@@ -217,8 +205,8 @@ jacocoTestReport {
     }
 
     reports {
-        html.enabled = true
-        xml.enabled = true
+        html.required = true
+        xml.required = true
         xml.destination file("${reportDir}/summary.xml")
         html.destination file("${reportDir}")
     }
