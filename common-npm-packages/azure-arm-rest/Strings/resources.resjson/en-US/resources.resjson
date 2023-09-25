@@ -117,6 +117,7 @@
   "loc.messages.FailedToUpdateAppServiceApplicationSettings": "Failed to update App service '%s' application settings. Error: %s",
   "loc.messages.FailedToUpdateAppServiceConnectionStrings": "Failed to update App service '%s' Connection Strings. Error: %s",
   "loc.messages.KuduSCMDetailsAreEmpty": "KUDU SCM details are empty",
+  "loc.messages.KuduStackTraceURL": "To debug further please check Kudu stack trace URL : %s",
   "loc.messages.FailedToGetContinuousWebJobs": "Failed to get continuous WebJobs. Error: %s",
   "loc.messages.FailedToStartContinuousWebJob": "Failed to start continuous WebJob '%s'. Error: %s",
   "loc.messages.FailedToStopContinuousWebJob": "Failed to stop continuous WebJob '%s'. Error: %s",

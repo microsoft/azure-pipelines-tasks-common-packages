@@ -144,6 +144,9 @@ export async function getPackageNameFromId(serviceUri: string, accessToken: stri
     }
 }
 
+/**
+ * Returns the highest package version from a Feed for a given package. If no versions for this package name exist, we will return highest version of 0.0.0
+ */
 export async function getHighestPackageVersionFromFeed(serviceUri: string, accessToken: string, projectId: string, feedId: string, packageName: string): Promise<string> {
     const ApiVersion = "3.0-preview.1";
     const PackagingAreaName = "Packaging";
@@ -175,5 +178,5 @@ export async function getHighestPackageVersionFromFeed(serviceUri: string, acces
         }
     }
     
-    return null;
+    return "0.0.0";
 }
