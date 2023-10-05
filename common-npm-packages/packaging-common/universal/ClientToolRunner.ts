@@ -38,7 +38,9 @@ export function runClientTool(clientToolPath: string, command: string[], execOpt
             execOptions.outStream.write(getCommandString(clientToolPath, command) + os.EOL);
         }
 
-        let result = child.spawnSync(clientToolPath, command, execOptions);
+        const spawnOptions = { ...execOptions, maxBuffer: 1024 * 1024 * 1024 };
+
+        let result = child.spawnSync(clientToolPath, command, spawnOptions);
 
         if (!execOptions.silent && result.stdout && result.stdout.length > 0) {
             execOptions.outStream.write(result.stdout);
