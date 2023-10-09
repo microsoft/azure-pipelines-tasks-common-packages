@@ -291,7 +291,7 @@ export class Kudu {
         }
     }
 
-    public async listDir(physicalPath: string): Promise<void> {
+    public async listDir(physicalPath: string): Promise<any> {
         physicalPath = physicalPath.replace(/[\\]/g, "/");
         physicalPath = physicalPath[0] == "/" ? physicalPath.slice(1): physicalPath;
         var httpRequest = new webClient.WebRequest();
