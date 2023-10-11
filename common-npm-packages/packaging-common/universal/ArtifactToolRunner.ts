@@ -50,7 +50,9 @@ export function runArtifactTool(artifactToolPath: string, command: string[], exe
             execOptions.outStream.write(getCommandString(artifactToolPath, command) + os.EOL);
         }
 
-        let result = child.spawnSync(artifactToolPath, command, execOptions);
+        const spawnOptions = { ...execOptions, maxBuffer: 1024 * 1024 * 1024 };
+
+        let result = child.spawnSync(artifactToolPath, command, spawnOptions);
 
         if (!execOptions.silent && result.stdout && result.stdout.length > 0) {
             execOptions.outStream.write(result.stdout);
