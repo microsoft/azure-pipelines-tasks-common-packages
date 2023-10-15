@@ -29,7 +29,7 @@ const ERROR_FILE_NAME = "error.txt";
 export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, publishingProfile,
                              removeAdditionalFilesFlag: boolean, excludeFilesFromAppDataFlag: boolean, takeAppOfflineFlag: boolean,
                              virtualApplication: string, setParametersFile: string, additionalArguments: string, isParamFilePresentInPacakge: boolean,
-                             isFolderBasedDeployment: boolean, useWebDeploy: boolean) : string {
+                             isFolderBasedDeployment: boolean, useWebDeploy: boolean, authType?: string) : string {
 
     var msDeployCmdArgs: string = " -verb:sync";
 
@@ -65,7 +65,7 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pu
 
     if(publishingProfile != null) {
         msDeployCmdArgs += ",ComputerName=\"'https://" + publishingProfile.publishUrl + "/msdeploy.axd?site=" + webAppName + "'\",";
-        msDeployCmdArgs += "UserName=\"'" + publishingProfile.userName + "'\",Password=\"'" + publishingProfile.userPWD + "'\",AuthType=\"'Basic'\"";
+        msDeployCmdArgs += "UserName=\"'" + publishingProfile.userName + "'\",Password=\"'" + publishingProfile.userPWD + "'\",AuthType=\"'" + authType || "Basic" + "'\"";
     }
     
     if(isParamFilePresentInPacakge) {
@@ -207,9 +207,24 @@ function parseAdditionalArguments(additionalArguments: string): string[] {
 }
 
 export async function getWebDeployArgumentsString(webDeployArguments: WebDeployArguments, publishingProfile: any) {
-    return getMSDeployCmdArgs(webDeployArguments.package.getPath(), webDeployArguments.appName, publishingProfile, webDeployArguments.removeAdditionalFilesFlag,
-    webDeployArguments.excludeFilesFromAppDataFlag, webDeployArguments.takeAppOfflineFlag, webDeployArguments.virtualApplication, 
-    webDeployArguments.setParametersFile, webDeployArguments.additionalArguments, await webDeployArguments.package.isMSBuildPackage(), webDeployArguments.package.isFolder(), webDeployArguments.useWebDeploy);
+    return getMSDeployCmdArgs(
+        webDeployArguments.package.getPath(),
+        webDeployArguments.appName, 
+        publishingProfile, 
+        webDeployArguments.removeAdditionalFilesFlag,
+        webDeployArguments.excludeFilesFromAppDataFlag,
+        webDeployArguments.takeAppOfflineFlag,
+        webDeployArguments.virtualApplication,
+        webDeployArguments.setParametersFile,
+        webDeployArguments.additionalArguments,
+        await webDeployArguments.package.isMSBuildPackage(),
+        webDeployArguments.package.isFolder(),
+        webDeployArguments.useWebDeploy,
+        webDeployArguments.authType);
+}
+
+export function shouldUseMSDeployTokenAuth(): boolean {
+    return (tl.getVariable("USE_MSDEPLOY_TOKEN_AUTH") || "").toLowerCase() === "true";
 }
 
 /**
@@ -227,7 +242,8 @@ export async function getMSDeployFullPath() {
     }
     catch(error) {
         tl.debug(error);
-        return path.join(__dirname, "MSDeploy3.6/MSDeploy3.6", "msdeploy.exe"); 
+        const subfolder = shouldUseMSDeployTokenAuth() ? "M229" : "M142";
+        return path.join(__dirname, "MSDeploy", subfolder , "MSDeploy3.6", "msdeploy.exe");
     }
 }
 
@@ -273,15 +289,69 @@ function getMSDeployInstallPath(registryKey: string): Q.Promise<string> {
       key:  registryKey
     })
 
-    regKey.get("InstallPath", function(err,item) {
-        if(err) {
+    regKey.values(function(err, items: {name: string, value: string}[]) {
+        if (err) {
             defer.reject(tl.loc("UnabletofindthelocationofMSDeployfromregistryonmachineError", err));
-            return;
         }
-        defer.resolve(item.value);
+
+        if (shouldUseMSDeployTokenAuth()) {
+            const versionItem = items.find(item => item.name === "Version");
+            if (!versionItem) {
+                defer.reject(tl.loc("MissingMSDeployVersionRegistryKey"));
+            }
+
+            const minimalSupportedVersion = "9.0.7225.0";
+            const version = versionItem.value;
+            tl.debug(`Installed MSDeploy Version: ${version}`);
+
+            // MSDeploy 9.0.7225.0 is the first version to support token auth
+            if (compareVersions(version, minimalSupportedVersion) < 0) {
+                defer.reject(tl.loc("UnsupportedMSDeployVersion", version));
+            }
+        }
+
+        const installPathItem = items.find(item => item.name === "InstallPath");
+        if (!installPathItem) {
+            defer.reject(tl.loc("MissingMSDeployInstallPathRegistryKey"));
+        }
+
+        defer.resolve(installPathItem.value);
     });
 
     return defer.promise;
+}
+
+function compareVersions(version1: string, version2: string): number {
+    if (version1 === version2) {
+        return 0;
+    }
+
+    const parts1 = version1.split(".").map(Number);
+    const parts2 = version2.split(".").map(Number);
+
+    const length = Math.min(parts1.length, parts2.length);
+
+    for (let i = 0; i < length; i++) {
+        // A bigger than B
+        if (parts1[i] > parts2[i]) {
+            return 1;
+        }
+
+        // B bigger than A
+        if (parts1[i] < parts2[i]) {
+            return -1;
+        }
+    }
+
+    if (parts1.length > parts2.length) {
+        return 1;
+    }
+
+    if (parts1.length < parts2.length) {
+        return -1;
+    }
+
+    return 0;
 }
 
 /**
@@ -354,6 +424,7 @@ export interface WebDeployArguments {
     setParametersFile?: string
     additionalArguments?: string;
     useWebDeploy?: boolean;
+    authType?: string;
 }
 
 
