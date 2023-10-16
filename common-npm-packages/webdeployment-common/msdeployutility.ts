@@ -335,18 +335,17 @@ function compareVersions(version1: string, version2: string): number {
         return 0;
     }
 
-    const parts1 = version1.split(".").map(Number);
-    const parts2 = version2.split(".").map(Number);
+    const separator = ".";
+    const parts1 = version1.split(separator).map(Number);
+    const parts2 = version2.split(separator).map(Number);
 
     const length = Math.min(parts1.length, parts2.length);
 
     for (let i = 0; i < length; i++) {
-        // A bigger than B
         if (parts1[i] > parts2[i]) {
             return 1;
         }
 
-        // B bigger than A
         if (parts1[i] < parts2[i]) {
             return -1;
         }
