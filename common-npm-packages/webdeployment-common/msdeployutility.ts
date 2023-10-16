@@ -241,93 +241,90 @@ export function shouldUseMSDeployTokenAuth(): boolean {
  * 
  * @returns    string
  */
-export async function getMSDeployFullPath() {
+export async function getMSDeployFullPath(): Promise<string> {
     try {
-        var msDeployInstallPathRegKey = "\\SOFTWARE\\Microsoft\\IIS Extensions\\MSDeploy";
-        var msDeployLatestPathRegKey = await getMSDeployLatestRegKey(msDeployInstallPathRegKey);
-        var msDeployFullPath = await getMSDeployInstallPath(msDeployLatestPathRegKey);
-        msDeployFullPath = msDeployFullPath + "msdeploy.exe";
-        return msDeployFullPath;
+        const msDeployInstallPathRegKey = "\\SOFTWARE\\Microsoft\\IIS Extensions\\MSDeploy";
+        const msDeployLatestPathRegKey = await getMSDeployLatestRegKey(msDeployInstallPathRegKey);
+        return await getMSDeployInstallPath(msDeployLatestPathRegKey) + "msdeploy.exe";
     }
-    catch(error) {
+    catch (error) {
         tl.debug(error);
         const subfolder = shouldUseMSDeployTokenAuth() ? "M229" : "M142";
         return path.join(__dirname, "MSDeploy", subfolder , "MSDeploy3.6", "msdeploy.exe");
     }
 }
 
-function getMSDeployLatestRegKey(registryKey: string): Q.Promise<string> {
-    var defer = Q.defer<string>();
-    var regKey = new winreg({
-      hive: winreg.HKLM,
-      key:  registryKey
-    })
+function getMSDeployLatestRegKey(registryKey: string): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+        var regKey = new winreg({
+            hive: winreg.HKLM,
+            key: registryKey
+        })
 
-    regKey.keys(function(err, subRegKeys) {
-        if(err) {
-            defer.reject(tl.loc("UnabletofindthelocationofMSDeployfromregistryonmachineError", err));
-            return;
-        }
-        var latestKeyVersion = 0 ;
-        var latestSubKey;
-        for(var index in subRegKeys) {
-            var subRegKey = subRegKeys[index].key;
-            var subKeyVersion = subRegKey.substr(subRegKey.lastIndexOf('\\') + 1, subRegKey.length - 1);
-            if(!isNaN(subKeyVersion)){
-                var subKeyVersionNumber = parseFloat(subKeyVersion);
-                if(subKeyVersionNumber > latestKeyVersion) {
-                    latestKeyVersion = subKeyVersionNumber;
-                    latestSubKey = subRegKey;
+        regKey.keys(function (err, subRegKeys) {
+            if (err) {
+                reject(tl.loc("UnabletofindthelocationofMSDeployfromregistryonmachineError", err));
+                return;
+            }
+
+            var latestKeyVersion = 0;
+            var latestSubKey;
+            for (var index in subRegKeys) {
+                var subRegKey = subRegKeys[index].key;
+                var subKeyVersion = subRegKey.substr(subRegKey.lastIndexOf('\\') + 1, subRegKey.length - 1);
+                if (!isNaN(subKeyVersion)) {
+                    var subKeyVersionNumber = parseFloat(subKeyVersion);
+                    if (subKeyVersionNumber > latestKeyVersion) {
+                        latestKeyVersion = subKeyVersionNumber;
+                        latestSubKey = subRegKey;
+                    }
                 }
             }
-        }
-        if(latestKeyVersion < 3) {
-            defer.reject(tl.loc("UnsupportedinstalledversionfoundforMSDeployversionshouldbeatleast3orabove", latestKeyVersion));
-            return;
-        }
-        defer.resolve(latestSubKey);
+            if (latestKeyVersion < 3) {
+                reject(tl.loc("UnsupportedinstalledversionfoundforMSDeployversionshouldbeatleast3orabove", latestKeyVersion));
+                return;
+            }
+            resolve(latestSubKey);
+        });
     });
-    return defer.promise;
 }
 
-function getMSDeployInstallPath(registryKey: string): Q.Promise<string> {
-    var defer = Q.defer<string>();
+function getMSDeployInstallPath(registryKey: string): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+        var regKey = new winreg({
+            hive: winreg.HKLM,
+            key: registryKey
+        })
 
-    var regKey = new winreg({
-      hive: winreg.HKLM,
-      key:  registryKey
-    })
-
-    regKey.values(function(err, items: {name: string, value: string}[]) {
-        if (err) {
-            defer.reject(tl.loc("UnabletofindthelocationofMSDeployfromregistryonmachineError", err));
-        }
-
-        if (shouldUseMSDeployTokenAuth()) {
-            const versionItem = items.find(item => item.name === "Version");
-            if (!versionItem) {
-                defer.reject(tl.loc("MissingMSDeployVersionRegistryKey"));
+        regKey.values(function (err, items: { name: string, value: string }[]) {
+            if (err) {
+                reject(tl.loc("UnabletofindthelocationofMSDeployfromregistryonmachineError", err));
             }
 
-            const minimalSupportedVersion = "9.0.7225.0";
-            const version = versionItem.value;
-            tl.debug(`Installed MSDeploy Version: ${version}`);
+            if (shouldUseMSDeployTokenAuth()) {
+                const versionItem = items.find(item => item.name === "Version");
+                if (!versionItem) {
+                    reject(tl.loc("MissingMSDeployVersionRegistryKey"));
+                }
 
-            // MSDeploy 9.0.7225.0 is the first version to support token auth
-            if (compareVersions(version, minimalSupportedVersion) < 0) {
-                defer.reject(tl.loc("UnsupportedMSDeployVersion", version));
+                const minimalSupportedVersion = "9.0.7225.0";
+                const version = versionItem.value;
+                tl.debug(`Installed MSDeploy Version: ${version}`);
+
+                // MSDeploy 9.0.7225.0 is the first version to support token auth
+                if (compareVersions(version, minimalSupportedVersion) < 0) {
+                    reject(tl.loc("UnsupportedMSDeployVersion", version));
+                }
             }
-        }
 
-        const installPathItem = items.find(item => item.name === "InstallPath");
-        if (!installPathItem) {
-            defer.reject(tl.loc("MissingMSDeployInstallPathRegistryKey"));
-        }
+            const installPathItem = items.find(item => item.name === "InstallPath");
+            if (!installPathItem) {
+                reject(tl.loc("MissingMSDeployInstallPathRegistryKey"));
+            }
 
-        defer.resolve(installPathItem.value);
+            resolve(installPathItem.value);
+        });
     });
-
-    return defer.promise;
 }
 
 function compareVersions(version1: string, version2: string): number {
