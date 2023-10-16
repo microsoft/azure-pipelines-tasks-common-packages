@@ -14,7 +14,7 @@ const ERROR_FILE_NAME = "error.txt";
  * 
  * @param   webAppPackage                   Web deploy package
  * @param   webAppName                      web App Name
- * @param   publishingProfile               Azure RM Connection Details
+ * @param   profile                         Azure RM Connection Details
  * @param   removeAdditionalFilesFlag       Flag to set DoNotDeleteRule rule
  * @param   excludeFilesFromAppDataFlag     Flag to prevent App Data from publishing
  * @param   takeAppOfflineFlag              Flag to enable AppOffline rule
@@ -23,13 +23,14 @@ const ERROR_FILE_NAME = "error.txt";
  * @param   additionalArguments             Arguments provided by user
  * @param   isParamFilePresentInPacakge     Flag to check Paramter.xml file
  * @param   isFolderBasedDeployment         Flag to check if given web package path is a folder
+ * @param   authType                        Type of authentication to use
  * 
  * @returns string 
  */
-export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, publishingProfile,
+export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, profile,
                              removeAdditionalFilesFlag: boolean, excludeFilesFromAppDataFlag: boolean, takeAppOfflineFlag: boolean,
                              virtualApplication: string, setParametersFile: string, additionalArguments: string, isParamFilePresentInPacakge: boolean,
-                             isFolderBasedDeployment: boolean, useWebDeploy: boolean) : string {
+                             isFolderBasedDeployment: boolean, useWebDeploy: boolean, authType?: string) : string {
 
     var msDeployCmdArgs: string = " -verb:sync";
 
@@ -63,9 +64,9 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pu
         }
     }
 
-    if(publishingProfile != null) {
-        msDeployCmdArgs += ",ComputerName=\"'https://" + publishingProfile.publishUrl + "/msdeploy.axd?site=" + webAppName + "'\",";
-        msDeployCmdArgs += "UserName=\"'" + publishingProfile.userName + "'\",Password=\"'" + publishingProfile.userPWD + "'\",AuthType=\"'Basic'\"";
+    if(profile != null) {
+        msDeployCmdArgs += `,ComputerName=\"'https://${profile.publishUrl}/msdeploy.axd?site=${webAppName}'\",`;
+        msDeployCmdArgs += `UserName=\"'${profile.userName}'\",Password=\"'${profile.userPWD}'\",AuthType=\"'${authType || "Basic"}'\"`;
     }
     
     if(isParamFilePresentInPacakge) {
@@ -93,7 +94,7 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pu
         msDeployCmdArgs += " -enableRule:DoNotDeleteRule";
     }
 
-    if(publishingProfile != null)
+    if(profile != null)
     {
         var userAgent = tl.getVariable("AZURE_HTTP_USER_AGENT");
         if(userAgent)
@@ -206,10 +207,33 @@ function parseAdditionalArguments(additionalArguments: string): string[] {
     return parsedArgs;
 }
 
-export async function getWebDeployArgumentsString(webDeployArguments: WebDeployArguments, publishingProfile: any) {
-    return getMSDeployCmdArgs(webDeployArguments.package.getPath(), webDeployArguments.appName, publishingProfile, webDeployArguments.removeAdditionalFilesFlag,
-    webDeployArguments.excludeFilesFromAppDataFlag, webDeployArguments.takeAppOfflineFlag, webDeployArguments.virtualApplication, 
-    webDeployArguments.setParametersFile, webDeployArguments.additionalArguments, await webDeployArguments.package.isMSBuildPackage(), webDeployArguments.package.isFolder(), webDeployArguments.useWebDeploy);
+
+
+export async function getWebDeployArgumentsString(args: WebDeployArguments): Promise<string> {
+    const profile = {
+        userPWD: args.password,
+        userName: args.userName,
+        publishUrl: args.publishUrl
+    };
+
+    return getMSDeployCmdArgs(
+        args.package.getPath(),
+        args.appName, 
+        profile, 
+        args.removeAdditionalFilesFlag,
+        args.excludeFilesFromAppDataFlag,
+        args.takeAppOfflineFlag,
+        args.virtualApplication,
+        args.setParametersFile,
+        args.additionalArguments,
+        await args.package.isMSBuildPackage(),
+        args.package.isFolder(),
+        args.useWebDeploy,
+        args.authType);
+}
+
+export function shouldUseMSDeployTokenAuth(): boolean {
+    return (tl.getVariable("USE_MSDEPLOY_TOKEN_AUTH") || "").toLowerCase() === "true";
 }
 
 /**
@@ -217,71 +241,122 @@ export async function getWebDeployArgumentsString(webDeployArguments: WebDeployA
  * 
  * @returns    string
  */
-export async function getMSDeployFullPath() {
+export async function getMSDeployFullPath(): Promise<string> {
     try {
-        var msDeployInstallPathRegKey = "\\SOFTWARE\\Microsoft\\IIS Extensions\\MSDeploy";
-        var msDeployLatestPathRegKey = await getMSDeployLatestRegKey(msDeployInstallPathRegKey);
-        var msDeployFullPath = await getMSDeployInstallPath(msDeployLatestPathRegKey);
-        msDeployFullPath = msDeployFullPath + "msdeploy.exe";
-        return msDeployFullPath;
+        const msDeployInstallPathRegKey = "\\SOFTWARE\\Microsoft\\IIS Extensions\\MSDeploy";
+        const msDeployLatestPathRegKey = await getMSDeployLatestRegKey(msDeployInstallPathRegKey);
+        return await getMSDeployInstallPath(msDeployLatestPathRegKey) + "msdeploy.exe";
     }
-    catch(error) {
+    catch (error) {
         tl.debug(error);
-        return path.join(__dirname, "MSDeploy3.6/MSDeploy3.6", "msdeploy.exe"); 
+        const subfolder = shouldUseMSDeployTokenAuth() ? "M229" : "M142";
+        return path.join(__dirname, "MSDeploy", subfolder , "MSDeploy3.6", "msdeploy.exe");
     }
 }
 
-function getMSDeployLatestRegKey(registryKey: string): Q.Promise<string> {
-    var defer = Q.defer<string>();
-    var regKey = new winreg({
-      hive: winreg.HKLM,
-      key:  registryKey
-    })
+function getMSDeployLatestRegKey(registryKey: string): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+        var regKey = new winreg({
+            hive: winreg.HKLM,
+            key: registryKey
+        })
 
-    regKey.keys(function(err, subRegKeys) {
-        if(err) {
-            defer.reject(tl.loc("UnabletofindthelocationofMSDeployfromregistryonmachineError", err));
-            return;
-        }
-        var latestKeyVersion = 0 ;
-        var latestSubKey;
-        for(var index in subRegKeys) {
-            var subRegKey = subRegKeys[index].key;
-            var subKeyVersion = subRegKey.substr(subRegKey.lastIndexOf('\\') + 1, subRegKey.length - 1);
-            if(!isNaN(subKeyVersion)){
-                var subKeyVersionNumber = parseFloat(subKeyVersion);
-                if(subKeyVersionNumber > latestKeyVersion) {
-                    latestKeyVersion = subKeyVersionNumber;
-                    latestSubKey = subRegKey;
+        regKey.keys(function (err, subRegKeys) {
+            if (err) {
+                reject(tl.loc("UnabletofindthelocationofMSDeployfromregistryonmachineError", err));
+                return;
+            }
+
+            var latestKeyVersion = 0;
+            var latestSubKey;
+            for (var index in subRegKeys) {
+                var subRegKey = subRegKeys[index].key;
+                var subKeyVersion = subRegKey.substr(subRegKey.lastIndexOf('\\') + 1, subRegKey.length - 1);
+                if (!isNaN(subKeyVersion)) {
+                    var subKeyVersionNumber = parseFloat(subKeyVersion);
+                    if (subKeyVersionNumber > latestKeyVersion) {
+                        latestKeyVersion = subKeyVersionNumber;
+                        latestSubKey = subRegKey;
+                    }
                 }
             }
-        }
-        if(latestKeyVersion < 3) {
-            defer.reject(tl.loc("UnsupportedinstalledversionfoundforMSDeployversionshouldbeatleast3orabove", latestKeyVersion));
-            return;
-        }
-        defer.resolve(latestSubKey);
+            if (latestKeyVersion < 3) {
+                reject(tl.loc("UnsupportedinstalledversionfoundforMSDeployversionshouldbeatleast3orabove", latestKeyVersion));
+                return;
+            }
+            resolve(latestSubKey);
+        });
     });
-    return defer.promise;
 }
 
-function getMSDeployInstallPath(registryKey: string): Q.Promise<string> {
-    var defer = Q.defer<string>();
+function getMSDeployInstallPath(registryKey: string): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+        var regKey = new winreg({
+            hive: winreg.HKLM,
+            key: registryKey
+        })
 
-    var regKey = new winreg({
-      hive: winreg.HKLM,
-      key:  registryKey
-    })
+        regKey.values(function (err, items: { name: string, value: string }[]) {
+            if (err) {
+                reject(tl.loc("UnabletofindthelocationofMSDeployfromregistryonmachineError", err));
+            }
 
-    regKey.get("InstallPath", function(err,item) {
-        if(err) {
-            defer.reject(tl.loc("UnabletofindthelocationofMSDeployfromregistryonmachineError", err));
-            return;
-        }
-        defer.resolve(item.value);
+            if (shouldUseMSDeployTokenAuth()) {
+                const versionItem = items.find(item => item.name === "Version");
+                if (!versionItem) {
+                    reject(tl.loc("MissingMSDeployVersionRegistryKey"));
+                }
+
+                const minimalSupportedVersion = "9.0.7225.0";
+                const version = versionItem.value;
+                tl.debug(`Installed MSDeploy Version: ${version}`);
+
+                // MSDeploy 9.0.7225.0 is the first version to support token auth
+                if (compareVersions(version, minimalSupportedVersion) < 0) {
+                    reject(tl.loc("UnsupportedMSDeployVersion", version));
+                }
+            }
+
+            const installPathItem = items.find(item => item.name === "InstallPath");
+            if (!installPathItem) {
+                reject(tl.loc("MissingMSDeployInstallPathRegistryKey"));
+            }
+
+            resolve(installPathItem.value);
+        });
     });
+}
 
-    return defer.promise;
+function compareVersions(version1: string, version2: string): number {
+    if (version1 === version2) {
+        return 0;
+    }
+
+    const separator = ".";
+    const parts1 = version1.split(separator).map(Number);
+    const parts2 = version2.split(separator).map(Number);
+
+    const length = Math.min(parts1.length, parts2.length);
+
+    for (let i = 0; i < length; i++) {
+        if (parts1[i] > parts2[i]) {
+            return 1;
+        }
+
+        if (parts1[i] < parts2[i]) {
+            return -1;
+        }
+    }
+
+    if (parts1.length > parts2.length) {
+        return 1;
+    }
+
+    if (parts1.length < parts2.length) {
+        return -1;
+    }
+
+    return 0;
 }
 
 /**
@@ -354,6 +429,7 @@ export interface WebDeployArguments {
     setParametersFile?: string
     additionalArguments?: string;
     useWebDeploy?: boolean;
+    authType?: string;
 }
 
 

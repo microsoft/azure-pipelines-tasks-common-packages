@@ -30,6 +30,10 @@
         "VariableSubstitutionInitiated" : "Initiated variable substitution in config file : %s",
         "ConfigFileUpdated" : "Config file : %s updated.",
         "SkippedUpdatingFile" : "Skipped Updating file: %s",
-        "PwshNotAvailable": "##WARNING##:PowerShell Core (pwsh.exe) is not available on agent machine. Falling back to using Windows PowerShell (powershell.exe). This can cause reduced performance. Please install the newer version of PowerShell for improved performance."
+        "PwshNotAvailable": "##WARNING##:PowerShell Core (pwsh.exe) is not available on agent machine. Falling back to using Windows PowerShell (powershell.exe). This can cause reduced performance. Please install the newer version of PowerShell for improved performance.",
+        "UnabletofindthelocationofMSDeployfromregistryonmachineError": "Unable to find the location of MSDeploy from registry. Error: %s",
+        "MissingMSDeployVersionRegistryKey": "Missing MSDeploy Version registry key.",
+        "UnsupportedMSDeployVersion": "MSDeploy %s does not support token base authentication. Please upgrade to MSDeploy 9.0.7225.0 or higher.",
+        "MissingMSDeployInstallPathRegistryKey": "Missing MSDeploy InstallPath registry key."
     }
 }
