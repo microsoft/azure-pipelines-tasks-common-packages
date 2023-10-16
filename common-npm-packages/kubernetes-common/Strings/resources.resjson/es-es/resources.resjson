@@ -15,5 +15,6 @@
   "loc.messages.AllContainersNotInReadyState": "Ninguno de los contenedores está listo.",
   "loc.messages.waitForServiceIpAssignment": "Esperando a la asignación de dirección IP externa del servicio %s",
   "loc.messages.waitForServiceIpAssignmentTimedOut": "Se agotó el tiempo de expiración de la asignación de dirección IP externa del servicio %s",
-  "loc.messages.EnvironmentLink": "Para más información, vaya a %s"
+  "loc.messages.EnvironmentLink": "Para más información, vaya a %s",
+  "loc.messages.AuthSchemeNotSupported": "No se admite el esquema de autenticación %s."
 }

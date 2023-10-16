@@ -15,5 +15,6 @@
   "loc.messages.AllContainersNotInReadyState": "Tutti i contenitori non si trovano in uno stato pronto.",
   "loc.messages.waitForServiceIpAssignment": "In attesa dell'assegnazione dell'IP esterno del servizio %s",
   "loc.messages.waitForServiceIpAssignmentTimedOut": "Si è verificato un timeout durante l'attesa dell'assegnazione dell'IP esterno del servizio %s",
-  "loc.messages.EnvironmentLink": "Per altre informazioni, vedere %s"
+  "loc.messages.EnvironmentLink": "Per altre informazioni, vedere %s",
+  "loc.messages.AuthSchemeNotSupported": "Lo schema di autenticazione %s non è supportato"
 }
