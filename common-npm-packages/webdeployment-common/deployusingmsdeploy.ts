@@ -2,7 +2,7 @@ import tl = require('azure-pipelines-task-lib/task');
 import fs = require('fs');
 import path = require('path');
 import Q = require('q');
-import { WebDeployArguments, WebDeployResult } from './msdeployutility';
+import { WebDeployArguments, WebDeployResult, getMSDeployFullPath, getWebDeployArgumentsString, getWebDeployErrorCode } from './msdeployutility';
 
 var msDeployUtility = require('./msdeployutility.js');
 var utility = require('./utility.js');
@@ -80,26 +80,30 @@ export async function DeployUsingMSDeploy(webDeployPkg, webAppName, publishingPr
 }
 
 
-export async function executeWebDeploy(WebDeployArguments: WebDeployArguments, publishingProfile: any): Promise<WebDeployResult> {
-    var webDeployArguments = await msDeployUtility.getWebDeployArgumentsString(WebDeployArguments, publishingProfile);
+export async function executeWebDeploy(webDeployArguments: WebDeployArguments): Promise<WebDeployResult> {
+    const args = await getWebDeployArgumentsString(webDeployArguments);
+    const originalPathVar = process.env.PATH;
     try {
-        var msDeployPath = await msDeployUtility.getMSDeployFullPath();
-        var msDeployDirectory = msDeployPath.slice(0, msDeployPath.lastIndexOf('\\') + 1);
-        var pathVar = process.env.PATH;
-        process.env.PATH = msDeployDirectory + ";" + process.env.PATH ;
-        await executeMSDeploy(webDeployArguments);
+        const msDeployPath: string = await getMSDeployFullPath();
+        const msDeployDirectory = msDeployPath.slice(0, msDeployPath.lastIndexOf('\\') + 1);
+        process.env.PATH = msDeployDirectory + ";" + process.env.PATH;
+        await executeMSDeploy(args);
+        return {
+            isSuccess: true
+        } as WebDeployResult;
     }
-    catch(exception) {
-        var msDeployErrorFilePath = tl.getVariable('System.DefaultWorkingDirectory') + '\\' + 'error.txt';
-        var errorFileContent = tl.exist(msDeployErrorFilePath) ? fs.readFileSync(msDeployErrorFilePath, 'utf-8') : "";
+    catch (exception) {
+        const msDeployErrorFilePath = tl.getVariable('System.DefaultWorkingDirectory') + '\\' + 'error.txt';
+        const errorFileContent = tl.exist(msDeployErrorFilePath) ? fs.readFileSync(msDeployErrorFilePath, 'utf-8') : "";
         return {
             isSuccess: false,
             error: errorFileContent,
-            errorCode: msDeployUtility.getWebDeployErrorCode(errorFileContent)
+            errorCode: getWebDeployErrorCode(errorFileContent)
         } as WebDeployResult;
     }
-
-    return { isSuccess: true } as WebDeployResult;
+    finally {
+        process.env.PATH = originalPathVar;
+    }
 }
 
 function argStringToArray(argString): string[] {

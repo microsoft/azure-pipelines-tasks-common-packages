@@ -14,7 +14,7 @@ const ERROR_FILE_NAME = "error.txt";
  * 
  * @param   webAppPackage                   Web deploy package
  * @param   webAppName                      web App Name
- * @param   publishingProfile               Azure RM Connection Details
+ * @param   profile                         Azure RM Connection Details
  * @param   removeAdditionalFilesFlag       Flag to set DoNotDeleteRule rule
  * @param   excludeFilesFromAppDataFlag     Flag to prevent App Data from publishing
  * @param   takeAppOfflineFlag              Flag to enable AppOffline rule
@@ -23,10 +23,11 @@ const ERROR_FILE_NAME = "error.txt";
  * @param   additionalArguments             Arguments provided by user
  * @param   isParamFilePresentInPacakge     Flag to check Paramter.xml file
  * @param   isFolderBasedDeployment         Flag to check if given web package path is a folder
+ * @param   authType                        Type of authentication to use
  * 
  * @returns string 
  */
-export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, publishingProfile,
+export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, profile,
                              removeAdditionalFilesFlag: boolean, excludeFilesFromAppDataFlag: boolean, takeAppOfflineFlag: boolean,
                              virtualApplication: string, setParametersFile: string, additionalArguments: string, isParamFilePresentInPacakge: boolean,
                              isFolderBasedDeployment: boolean, useWebDeploy: boolean, authType?: string) : string {
@@ -63,9 +64,9 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pu
         }
     }
 
-    if(publishingProfile != null) {
-        msDeployCmdArgs += ",ComputerName=\"'https://" + publishingProfile.publishUrl + "/msdeploy.axd?site=" + webAppName + "'\",";
-        msDeployCmdArgs += "UserName=\"'" + publishingProfile.userName + "'\",Password=\"'" + publishingProfile.userPWD + "'\",AuthType=\"'" + authType || "Basic" + "'\"";
+    if(profile != null) {
+        msDeployCmdArgs += `,ComputerName=\"'https://${profile.publishUrl}/msdeploy.axd?site=${webAppName}'\",`;
+        msDeployCmdArgs += `UserName=\"'${profile.userName}'\",Password=\"'${profile.userPWD}'\",AuthType=\"'${authType || "Basic"}'\"`;
     }
     
     if(isParamFilePresentInPacakge) {
@@ -93,7 +94,7 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pu
         msDeployCmdArgs += " -enableRule:DoNotDeleteRule";
     }
 
-    if(publishingProfile != null)
+    if(profile != null)
     {
         var userAgent = tl.getVariable("AZURE_HTTP_USER_AGENT");
         if(userAgent)
@@ -206,21 +207,29 @@ function parseAdditionalArguments(additionalArguments: string): string[] {
     return parsedArgs;
 }
 
-export async function getWebDeployArgumentsString(webDeployArguments: WebDeployArguments, publishingProfile: any) {
+
+
+export async function getWebDeployArgumentsString(args: WebDeployArguments): Promise<string> {
+    const profile = {
+        userPWD: args.password,
+        userName: args.userName,
+        publishUrl: args.publishUrl
+    };
+
     return getMSDeployCmdArgs(
-        webDeployArguments.package.getPath(),
-        webDeployArguments.appName, 
-        publishingProfile, 
-        webDeployArguments.removeAdditionalFilesFlag,
-        webDeployArguments.excludeFilesFromAppDataFlag,
-        webDeployArguments.takeAppOfflineFlag,
-        webDeployArguments.virtualApplication,
-        webDeployArguments.setParametersFile,
-        webDeployArguments.additionalArguments,
-        await webDeployArguments.package.isMSBuildPackage(),
-        webDeployArguments.package.isFolder(),
-        webDeployArguments.useWebDeploy,
-        webDeployArguments.authType);
+        args.package.getPath(),
+        args.appName, 
+        profile, 
+        args.removeAdditionalFilesFlag,
+        args.excludeFilesFromAppDataFlag,
+        args.takeAppOfflineFlag,
+        args.virtualApplication,
+        args.setParametersFile,
+        args.additionalArguments,
+        await args.package.isMSBuildPackage(),
+        args.package.isFolder(),
+        args.useWebDeploy,
+        args.authType);
 }
 
 export function shouldUseMSDeployTokenAuth(): boolean {
