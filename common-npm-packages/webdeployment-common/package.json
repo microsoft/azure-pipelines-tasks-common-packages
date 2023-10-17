@@ -1,13 +1,13 @@
 {
     "name": "azure-pipelines-tasks-webdeployment-common",
-    "version": "4.224.0",
+    "version": "4.230.1",
     "description": "Common Lib for MSDeploy Utility",
     "repository": {
         "type": "git",
         "url": "git+ssh://git@github.com/Microsoft/azure-pipelines-tasks.git"
     },
     "scripts": {
-        "build": "node ../build-scripts/downloadArchive.js https://vstsagenttools.blob.core.windows.net/tools/7zip/1/7zip.zip ./7zip &&  node ../build-scripts/downloadArchive.js https://vstsagenttools.blob.core.windows.net/tools/MSDeploy/3.6/M142/MSDeploy.zip ./MSDeploy3.6 &&  node make.js"
+        "build": "pwsh build.ps1"
     },
     "author": "Microsoft Corporation",
     "license": "MIT",
@@ -23,9 +23,10 @@
         "azure-pipelines-task-lib": "^4.2.0",
         "decompress-zip": "^0.3.3",
         "ltx": "2.8.0",
+        "node-stream-zip": "^1.15.0",
         "q": "1.4.1",
         "winreg": "1.2.2",
-        "xml2js": "0.4.13"
+        "xml2js": "0.6.2"
     },
     "devDependencies": {
         "typescript": "4.0.2"

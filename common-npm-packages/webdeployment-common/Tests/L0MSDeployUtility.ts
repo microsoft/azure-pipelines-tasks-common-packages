@@ -32,6 +32,18 @@ else {
     throw new Error('MSBUILD PACKAGE DEFAULT PARAMS FAILED');
 }
 
+var tokenAuthMSBuildPackageArgument: string = msdeployUtility.getMSDeployCmdArgs('package.zip', 'webapp_name', {
+    publishUrl: 'publishUrl', userName: 'user', userPWD: 'token'
+}, true, false, true, null, null, null, true, false, false, "Bearer");
+
+console.log(` * MSBUILD TOKEN AUTH PARAMS: ${tokenAuthMSBuildPackageArgument}`);
+if(checkParametersIfPresent(tokenAuthMSBuildPackageArgument, ["AuthType=\"'Bearer'\""])) {
+    console.log("MSBUILD TOKEN AUTH PARAMS PASSED");
+}
+else {
+    throw new Error('MSBUILD TOKEN AUTH PARAMS FAILED');
+}
+
 
 var packageWithSetParamArgument: string = msdeployUtility.getMSDeployCmdArgs('package.zip', 'webapp_name', {
     publishUrl: 'http://webapp_name.scm.azurewebsites.net:443', userName: '$webapp_name', userPWD: 'webapp_password'

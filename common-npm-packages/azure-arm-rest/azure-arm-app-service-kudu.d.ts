@@ -22,7 +22,7 @@ export declare class Kudu {
     getProcess(processID: number): Promise<any>;
     killProcess(processID: number): Promise<void>;
     getAppSettings(): Promise<Map<string, string>>;
-    listDir(physicalPath: string): Promise<void>;
+    listDir(physicalPath: string): Promise<any>;
     getFileContent(physicalPath: string, fileName: string): Promise<string>;
     uploadFile(physicalPath: string, fileName: string, filePath: string): Promise<void>;
     createPath(physicalPath: string): Promise<any>;
