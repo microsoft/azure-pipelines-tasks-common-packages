@@ -15,5 +15,6 @@
   "loc.messages.AllContainersNotInReadyState": "Все контейнеры не находятся в состоянии готовности.",
   "loc.messages.waitForServiceIpAssignment": "Ожидание назначения внешнего IP-адреса службы %s",
   "loc.messages.waitForServiceIpAssignmentTimedOut": "Истекло время ожидания назначения внешнего IP-адреса службы %s.",
-  "loc.messages.EnvironmentLink": "Дополнительные сведения: %s"
+  "loc.messages.EnvironmentLink": "Дополнительные сведения: %s",
+  "loc.messages.AuthSchemeNotSupported": "Схема проверки подлинности %s не поддерживается"
 }
