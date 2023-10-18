@@ -87,7 +87,13 @@ export function runL1XmlVarSubTests() {
         transformedFileAsBuffer = Buffer.from(transformedFileAsString, transformedFileEncodeType);
         var resultFile = ltx.parse(transformedFileAsBuffer);
         var expectFile = ltx.parse(expectedFileAsBuffer);
-        return ltx.equal(resultFile, expectFile);
+        const result = ltx.equal(resultFile, expectFile);
+
+        if (!result) {
+            console.debug(transformedFileAsString);
+        }
+
+        return result;
     }
 }
 
