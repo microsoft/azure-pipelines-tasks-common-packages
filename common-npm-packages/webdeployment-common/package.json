@@ -20,6 +20,7 @@
         "@types/mocha": "^5.2.7",
         "@types/node": "^10.17.0",
         "@xmldom/xmldom": "git+https://github.com/xmldom/xmldom.git#0.8.6",
+        "@types/ltx": "3.0.6",
         "archiver": "1.2.0",
         "azure-pipelines-task-lib": "^4.2.0",
         "decompress-zip": "^0.3.3",

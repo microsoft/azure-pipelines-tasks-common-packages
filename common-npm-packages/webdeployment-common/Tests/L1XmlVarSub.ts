@@ -33,11 +33,8 @@ export function runL1XmlVarSubTests() {
    });
 
     it("Should replace xml variables", done => {
-        const tags = ["applicationSettings", "appSettings", "connectionStrings", "configSections"];
-        const configFiles = [
-            getAbsolutePath('Web_test.config'),
-            getAbsolutePath('Web_test.Debug.config')
-        ];
+        const parameterFilePath = getAbsolutePath('parameters_test.xml');
+        const tags = [ "applicationSettings", "appSettings", "connectionStrings", "configSections" ];
         const variableMap = {
             'conntype': 'new_connType',
             "MyDB": "TestDB",
@@ -53,23 +50,13 @@ export function runL1XmlVarSubTests() {
             'log_level': 'error,warning',
             'Email:ToOverride': ''
         };
-
-        const parameterFilePath = getAbsolutePath('parameters_test.xml');
-        for (const configFile of configFiles) {
-            substituteXmlVariables(configFile, tags, variableMap, parameterFilePath);
-        }
-
-        let transformedFilePath = getAbsolutePath('Web_test.config');
-        let expectedFilePath = getAbsolutePath('Web_Expected.config');
-        assert(compareXmlFiles(transformedFilePath, expectedFilePath), 'Should have substituted variables in Web.config file');
         
-        transformedFilePath = getAbsolutePath('Web_test.Debug.config');
-        expectedFilePath = getAbsolutePath('Web_Expected.Debug.config');
-        assert(compareXmlFiles(transformedFilePath, expectedFilePath), 'Should have substituted variables in Web.Debug.config file');
+        substituteXmlVariables(getAbsolutePath('Web_test.config'), tags, variableMap, parameterFilePath);
+        substituteXmlVariables(getAbsolutePath('Web_test.Debug.config'), tags, variableMap, parameterFilePath);
 
-        var resultParamFile = ltx.parse(fs.readFileSync(getAbsolutePath('parameters_test.xml')));
-        var expectParamFile = ltx.parse(fs.readFileSync(getAbsolutePath('parameters_Expected.xml')));
-        assert(ltx.equal(resultParamFile, expectParamFile), 'Should have substituted variables in parameters.xml file');
+        assert(compareXmlFiles('Web_test.config', 'Web_Expected.config'), 'Should have substituted variables in Web.config file');
+        assert(compareXmlFiles('Web_test.Debug.config', 'Web_Expected.Debug.config'), 'Should have substituted variables in Web.Debug.config file');
+        assert(compareXmlFiles('parameters_test.xml', 'parameters_Expected.xml'), 'Should have substituted variables in parameters.xml file');
 
         done();
     });
@@ -78,22 +65,20 @@ export function runL1XmlVarSubTests() {
         return path.join(__dirname, 'L1XmlVarSub', file);
     }
 
-    function compareXmlFiles(actualFilePath: string, expectedFilePath: string): boolean {
-        let transformedFileAsBuffer = fs.readFileSync(actualFilePath);
-        const expectedFileAsBuffer = fs.readFileSync(expectedFilePath);
-        const transformedFileEncodeType = detectFileEncoding(actualFilePath, transformedFileAsBuffer)[0].toString();
-        let transformedFileAsString = transformedFileAsBuffer.toString(transformedFileEncodeType);
-        transformedFileAsString = transformedFileAsString.replace( /(?<!\r)[\n]+/gm, "\r\n" );
-        transformedFileAsBuffer = Buffer.from(transformedFileAsString, transformedFileEncodeType);
-        var resultFile = ltx.parse(transformedFileAsBuffer);
-        var expectFile = ltx.parse(expectedFileAsBuffer);
-        const result = ltx.equal(resultFile, expectFile);
+    function compareXmlFiles(actualFile: string, expectedFile: string): boolean {
+        const actualFilePath = getAbsolutePath(actualFile);
+        const expectedFilePath = getAbsolutePath(expectedFile);
 
-        if (!result) {
-            console.debug(transformedFileAsString);
-        }
+        var actualXml = ltx.parse(readFile(actualFilePath));
+        var expectedXml = ltx.parse(readFile(expectedFilePath));
 
-        return result;
+        return ltx.equal(actualXml, expectedXml);
+    }
+
+    function readFile(path: string): string {
+        const buffer = fs.readFileSync(path);
+        const encoding = detectFileEncoding(path, buffer)[0].toString();
+        return buffer.toString(encoding).replace( /(?<!\r)[\n]+/gm, "\r\n" );
     }
 }
 
