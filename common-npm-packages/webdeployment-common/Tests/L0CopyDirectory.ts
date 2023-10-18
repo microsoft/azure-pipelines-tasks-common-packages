@@ -1,59 +1,87 @@
-var mockery = require('mockery');
-mockery.enable({
-    useCleanCache: true,
-    warnOnReplace: false,
-    warnOnUnregistered: false
-});
+import * as assert from "assert";
+import * as mockery from "mockery";
 
-var fileList = ["C:/vinca/path", "C:/vinca/path/myfile.txt",
-                "C:/vinca/path/New Folder", "C:/vinca/path/New Folder/Another New Folder",
-                "C:/vinca/New Folder/anotherfile.py", "C:/vinca/New Folder/Another New Folder/mynewfile.txt"];
+export function runCopyDirectoryTests(): void {
+    const fileList = [
+        "C:\\source\\path",
+        "C:\\source\\path\\myfile.txt",
+        "C:\\source\\path\\New Folder",
+        "C:\\source\\path\\New Folder\\Another New Folder",
+        "C:\\source\\New Folder\\anotherfile.py",
+        "C:\\source\\New Folder\\Another New Folder\\mynewfile.txt"
+    ];
 
-var mkdirPCount = 0;
-var cpfilesCount = 0;
-mockery.registerMock('azure-pipelines-task-lib/task', {
-    exist: function (path) {
-        console.log("exist : " + path);
-    },
-    find: function (path) {
-        console.log("find : " + path);
-        return fileList;
-    },
-    mkdirP: function (path) {
-        mkdirPCount += 1;
-        console.log("mkdirp : " + path);
-    },
-    cp: function (source, dest, options, continueOnError) {
-        if(fileList.indexOf(source)!= -1) {
-            cpfilesCount += 1;
-            console.log('cp ' + source + ' to ' + dest);
-        }
-    },
-    stats: function (path) {
-        return {
-            isDirectory: function() {
-                if(path.endsWith('.py') || path.endsWith('.txt')) {
-                    return false;
+    let mkdirPCount: number;
+    let cpfilesCount: number;
+
+    before(() => {
+
+        const taskLibMock = {
+            exist: function (path: string): boolean {
+                console.log("exist : " + path);
+                return fileList.indexOf(path) !== -1;
+            },
+            find: function (path: string): string[] {
+                console.log("find : " + path);
+                return fileList.filter(f => f.startsWith(path));
+            },
+            mkdirP: function (path: string): void {
+                if (fileList.indexOf(path) !== -1) {
+                    return;
                 }
-                return true;
+                
+                mkdirPCount++;
+                fileList.push(path);
+                console.log("mkdirp : " + path);
+            },
+            cp: function (source: string, dest: string, _options: any, _continueOnError: boolean): void {
+                if (fileList.indexOf(source) === -1) {
+                    return;
+                }
+                if (fileList.indexOf(dest) !== -1) {
+                    return;
+                }
+                cpfilesCount++;
+                fileList.push(dest);
+                console.log('cp ' + source + ' to ' + dest);
+            },
+            stats: function (path: string): any {
+                return {
+                    isDirectory: function (): boolean {
+                        return !path.endsWith('.py') && !path.endsWith('.txt');
+                    }
+                };
+            },
+            debug: function (message: string) {
+                console.log(message);
             }
         };
-    },
-    debug: function(message) {
-        console.log(message);
-    }
-});
-var utility = require('azure-pipelines-tasks-webdeployment-common/utility.js');
-utility.copyDirectory('C:/vinca/path', 'C:/vinca/path/destFolder');
+        mockery.registerMock('azure-pipelines-task-lib/task', taskLibMock);
+        mockery.registerMock('./packageUtility', {});
+        mockery.registerMock('./ziputility', {});
+        mockery.registerAllowable('../utility');
 
-if(cpfilesCount === 3) {
-    console.log('## Copy Files Successful ##');
-}
-/**
- * 7 dir to be created including dest dir
- * Hash is not created to check already created dir, for testing purpose
- */
-if(mkdirPCount === 7) {
-    console.log('## mkdir Successful ##');    
-}
+        mockery.enable({
+            useCleanCache: true,
+            warnOnReplace: false,
+            warnOnUnregistered: false
+        });        
+    });
 
+    after(() => {
+        mockery.disable();
+    });
+
+    beforeEach(() => {
+        mkdirPCount = 0;
+        cpfilesCount = 0;
+    });
+
+
+    it("Should copy files and folders as expected", async () => {
+        const utility = await import('../utility');
+        utility.copyDirectory('C:\\source', 'C:\\destination');
+        assert.strictEqual(cpfilesCount, 3, '## Copy Files Successful ##');
+        assert.strictEqual(mkdirPCount, 6, '## mkdir Successful ##');
+    });
+}
