@@ -2,6 +2,7 @@ import { runGetMSDeployCmdArgsTests, runGetWebDeployErrorCodeTests } from './L0M
 import { runCopyDirectoryTests } from "./L0CopyDirectory";
 import { runGenerateWebCongigTests } from "./L0GenerateWebConfig";
 import { runL1XmlVarSubTests } from "./L1XmlVarSub";
+import { runL1XdtTransformTests } from "./L1XdtTransform"
 
 describe('MSDeploy tests', () => {
     describe('GetMSDeployCmdArgs tests', runGetMSDeployCmdArgsTests);
@@ -12,4 +13,5 @@ describe('MSDeploy tests', () => {
     describe("GenerateWebConfig tests", runGenerateWebCongigTests);
 
     describe("L1XmlVarSub tests", runL1XmlVarSubTests);
+    describe("L1XdtTransform tests", runL1XdtTransformTests);
 });

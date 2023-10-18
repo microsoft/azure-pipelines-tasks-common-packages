@@ -1,10 +1,12 @@
-import * as tl from 'azure-pipelines-task-lib';
-import { substituteXmlVariables } from '../xmlvariablesubstitutionutility';
-import { detectFileEncoding } from "../fileencoding";
-import * as  path from 'path';
-import assert = require('assert');
+import * as path from 'path';
+import * as assert from 'assert';
 import * as ltx from 'ltx';
 import * as fs from 'fs';
+
+import * as tl from 'azure-pipelines-task-lib';
+
+import { substituteXmlVariables } from '../xmlvariablesubstitutionutility';
+import { detectFileEncoding } from "../fileencoding";
 
 export function runL1XmlVarSubTests() {
 
@@ -32,7 +34,7 @@ export function runL1XmlVarSubTests() {
        }
    });
 
-    it("Should replace xml variables", done => {
+    it("Runs successfully with XML variable substitution", done => {
         const parameterFilePath = getAbsolutePath('parameters_test.xml');
         const tags = [ "applicationSettings", "appSettings", "connectionStrings", "configSections" ];
         const variableMap = {
