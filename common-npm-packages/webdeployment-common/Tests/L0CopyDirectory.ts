@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import * as mockery from "mockery";
+import * as path from "path";
 
 export function runCopyDirectoryTests(): void {
     const fileList: string[] = [];
@@ -73,16 +74,16 @@ export function runCopyDirectoryTests(): void {
 
     it("Should copy files and folders as expected", async () => {
         fileList.push(
-            "C:\\source\\path",
-            "C:\\source\\path\\myfile.txt",
-            "C:\\source\\path\\New Folder",
-            "C:\\source\\path\\New Folder\\Another New Folder",
-            "C:\\source\\New Folder\\anotherfile.py",
-            "C:\\source\\New Folder\\Another New Folder\\mynewfile.txt"
+            path.join("C:", "source", "path"),
+            path.join("C:", "source", "path", "myfile.txt"),
+            path.join("C:", "source", "path", "New Folder"),
+            path.join("C:", "source", "path", "New Folder", "Another New Folder"),
+            path.join("C:", "source", "New Folder", "anotherfile.py"),
+            path.join("C:", "source", "New Folder", "Another New Folder", "mynewfile.txt")
         );
         const utility = await import('../utility');
 
-        utility.copyDirectory('C:\\source', 'C:\\destination');
+        utility.copyDirectory(path.join('C:','source'), path.join('C:', 'destination'));
 
         assert.strictEqual(cpfilesCount, 3, '## Copy Files Successful ##');
         assert.strictEqual(mkdirPCount, 6, '## mkdir Successful ##');

@@ -7,7 +7,8 @@
         "url": "git+ssh://git@github.com/Microsoft/azure-pipelines-tasks.git"
     },
     "scripts": {
-        "build": "pwsh build.ps1"
+        "build": "pwsh build.ps1",
+        "test": "nyc --all --src ./_build mocha ./_build/Tests/L0.js"
     },
     "author": "Microsoft Corporation",
     "license": "MIT",
@@ -29,6 +30,8 @@
         "xml2js": "0.6.2"
     },
     "devDependencies": {
-        "typescript": "4.0.2"
+        "typescript": "4.0.2",
+        "mocha": "^6.2.3",
+        "nyc": "^15.1.0"
     }
 }
