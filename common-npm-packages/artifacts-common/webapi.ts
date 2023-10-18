@@ -53,7 +53,9 @@ export async function getFederatedToken(connectedServiceName: string): Promise<s
         connectedServiceName,
         0,
         2000);
-
+    
+    tl.setSecret(oidc_token);
+    
     return oidc_token;
 }
 
