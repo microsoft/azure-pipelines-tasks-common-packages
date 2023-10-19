@@ -8,7 +8,9 @@ import { applyXdtTransformation } from "../xdttransformationutility";
 import { detectFileEncoding } from "../fileencoding";
 
 
-export function runL1XdtTransformTests() {
+export function runL1XdtTransformTests(this: Mocha.Suite) {
+
+    this.timeout(parseInt(process.env.TASK_TEST_TIMEOUT) || 20000);
 
     beforeEach(done => {
         tl.cp(getAbsolutePath('Web.config'), getAbsolutePath('Web_test.config'), '-f', false);
@@ -32,8 +34,6 @@ export function runL1XdtTransformTests() {
         if (tl.getPlatform() !== tl.Platform.Windows) {
             this.skip();
         }
-
-        this.timeout(parseInt(process.env.TASK_TEST_TIMEOUT) || 20000);
 
         applyXdtTransformation(getAbsolutePath('Web_test.config'), getAbsolutePath('Web.Debug.config'));
 

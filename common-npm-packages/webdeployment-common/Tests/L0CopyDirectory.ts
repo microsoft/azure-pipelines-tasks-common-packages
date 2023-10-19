@@ -85,7 +85,7 @@ export function runCopyDirectoryTests(): void {
 
         utility.copyDirectory(path.join('C:','source'), path.join('C:', 'destination'));
 
-        assert.strictEqual(cpfilesCount, 3, '## Copy Files Successful ##');
-        assert.strictEqual(mkdirPCount, 6, '## mkdir Successful ##');
+        assert.strictEqual(cpfilesCount, 3, 'Should create three files');
+        assert.strictEqual(mkdirPCount, 6, 'Should create six folder including destination folder');
     });
 }

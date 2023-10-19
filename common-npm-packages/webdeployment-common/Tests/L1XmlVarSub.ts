@@ -8,12 +8,11 @@ import * as tl from 'azure-pipelines-task-lib';
 import { substituteXmlVariables } from '../xmlvariablesubstitutionutility';
 import { detectFileEncoding } from "../fileencoding";
 
-export function runL1XmlVarSubTests() {
+export function runL1XmlVarSubTests(this: Mocha.Suite): void {
 
+    this.timeout(60000);
 
     beforeEach(function (done: Mocha.Done) {
-        this.timeout(60000);
-
         tl.cp(getAbsolutePath('Web.config'), getAbsolutePath('Web_test.config'), '-f', false);
         tl.cp(getAbsolutePath('Web.Debug.config'), getAbsolutePath('Web_test.Debug.config'), '-f', false);
         tl.cp(getAbsolutePath('parameters.xml'), getAbsolutePath('parameters_test.xml'), '-f', false);
