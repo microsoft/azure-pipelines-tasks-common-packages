@@ -66,6 +66,15 @@ export class Package {
     }
 
     public async isMSBuildPackage(): Promise<boolean> {
+  if (this._isMSBuildPackage !== undefined) return this._isMSBuildPackage;
+
+  const shouldCheckFiles = this.getPackageType() !== PackageType.folder;
+  this._isMSBuildPackage = shouldCheckFiles && await checkIfFilesExistsInZip(this._path, ["parameters.xml", "systeminfo.xml"]);
+
+  tl.debug(`Is the package an msdeploy package : ${this._isMSBuildPackage}`);
+
+  return this._isMSBuildPackage;
+}
         if(this._isMSBuildPackage == undefined) {
             this._isMSBuildPackage = this.getPackageType() != PackageType.folder && await checkIfFilesExistsInZip(this._path, ["parameters.xml", "systeminfo.xml"]);
             tl.debug("Is the package an msdeploy package : " + this._isMSBuildPackage);
