@@ -28,11 +28,9 @@ export function runL1XdtTransformTests() {
         }
     });
 
-    it('Runs successfully with XML Transformation (L1)', (done) => {
-
+    it('Runs successfully with XML Transformation (L1)', function(done: Mocha.Done) {
         if (tl.getPlatform() !== tl.Platform.Windows) {
             this.skip();
-            return;
         }
 
         this.timeout(parseInt(process.env.TASK_TEST_TIMEOUT) || 20000);
