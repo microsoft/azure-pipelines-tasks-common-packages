@@ -1,7 +1,7 @@
 import path = require('path');
 import * as os from "os";
 import tl = require('azure-pipelines-task-lib/task');
-import {  PackageType } from './packageUtility';
+import { PackageType } from './packageUtility';
 import zipUtility = require('./ziputility');
 /**
  * Validates the input package and finds out input type

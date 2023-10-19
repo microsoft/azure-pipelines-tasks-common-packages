@@ -3,45 +3,52 @@ import * as mockery from "mockery";
 import * as path from "path";
 
 export function runCopyDirectoryTests(): void {
-    const fileList: string[] = [];
+    const fileList: { path: string, isDirectory: boolean}[] = [];
     let mkdirPCount: number;
     let cpfilesCount: number;
 
-    before(() => {
+    before(async () => {
 
         const taskLibMock = {
             exist: function (path: string): boolean {
                 console.log("exist : " + path);
-                return fileList.indexOf(path) !== -1;
+                return fileList.map(f => f.path).indexOf(path) !== -1;
             },
             find: function (path: string): string[] {
                 console.log("find : " + path);
-                return fileList.filter(f => f.startsWith(path));
+                return fileList.map(f => f.path).filter(f => f.startsWith(path));
             },
             mkdirP: function (path: string): void {
-                if (fileList.indexOf(path) !== -1) {
+                if (fileList.filter(f => f.isDirectory).map(f => f.path).indexOf(path) !== -1) {
                     return;
                 }
                 
                 mkdirPCount++;
-                fileList.push(path);
+                fileList.push({
+                    path: path,
+                    isDirectory: true
+                });
                 console.log("mkdirp : " + path);
             },
             cp: function (source: string, dest: string, _options: any, _continueOnError: boolean): void {
-                if (fileList.indexOf(source) === -1) {
+                const files = fileList.filter(f => !f.isDirectory).map(f => f.path);
+                if (files.indexOf(source) === -1) {
                     return;
                 }
-                if (fileList.indexOf(dest) !== -1) {
+                if (files.indexOf(dest) !== -1) {
                     return;
                 }
                 cpfilesCount++;
-                fileList.push(dest);
+                fileList.push({
+                    path: dest,
+                    isDirectory: false
+                });
                 console.log('cp ' + source + ' to ' + dest);
             },
             stats: function (path: string): any {
                 return {
                     isDirectory: function (): boolean {
-                        return !path.endsWith('.py') && !path.endsWith('.txt');
+                        return fileList.some(f => f.path === path && f.isDirectory);
                     }
                 };
             },
@@ -58,7 +65,7 @@ export function runCopyDirectoryTests(): void {
             useCleanCache: true,
             warnOnReplace: false,
             warnOnUnregistered: false
-        });        
+        });
     });
 
     after(() => {
@@ -71,18 +78,17 @@ export function runCopyDirectoryTests(): void {
         fileList.splice(0);
     });
 
-
     it("Should copy files and folders as expected", async () => {
         fileList.push(
-            path.join("C:", "source", "path"),
-            path.join("C:", "source", "path", "myfile.txt"),
-            path.join("C:", "source", "path", "New Folder"),
-            path.join("C:", "source", "path", "New Folder", "Another New Folder"),
-            path.join("C:", "source", "New Folder", "anotherfile.py"),
-            path.join("C:", "source", "New Folder", "Another New Folder", "mynewfile.txt")
+            { path: path.join("C:", "source", "path"), isDirectory: true },
+            { path: path.join("C:", "source", "path", "myfile.txt"), isDirectory: false },
+            { path: path.join("C:", "source", "path", "New Folder"), isDirectory: true },
+            { path: path.join("C:", "source", "path", "New Folder", "Another New Folder"), isDirectory: true },
+            { path: path.join("C:", "source", "New Folder", "anotherfile.py"), isDirectory: false },
+            { path: path.join("C:", "source", "New Folder", "Another New Folder", "mynewfile.txt"), isDirectory: false }
         );
-        const utility = await import('../utility');
 
+        const utility = await import('../utility')
         utility.copyDirectory(path.join('C:','source'), path.join('C:', 'destination'));
 
         assert.strictEqual(cpfilesCount, 3, 'Should create three files');
