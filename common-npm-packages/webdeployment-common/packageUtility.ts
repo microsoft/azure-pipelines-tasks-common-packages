@@ -1,6 +1,6 @@
 import tl = require('azure-pipelines-task-lib/task');
 import utility = require('./utility');
-var zipUtility = require('azure-pipelines-tasks-webdeployment-common/ziputility.js');
+import { checkIfFilesExistsInZip } from './ziputility';
 import path = require('path');
 
 export enum PackageType {
@@ -67,7 +67,7 @@ export class Package {
 
     public async isMSBuildPackage(): Promise<boolean> {
         if(this._isMSBuildPackage == undefined) {
-            this._isMSBuildPackage = this.getPackageType() != PackageType.folder && await zipUtility.checkIfFilesExistsInZip(this._path, ["parameters.xml", "systeminfo.xml"]);
+            this._isMSBuildPackage = this.getPackageType() != PackageType.folder && await checkIfFilesExistsInZip(this._path, ["parameters.xml", "systeminfo.xml"]);
             tl.debug("Is the package an msdeploy package : " + this._isMSBuildPackage);
         }
         return this._isMSBuildPackage;

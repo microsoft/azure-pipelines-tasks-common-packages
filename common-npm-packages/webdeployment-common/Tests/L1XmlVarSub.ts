@@ -10,33 +10,34 @@ import { detectFileEncoding } from "../fileencoding";
 
 export function runL1XmlVarSubTests() {
 
-    this.timeout(60000);
 
-    beforeEach(done => {
-       tl.cp(getAbsolutePath('Web.config'), getAbsolutePath('Web_test.config'), '-f', false);
-       tl.cp(getAbsolutePath('Web.Debug.config'), getAbsolutePath('Web_test.Debug.config'), '-f', false);
-       tl.cp(getAbsolutePath('parameters.xml'), getAbsolutePath('parameters_test.xml'), '-f', false);
+    beforeEach(function (done: Mocha.Done) {
+        this.timeout(60000);
 
-       done();
-   });
+        tl.cp(getAbsolutePath('Web.config'), getAbsolutePath('Web_test.config'), '-f', false);
+        tl.cp(getAbsolutePath('Web.Debug.config'), getAbsolutePath('Web_test.Debug.config'), '-f', false);
+        tl.cp(getAbsolutePath('parameters.xml'), getAbsolutePath('parameters_test.xml'), '-f', false);
 
-   afterEach(done => {
-       try {
-           tl.rmRF(getAbsolutePath('parameters_test.xml'));
-           tl.rmRF(getAbsolutePath('Web_test.Debug.config'));
-           tl.rmRF(getAbsolutePath('Web_test.config'));
-       }
-       catch (error) {
-           tl.debug(error);
-       }
-       finally {
-           done();
-       }
-   });
+        done();
+    });
+
+    afterEach(done => {
+        try {
+            tl.rmRF(getAbsolutePath('parameters_test.xml'));
+            tl.rmRF(getAbsolutePath('Web_test.Debug.config'));
+            tl.rmRF(getAbsolutePath('Web_test.config'));
+        }
+        catch (error) {
+            tl.debug(error);
+        }
+        finally {
+            done();
+        }
+    });
 
     it("Runs successfully with XML variable substitution", done => {
         const parameterFilePath = getAbsolutePath('parameters_test.xml');
-        const tags = [ "applicationSettings", "appSettings", "connectionStrings", "configSections" ];
+        const tags = ["applicationSettings", "appSettings", "connectionStrings", "configSections"];
         const variableMap = {
             'conntype': 'new_connType',
             "MyDB": "TestDB",
@@ -52,7 +53,7 @@ export function runL1XmlVarSubTests() {
             'log_level': 'error,warning',
             'Email:ToOverride': ''
         };
-        
+
         substituteXmlVariables(getAbsolutePath('Web_test.config'), tags, variableMap, parameterFilePath);
         substituteXmlVariables(getAbsolutePath('Web_test.Debug.config'), tags, variableMap, parameterFilePath);
 
@@ -80,7 +81,7 @@ export function runL1XmlVarSubTests() {
     function readFile(path: string): string {
         const buffer = fs.readFileSync(path);
         const encoding = detectFileEncoding(path, buffer)[0].toString();
-        return buffer.toString(encoding).replace( /(?<!\r)[\n]+/gm, "\r\n" );
+        return buffer.toString(encoding).replace(/(?<!\r)[\n]+/gm, "\r\n");
     }
 }
 
