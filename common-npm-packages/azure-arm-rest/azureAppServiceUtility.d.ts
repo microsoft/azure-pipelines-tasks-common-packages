@@ -11,5 +11,6 @@ export declare class AzureAppServiceUtility {
     updateAndMonitorAppSettings(addProperties?: any, deleteProperties?: any, formatJSON?: boolean): Promise<boolean>;
     enableRenameLockedFiles(): Promise<void>;
     updateStartupCommandAndRuntimeStack(runtimeStack: string, startupCommand?: string): Promise<void>;
+    isSitePublishingCredentialsEnabled(): Promise<boolean>;
     isFunctionAppOnCentauri(): Promise<boolean>;
 }

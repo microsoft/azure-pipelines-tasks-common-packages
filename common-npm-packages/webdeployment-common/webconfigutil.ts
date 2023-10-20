@@ -3,7 +3,7 @@ import fs = require('fs');
 import path = require('path');
 import util = require('util');
 
-export function generateWebConfigFile(webConfigTargetPath: string, appType: string, substitutionParameters: any) {
+export function generateWebConfigFile(webConfigTargetPath: string, appType: string, substitutionParameters: { [key: string]: string }) {
     // Get the template path for the given appType
     var webConfigTemplatePath = path.join(__dirname, 'WebConfigTemplates', appType.toLowerCase());
     var webConfigContent: string = fs.readFileSync(webConfigTemplatePath, 'utf8');
@@ -11,7 +11,7 @@ export function generateWebConfigFile(webConfigTargetPath: string, appType: stri
     tl.writeFile(webConfigTargetPath, webConfigContent, { encoding: "utf8" });
 }
 
-function replaceMultiple(text: string, substitutions: any): string {
+function replaceMultiple(text: string, substitutions: { [key: string]: string }): string {
     for(var key in substitutions) {
         tl.debug('Replacing: ' + '{' + key + '} with: ' + substitutions[key]);
         text = text.replace(new RegExp('{' + key + '}', 'g'), substitutions[key]);
