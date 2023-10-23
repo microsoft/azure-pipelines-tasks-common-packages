@@ -8,11 +8,11 @@
   "loc.messages.CredProvider_Error_InvalidServiceConnection_ApiKey": "'%s' 的服務連線無效。此工作不支援 ApiKey 服務連線。當叫用工具本身時，請改用 -ApiKey (NuGet) 或 --api-key (dotnet)。如需詳細資料，請參閱工作文件。",
   "loc.messages.CredProvider_InstallingNetCoreTo": "正在將 Azure Artifacts 認證提供者 (.NET Core) 安裝到 '%s'。此認證提供者與 dotnet SDK 2.1.400 或更新版本相容。",
   "loc.messages.CredProvider_InstallingNetFxTo": "正在將 Azure Artifacts 認證提供者 (.NET Framework) 安裝到 '%s'。此認證提供者與 nuget.exe 4.8.0.5385 或更新版本相容，也與 MSBuild 15.8.166.59604 或更新版本相容。",
-  "loc.messages.CredProvider_SettingUpForOrgFeeds": "正在設定認證提供者，為開頭如下的組織/集合中之摘要，使用身分識別 '%s':",
-  "loc.messages.CredProvider_SettingUpForServiceConnections": "正在設定這些服務連線的認證提供者:",
   "loc.messages.ErrorInSettingUpSubscription": "設定訂用帳戶時發生錯誤",
   "loc.messages.LoginFailed": "Azure 登入失敗",
   "loc.messages.MSILoginFailed": "使用受控服務識別登入 Azure 失敗",
+  "loc.messages.CredProvider_SettingUpForOrgFeeds": "正在設定認證提供者，為開頭如下的組織/集合中之摘要，使用身分識別 '%s':",
+  "loc.messages.CredProvider_SettingUpForServiceConnections": "正在設定這些服務連線的認證提供者:",
   "loc.messages.ServiceConnections_Error_FailedToParseServiceEndpoint_MissingParameter": "因為服務端點 '%s' 缺少參數 '%s'，所以無法予以剖析",
   "loc.messages.ServiceConnections_Error_FailedToParseServiceEndpoint_BadScheme": "因為驗證配置 '%s' 無效，所以無法剖析服務端點 '%s'",
   "loc.messages.SettingAzureCloud": "正在將作用中雲端設定為: %s"
