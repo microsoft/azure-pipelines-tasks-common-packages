@@ -1,10 +1,8 @@
 import path = require('path');
-import fs = require('fs');
 import * as os from "os";
 import tl = require('azure-pipelines-task-lib/task');
-import { PackageUtility, PackageType } from './packageUtility';
-
-var zipUtility = require('azure-pipelines-tasks-webdeployment-common/ziputility.js');
+import { PackageType } from './packageUtility';
+import zipUtility = require('./ziputility');
 /**
  * Validates the input package and finds out input type
  *
