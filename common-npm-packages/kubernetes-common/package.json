@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-kubernetes-common",
-    "version": "2.224.1",
+    "version": "2.230.0",
     "description": "Common Library for Kubernetes",
     "repository": {
         "type": "git",
@@ -28,6 +28,6 @@
         "typescript": "4.0.2"
     },
     "scripts": {
-        "build": "cd ../build-scripts && npm install && cd ../kubernetes-common && node ../build-scripts/downloadArchive.js https://vstsagenttools.blob.core.windows.net/tools/7zip/1/7zip.zip ./_tools && node make.js"
+        "build": "cd ../build-scripts && npm install && cd ../kubernetes-common && node make.js"
     }
 }

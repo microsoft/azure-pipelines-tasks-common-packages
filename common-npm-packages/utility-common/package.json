@@ -1,13 +1,13 @@
 {
     "name": "azure-pipelines-tasks-utility-common",
-    "version": "3.225.1",
+    "version": "3.230.0",
     "description": "Common Library for Azure Rest Calls",
     "repository": {
         "type": "git",
         "url": "git+ssh://git@github.com/Microsoft/azure-pipelines-tasks.git"
     },
     "scripts": {
-        "build": "node ../build-scripts/downloadArchive.js https://vstsagenttools.blob.core.windows.net/tools/7zip/1/7zip.zip ./tools && node make.js",
+        "build": "node make.js",
         "test": "mocha _build/Tests/L0.js"
     },
     "author": "Microsoft Corporation",
