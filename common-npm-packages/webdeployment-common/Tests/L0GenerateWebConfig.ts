@@ -1,32 +1,52 @@
-var mockery = require('mockery');
-mockery.enable({
-    useCleanCache: true,
-    warnOnReplace: false,
-    warnOnUnregistered: false
-});
+import * as assert from "assert";
+import * as mockery from "mockery";
 
-mockery.registerMock('azure-pipelines-task-lib/task', {
-    writeFile: function (file, data, options) {
-        console.log("web.config contents: " + data);
-    },
-    debug: function(message: string) {
-        console.log("##[debug]: " + message);
-    }
-});
 
-mockery.registerMock('fs', {
-    readFileSync: function (path, format) {
-        return "{NodeStartFile};{Handler}"
-    }
-});
+export function runGenerateWebCongigTests() {
+    let webConfigContents: string;
 
-var generateWebConfig = require('azure-pipelines-tasks-webdeployment-common/webconfigutil.js');
-generateWebConfig.generateWebConfigFile(
-    'node',
-    'TemplatePath/node',
-    {
-        "Handler": "iisnode",
-        "NodeStartFile":  "server.js"
-    }
-);
+    before(() => {
 
+        mockery.registerMock('azure-pipelines-task-lib/task', {
+            writeFile: function (_file: string, data: string, _options: any): void {
+                console.log("web.config contents: " + data);
+                webConfigContents = data;
+            },
+            debug: function(message: string): void {
+                console.log("##[debug]: " + message);
+            }
+        });
+
+        mockery.registerMock('fs', {
+            readFileSync: function (_path: string, _format: string): string {
+                return "{NodeStartFile};{Handler}"
+            }
+        });
+
+        mockery.registerAllowable("../webconfigutil");
+
+        mockery.enable({
+            useCleanCache: true,
+            warnOnReplace: false,
+            warnOnUnregistered: false
+        });
+    });
+
+    after(() => {
+        mockery.disable();
+    });
+
+    beforeEach(() => { 
+        webConfigContents = ""; 
+    });
+
+    it("Should replace substitution parameters", async () => {
+        const util = await import("../webconfigutil");
+        const parameters = {
+            NodeStartFile: "server.js", 
+            Handler: "iisnode"
+        };
+        util.generateWebConfigFile("web.config", "node", parameters);
+        assert.strictEqual(webConfigContents, "server.js;iisnode");
+    });
+}
