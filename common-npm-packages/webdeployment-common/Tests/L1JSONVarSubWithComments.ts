@@ -33,7 +33,6 @@ export function runL1JSONVarSubWithCommentsTests(): void {
     it("Should throw exception for invalid JSON with comments", (done: Mocha.Done) => {
         const fileContent = fs.readFileSync(path.join(__dirname, 'L1JSONVarSub', 'InvalidJSONWithComments.json'), 'utf-8');
         const jsonContent = stripJsonComments(fileContent);
-        console.log(jsonContent);
         assert.throws(() => JSON.parse(jsonContent), "Parse is expected to throw an error");
         done();
     });

@@ -1,8 +1,6 @@
 import assert = require("assert");
 import { getMSDeployCmdArgs, getWebDeployErrorCode } from "../msdeployutility";
 
-
-
 export function runGetMSDeployCmdArgsTests() {
 
     it('Should produce default valid args', () => {
