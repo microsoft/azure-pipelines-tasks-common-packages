@@ -298,7 +298,7 @@ export async function installedMSDeployVersionSupportsTokenAuth(): Promise<boole
 
 function getMSDeployLatestRegKey(): Promise<winreg.Registry> {
     return new Promise<winreg.Registry>((resolve, reject) => {
-
+        const minimalSupportedMSDeployVersion = 3;
         const msdeployRegistryPath = "\\SOFTWARE\\Microsoft\\IIS Extensions\\MSDeploy";
         const regKey = new winreg({
             hive: winreg.HKLM,
@@ -326,7 +326,8 @@ function getMSDeployLatestRegKey(): Promise<winreg.Registry> {
                     latestSubKey = subRegKeys[index];
                 }
             }
-            if (latestKeyVersion < 3) {
+            if (latestKeyVersion < minimalSupportedMSDeployVersion) {
+                // previous versions are not compatible either with app services or web deployment tasks
                 reject(tl.loc("UnsupportedinstalledversionfoundforMSDeployversionshouldbeatleast3orabove", latestKeyVersion));
                 return;
             }
