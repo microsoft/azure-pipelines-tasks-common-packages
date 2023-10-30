@@ -8,11 +8,11 @@
   "loc.messages.CredProvider_Error_InvalidServiceConnection_ApiKey": "La conexión de servicio de \"%s\" no es válida. No se admiten conexiones de servicio ApiKey en esta tarea. En su lugar, use -ApiKey (NuGet) o --api-key (dotnet) al invocar la propia herramienta. Consulte la documentación de las tareas para obtener más detalles.",
   "loc.messages.CredProvider_InstallingNetCoreTo": "Instalando el proveedor de credenciales de Azure Artifacts (.NET Core) en \"%s\". Este proveedor de credenciales es compatible con el SDK de dotnet 2.1.400 o versiones posteriores.",
   "loc.messages.CredProvider_InstallingNetFxTo": "Instalando el proveedor de credenciales de Azure Artifacts (.NET Framework) en \"%s\". Este proveedor de credenciales es compatible con nuget.exe 4.8.0.5385 o versiones posteriores y MSBuild 15.8.166.59604 o versiones posteriores.",
-  "loc.messages.CredProvider_SettingUpForOrgFeeds": "Configurando el proveedor de credenciales para usar la identidad \"%s\" en las fuentes de la organización o colección que empiecen por:",
-  "loc.messages.CredProvider_SettingUpForServiceConnections": "Configurando el proveedor de credenciales para estas conexiones de servicio:",
   "loc.messages.ErrorInSettingUpSubscription": "Error en la configuración de la suscripción",
   "loc.messages.LoginFailed": "Error del inicio de sesión de Azure",
   "loc.messages.MSILoginFailed": "Error de inicio de sesión de Azure con Managed Service Identity",
+  "loc.messages.CredProvider_SettingUpForOrgFeeds": "Configurando el proveedor de credenciales para usar la identidad \"%s\" en las fuentes de la organización o colección que empiecen por:",
+  "loc.messages.CredProvider_SettingUpForServiceConnections": "Configurando el proveedor de credenciales para estas conexiones de servicio:",
   "loc.messages.ServiceConnections_Error_FailedToParseServiceEndpoint_MissingParameter": "No se pudo analizar el punto de conexión de servicio \"%s\" porque faltaba el parámetro \"%s\".",
   "loc.messages.ServiceConnections_Error_FailedToParseServiceEndpoint_BadScheme": "No se pudo analizar el punto de conexión de servicio \"%s\" porque el esquema de autenticación \"%s\" no era válido.",
   "loc.messages.SettingAzureCloud": "Estableciendo la nube activa en %s"
