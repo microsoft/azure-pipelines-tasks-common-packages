@@ -29,5 +29,8 @@
   "loc.messages.VariableSubstitutionInitiated": "La sostituzione delle variabili nel file config %s è stata avviata",
   "loc.messages.ConfigFileUpdated": "Il file di configurazione %s è stato aggiornato.",
   "loc.messages.SkippedUpdatingFile": "L'aggiornamento del file %s è stato ignorato",
-  "loc.messages.PwshNotAvailable": "##AVVISO##:PowerShell Core (pwsh.exe) non è disponibile nel computer agente. Verrà eseguito il fallback a Windows PowerShell (powershell.exe). Ciò può causare prestazioni ridotte. Installare la versione più recente di PowerShell per migliorare le prestazioni."
+  "loc.messages.PwshNotAvailable": "##AVVISO##:PowerShell Core (pwsh.exe) non è disponibile nel computer agente. Verrà eseguito il fallback a Windows PowerShell (powershell.exe). Ciò può causare prestazioni ridotte. Installare la versione più recente di PowerShell per migliorare le prestazioni.",
+  "loc.messages.UnabletofindthelocationofMSDeployfromregistryonmachineError": "Unable to find the location of MSDeploy from registry. Error: %s",
+  "loc.messages.MissingMSDeployInstallPathRegistryKey": "Missing MSDeploy InstallPath registry key.",
+  "loc.messages.UnsupportedinstalledversionfoundforMSDeployversionshouldbeatleast3orabove": "Unsupported installed version: %s found for MSDeploy. Version should be at least 3 or above."
 }

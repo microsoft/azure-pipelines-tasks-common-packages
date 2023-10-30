@@ -29,5 +29,8 @@
   "loc.messages.VariableSubstitutionInitiated": "Die Variablenersetzung in der Konfigurationsdatei wurde initialisiert: %s",
   "loc.messages.ConfigFileUpdated": "Die Konfigurationsdatei \"%s\" wurde aktualisiert.",
   "loc.messages.SkippedUpdatingFile": "Die Aktualisierung der Datei wurde übersprungen: %s",
-  "loc.messages.PwshNotAvailable": "# #WARNUNG# #:PowerShell Core (pwsh.exe) ist auf dem Agent-Computer nicht verfügbar. Zurückgreifen auf die Verwendung von Windows PowerShell (powershell.exe). Dies kann zu einer niedrigeren Leistung führen. Installieren Sie die neuere Version von PowerShell, um die Leistung zu verbessern."
+  "loc.messages.PwshNotAvailable": "# #WARNUNG# #:PowerShell Core (pwsh.exe) ist auf dem Agent-Computer nicht verfügbar. Zurückgreifen auf die Verwendung von Windows PowerShell (powershell.exe). Dies kann zu einer niedrigeren Leistung führen. Installieren Sie die neuere Version von PowerShell, um die Leistung zu verbessern.",
+  "loc.messages.UnabletofindthelocationofMSDeployfromregistryonmachineError": "Unable to find the location of MSDeploy from registry. Error: %s",
+  "loc.messages.MissingMSDeployInstallPathRegistryKey": "Missing MSDeploy InstallPath registry key.",
+  "loc.messages.UnsupportedinstalledversionfoundforMSDeployversionshouldbeatleast3orabove": "Unsupported installed version: %s found for MSDeploy. Version should be at least 3 or above."
 }

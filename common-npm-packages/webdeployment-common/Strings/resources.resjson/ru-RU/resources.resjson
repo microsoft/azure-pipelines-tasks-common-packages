@@ -29,5 +29,8 @@
   "loc.messages.VariableSubstitutionInitiated": "Запущена подстановка переменных в файле конфигурации: %s.",
   "loc.messages.ConfigFileUpdated": "Файл конфигурации: %s обновлен.",
   "loc.messages.SkippedUpdatingFile": "Пропущенный файл обновления: %s",
-  "loc.messages.PwshNotAvailable": "##ПРЕДУПРЕЖДЕНИЕ##. PowerShell Core (pwsh.exe) недоступен на компьютере агента. Откат к использованию Windows PowerShell (powershell.exe). Это может привести к снижению производительности. Установите более новую версию PowerShell, чтобы повысить производительность."
+  "loc.messages.PwshNotAvailable": "##ПРЕДУПРЕЖДЕНИЕ##. PowerShell Core (pwsh.exe) недоступен на компьютере агента. Откат к использованию Windows PowerShell (powershell.exe). Это может привести к снижению производительности. Установите более новую версию PowerShell, чтобы повысить производительность.",
+  "loc.messages.UnabletofindthelocationofMSDeployfromregistryonmachineError": "Unable to find the location of MSDeploy from registry. Error: %s",
+  "loc.messages.MissingMSDeployInstallPathRegistryKey": "Missing MSDeploy InstallPath registry key.",
+  "loc.messages.UnsupportedinstalledversionfoundforMSDeployversionshouldbeatleast3orabove": "Unsupported installed version: %s found for MSDeploy. Version should be at least 3 or above."
 }

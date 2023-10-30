@@ -29,5 +29,8 @@
   "loc.messages.VariableSubstitutionInitiated": "구성 파일에서 변수 대체를 시작했습니다. %s",
   "loc.messages.ConfigFileUpdated": "구성 파일 %s이(가) 업데이트되었습니다.",
   "loc.messages.SkippedUpdatingFile": "파일 %s 업데이트를 건너뜀",
-  "loc.messages.PwshNotAvailable": "##경고##: PowerShell Core(pwsh.exe)는 에이전트 컴퓨터에서 사용할 수 없습니다. Windows PowerShell(powershell.exe) 사용으로 대체합니다. 이로 인해 성능 저하를 일으킬 수 있습니다. 성능 개선을 위해 최신 버전의 PowerShell을 설치하세요."
+  "loc.messages.PwshNotAvailable": "##경고##: PowerShell Core(pwsh.exe)는 에이전트 컴퓨터에서 사용할 수 없습니다. Windows PowerShell(powershell.exe) 사용으로 대체합니다. 이로 인해 성능 저하를 일으킬 수 있습니다. 성능 개선을 위해 최신 버전의 PowerShell을 설치하세요.",
+  "loc.messages.UnabletofindthelocationofMSDeployfromregistryonmachineError": "Unable to find the location of MSDeploy from registry. Error: %s",
+  "loc.messages.MissingMSDeployInstallPathRegistryKey": "Missing MSDeploy InstallPath registry key.",
+  "loc.messages.UnsupportedinstalledversionfoundforMSDeployversionshouldbeatleast3orabove": "Unsupported installed version: %s found for MSDeploy. Version should be at least 3 or above."
 }
