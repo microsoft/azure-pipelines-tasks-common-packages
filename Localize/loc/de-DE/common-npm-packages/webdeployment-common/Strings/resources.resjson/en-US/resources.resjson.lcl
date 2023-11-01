@@ -138,6 +138,15 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
+      <Item ItemId=";loc.messages.MissingMSDeployInstallPathRegistryKey" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Missing MSDeploy InstallPath registry key.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Fehlender MSDeploy InstallPath-Registrierungsschlüssel.]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
       <Item ItemId=";loc.messages.MorethanonepackagematchedwithspecifiedpatternPleaserestrainthesearchpattern" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[More than one package matched with specified pattern: %s. Please restrain the search pattern.]]></Val>
@@ -233,6 +242,24 @@
           <Val><![CDATA[Processing substitution for xml node : %s]]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
             <Val><![CDATA[Ersetzung für XML-Knoten wird verarbeitet: %s]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";loc.messages.UnabletofindthelocationofMSDeployfromregistryonmachineError" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Unable to find the location of MSDeploy from registry. Error: %s]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Der Speicherort von MSDeploy wurde in der Registrierung nicht gefunden. Fehler: %s]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";loc.messages.UnsupportedinstalledversionfoundforMSDeployversionshouldbeatleast3orabove" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Unsupported installed version: %s found for MSDeploy. Version should be at least 3 or above.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Nicht unterstützte installierte Version: %s für MSDeploy gefunden. Die Version muss mindestens 3 oder höher sein.]]></Val>
           </Tgt>
         </Str>
         <Disp Icon="Str" />
