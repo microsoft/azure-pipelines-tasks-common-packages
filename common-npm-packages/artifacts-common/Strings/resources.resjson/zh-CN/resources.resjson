@@ -8,11 +8,11 @@
   "loc.messages.CredProvider_Error_InvalidServiceConnection_ApiKey": "\"%s\" 的服务连接无效。此任务中不支持 ApiKey 服务连接。请在调用工具本身时改用 -ApiKey (NuGet) 或 --api-key (dotnet)。有关详细信息，请参阅任务文档。",
   "loc.messages.CredProvider_InstallingNetCoreTo": "正在将 Azure Artifacts 凭据提供程序(.NET Core)安装到 \"%s\"。此凭据提供程序与 dotnet SDK 2.1.400 或更高版本兼容。",
   "loc.messages.CredProvider_InstallingNetFxTo": "正在将 Azure Artifacts 凭据提供程序(.NET Framework)安装到 \"%s\"。此凭据提供程序与 nuget.exe 4.8.0.5385 或更高版本以及 MSBuild 15.8.166.59604 或更高版本兼容。",
-  "loc.messages.CredProvider_SettingUpForOrgFeeds": "设置凭据提供程序，以将标识 \"%s\" 用于组织/集合中以下列内容开头的源:",
-  "loc.messages.CredProvider_SettingUpForServiceConnections": "为这些服务连接设置凭据提供程序:",
   "loc.messages.ErrorInSettingUpSubscription": "设置订阅时出错",
   "loc.messages.LoginFailed": "Azure 登录失败",
   "loc.messages.MSILoginFailed": "使用托管服务标识进行 Azure 登录失败",
+  "loc.messages.CredProvider_SettingUpForOrgFeeds": "设置凭据提供程序，以将标识 \"%s\" 用于组织/集合中以下列内容开头的源:",
+  "loc.messages.CredProvider_SettingUpForServiceConnections": "为这些服务连接设置凭据提供程序:",
   "loc.messages.ServiceConnections_Error_FailedToParseServiceEndpoint_MissingParameter": "未能分析服务终结点 \"%s\"，因为它缺少参数 \"%s\"",
   "loc.messages.ServiceConnections_Error_FailedToParseServiceEndpoint_BadScheme": "未能分析服务终结点 \"%s\"，因为身份验证方案 \"%s\" 无效",
   "loc.messages.SettingAzureCloud": "将活动云设置为 %s"
