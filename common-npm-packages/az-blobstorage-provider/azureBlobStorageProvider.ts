@@ -43,8 +43,8 @@ export class AzureBlobProvider implements models.IArtifactProvider {
         
         try {
             await blockBlobClient.uploadStream(readStream);
-            const blobUrl = blockBlobClient.url + "/" + this._containerName + "/" + blobPath;
-            
+            const blobUrl = blockBlobClient.url;
+
             console.log(tl.loc("CreatedBlobForItem", item.path, blobUrl));
             item.metadata["destinationUrl"] = blobUrl;
             
