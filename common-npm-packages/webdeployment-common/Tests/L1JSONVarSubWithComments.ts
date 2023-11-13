@@ -1,52 +1,39 @@
-var jsonSubUtil = require('azure-pipelines-tasks-webdeployment-common/jsonvariablesubstitutionutility.js');
-import fs = require('fs');
-import path = require('path');
+import * as fs from 'fs';
+import * as path from 'path';
+import * as assert from 'assert';
 
-var envVarObject = jsonSubUtil.createEnvTree([
-    { name: 'dataSourceBindings.0.target', value: 'AppServiceName', secret: false},
-    { name: 'name', value: 'App Service Deploy', secret: false},
-    { name: 'Hello.World', value: 'Hello World', secret: false},
-    { name: 'dataSourceBindings.1.parameters.WebAppName', value: 'App Service Name params', secret: false},
-    { name: 'messages.Invalidwebapppackageorfolderpathprovided', value: 'Invalidwebapppackageorfolderpathprovided', secret: true}
-]);
+import { createEnvTree, stripJsonComments, substituteJsonVariable } from "../jsonvariablesubstitutionutility";
 
-function validateJSONWithComments() {
-    var fileContent: string = fs.readFileSync(path.join(__dirname, 'L1JSONVarSub', 'JSONWithComments.json'), 'utf-8');
-    var jsonContent: string = jsonSubUtil.stripJsonComments(fileContent);
-    var jsonObject = JSON.parse(jsonContent);
-    jsonSubUtil.substituteJsonVariable(jsonObject, envVarObject);
 
-    if(jsonObject['dataSourceBindings']['0']['target'] != 'AppServiceName') {
-        throw new Error('JSON VAR SUB FAIL #1');
-    }
-    if(jsonObject['name'] != 'App Service Deploy') {
-        throw new Error('JSON VAR SUB FAIL #2');
-    }
-    if(jsonObject['Hello']['World'] != 'Hello World') {
-        throw new Error('JSON VAR SUB FAIL #3');
-    }
-    if(jsonObject['dataSourceBindings']['1']['parameters']['WebAppName'] != 'App Service Name params') {
-        throw new Error('JSON VAR SUB FAIL #4');
-    }
-    if(jsonObject['messages']['Invalidwebapppackageorfolderpathprovided'] != 'Invalidwebapppackageorfolderpathprovided') {
-        throw new Error('JSON VAR SUB FAIL #5');
-    }
-    console.log("VALID JSON COMMENTS TESTS PASSED");
-}
+export function runL1JSONVarSubWithCommentsTests(): void {
 
-function validateInvalidJSONWithComments() {
-    var fileContent: string = fs.readFileSync(path.join(__dirname, 'L1JSONVarSub', 'InvalidJSONWithComments.json'), 'utf-8');
-    var jsonContent: string = jsonSubUtil.stripJsonComments(fileContent);
-    try {
-        var jsonObject = JSON.parse(jsonContent);
-        throw new Error('JSON VAR SUB FAIL #6');
-    }
-    catch(error) {
-        console.log("INVALID JSON COMMENTS TESTS PASSED");
-    }
-}
+    it("Should substitute variables in JSON with comments", (done: Mocha.Done) => {
+        const envVarObject = createEnvTree([
+            { name: 'dataSourceBindings.0.target', value: 'AppServiceName', secret: false },
+            { name: 'name', value: 'App Service Deploy', secret: false },
+            { name: 'Hello.World', value: 'Hello World', secret: false },
+            { name: 'dataSourceBindings.1.parameters.WebAppName', value: 'App Service Name params', secret: false },
+            { name: 'messages.Invalidwebapppackageorfolderpathprovided', value: 'Invalidwebapppackageorfolderpathprovided', secret: true }
+        ]);
 
-export function validate() {
-    validateJSONWithComments();
-    validateInvalidJSONWithComments();
+        const fileContent: string = fs.readFileSync(path.join(__dirname, 'L1JSONVarSub', 'JSONWithComments.json'), 'utf-8');
+        const jsonContent: string = stripJsonComments(fileContent);
+        const jsonObject = JSON.parse(jsonContent);
+        substituteJsonVariable(jsonObject, envVarObject);
+
+        assert.strictEqual(jsonObject['dataSourceBindings']['0']['target'], 'AppServiceName', 'Should have substituted target variable');
+        assert.strictEqual(jsonObject['name'], 'App Service Deploy', 'Should have substituted name variable');
+        assert.strictEqual(jsonObject['Hello']['World'], 'Hello World', 'Should have substituted Hello.World variable');
+        assert.strictEqual(jsonObject['dataSourceBindings']['1']['parameters']['WebAppName'], 'App Service Name params', 'Should have substituted WebAppName variable');
+        assert.strictEqual(jsonObject['messages']['Invalidwebapppackageorfolderpathprovided'], 'Invalidwebapppackageorfolderpathprovided', 'Should have substituted Invalidwebapppackageorfolderpathprovided variable');
+
+        done();
+    });
+
+    it("Should throw exception for invalid JSON with comments", (done: Mocha.Done) => {
+        const fileContent = fs.readFileSync(path.join(__dirname, 'L1JSONVarSub', 'InvalidJSONWithComments.json'), 'utf-8');
+        const jsonContent = stripJsonComments(fileContent);
+        assert.throws(() => JSON.parse(jsonContent), "Parse is expected to throw an error");
+        done();
+    });
 }

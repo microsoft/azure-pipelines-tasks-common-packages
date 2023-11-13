@@ -15,5 +15,6 @@
   "loc.messages.AllContainersNotInReadyState": "所有容器皆未處於就緒狀態。",
   "loc.messages.waitForServiceIpAssignment": "正在等候服務 %s 外部 IP 指派",
   "loc.messages.waitForServiceIpAssignmentTimedOut": "等候服務 %s 外部 IP 指派已逾時",
-  "loc.messages.EnvironmentLink": "如需詳細資訊，請前往 %s"
+  "loc.messages.EnvironmentLink": "如需詳細資訊，請前往 %s",
+  "loc.messages.AuthSchemeNotSupported": "不支援驗證結構描述 %s"
 }

@@ -101,10 +101,12 @@ const args = process.argv.slice(2);
 const archiveUrl = args[0];
 const dest = args[1];
 
-const targetPath = downloadArchive(archiveUrl, path.join('../_download', dest));
-if (!fs.existsSync(dest)) {
-    util.mkdir('-p', dest);
+if (args.length) {
+    const targetPath = downloadArchive(archiveUrl, path.join('../_download', dest));
+    if (!fs.existsSync(dest)) {
+        util.mkdir('-p', dest);
+    }
+    util.cp('-rf', path.join(targetPath, '*'), dest);
 }
-util.cp('-rf', path.join(targetPath, '*'), dest);
 
 exports.downloadArchive=downloadArchive;

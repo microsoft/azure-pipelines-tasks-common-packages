@@ -2,6 +2,7 @@ import tl = require('azure-pipelines-task-lib/task');
 import path = require('path');
 import Q = require('q');
 import fs = require('fs');
+import StreamZip = require('node-stream-zip');
 import tr = require('azure-pipelines-task-lib/toolrunner');
 
 var DecompressZip = require('decompress-zip');
@@ -161,3 +162,32 @@ export async function getArchivedEntries(archivedPackage: string)  {
     return deferred.promise;
 }
 
+export function checkIfFilesExistsInZip(archivedPackage: string, files: string[]): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+        for (let i = 0; i < files.length; i++) {
+            files[i] = files[i].toLowerCase();
+        }
+
+        const zip = new StreamZip({
+            file: archivedPackage,
+            storeEntries: true,
+            skipEntryNameValidation: true
+        });
+
+        zip.on('ready', () => {
+            let fileCount = 0;
+            for (let entry in zip.entries()) {
+                if (files.indexOf(entry.toLowerCase()) !== -1) {
+                    fileCount++;
+                }
+            }
+
+            zip.close();
+            resolve(fileCount === files.length);
+        });
+
+        zip.on('error', error => {
+            reject(error);
+        });
+    });
+}

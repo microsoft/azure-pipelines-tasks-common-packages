@@ -1,11 +1,19 @@
 import tl = require('azure-pipelines-task-lib/task');
+import { IExecOptions } from 'azure-pipelines-task-lib/toolrunner';
 import fs = require('fs');
 import path = require('path');
-import Q = require('q');
-import { WebDeployArguments, WebDeployResult } from './msdeployutility';
 
-var msDeployUtility = require('./msdeployutility.js');
-var utility = require('./utility.js');
+import { copySetParamFileIfItExists, isMSDeployPackage } from './utility'; 
+import { 
+    WebDeployArguments, 
+    WebDeployResult, 
+    getMSDeployFullPath, 
+    getWebDeployArgumentsString, 
+    getWebDeployErrorCode,
+    getMSDeployCmdArgs,
+    redirectMSDeployErrorToConsole,
+    ERROR_FILE_NAME
+} from './msdeployutility';
 
 const DEFAULT_RETRY_COUNT = 3;
 
@@ -24,24 +32,24 @@ const DEFAULT_RETRY_COUNT = 3;
  *
  */
 export async function DeployUsingMSDeploy(webDeployPkg, webAppName, publishingProfile, removeAdditionalFilesFlag,
-        excludeFilesFromAppDataFlag, takeAppOfflineFlag, virtualApplication, setParametersFile, additionalArguments, isFolderBasedDeployment, useWebDeploy) {
+        excludeFilesFromAppDataFlag, takeAppOfflineFlag, virtualApplication, setParametersFile, additionalArguments, isFolderBasedDeployment, useWebDeploy, authType?: string) {
 
-    var msDeployPath = await msDeployUtility.getMSDeployFullPath();
+    var msDeployPath = await getMSDeployFullPath();
     var msDeployDirectory = msDeployPath.slice(0, msDeployPath.lastIndexOf('\\') + 1);
     var pathVar = process.env.PATH;
     process.env.PATH = msDeployDirectory + ";" + process.env.PATH ;
 
-    setParametersFile = utility.copySetParamFileIfItExists(setParametersFile);
+    setParametersFile = copySetParamFileIfItExists(setParametersFile);
     var setParametersFileName = null;
 
     if(setParametersFile != null) {
         setParametersFileName = setParametersFile.slice(setParametersFile.lastIndexOf('\\') + 1, setParametersFile.length);
     }
-    var isParamFilePresentInPackage = isFolderBasedDeployment ? false : await utility.isMSDeployPackage(webDeployPkg);
+    var isParamFilePresentInPackage = isFolderBasedDeployment ? false : await isMSDeployPackage(webDeployPkg);
 
-    var msDeployCmdArgs = msDeployUtility.getMSDeployCmdArgs(webDeployPkg, webAppName, publishingProfile, removeAdditionalFilesFlag,
+    var msDeployCmdArgs = getMSDeployCmdArgs(webDeployPkg, webAppName, publishingProfile, removeAdditionalFilesFlag,
         excludeFilesFromAppDataFlag, takeAppOfflineFlag, virtualApplication, setParametersFileName, additionalArguments, isParamFilePresentInPackage, isFolderBasedDeployment,
-        useWebDeploy);
+        useWebDeploy, authType);
 
     var retryCountParam = tl.getVariable("appservice.msdeployretrycount");
     var retryCount = (retryCountParam && !(isNaN(Number(retryCountParam)))) ? Number(retryCountParam): DEFAULT_RETRY_COUNT; 
@@ -68,7 +76,7 @@ export async function DeployUsingMSDeploy(webDeployPkg, webAppName, publishingPr
     catch (error) {
         tl.error(tl.loc('PackageDeploymentFailed'));
         tl.debug(JSON.stringify(error));
-        msDeployUtility.redirectMSDeployErrorToConsole();
+        redirectMSDeployErrorToConsole();
         throw Error(error.message);
     }
     finally {
@@ -80,26 +88,31 @@ export async function DeployUsingMSDeploy(webDeployPkg, webAppName, publishingPr
 }
 
 
-export async function executeWebDeploy(WebDeployArguments: WebDeployArguments, publishingProfile: any): Promise<WebDeployResult> {
-    var webDeployArguments = await msDeployUtility.getWebDeployArgumentsString(WebDeployArguments, publishingProfile);
+export async function executeWebDeploy(webDeployArguments: WebDeployArguments): Promise<WebDeployResult> {
+    const args = await getWebDeployArgumentsString(webDeployArguments);
+    const originalPathVar = process.env.PATH;
     try {
-        var msDeployPath = await msDeployUtility.getMSDeployFullPath();
-        var msDeployDirectory = msDeployPath.slice(0, msDeployPath.lastIndexOf('\\') + 1);
-        var pathVar = process.env.PATH;
-        process.env.PATH = msDeployDirectory + ";" + process.env.PATH ;
-        await executeMSDeploy(webDeployArguments);
+        const msDeployPath: string = await getMSDeployFullPath();
+        const msDeployDirectory = msDeployPath.slice(0, msDeployPath.lastIndexOf('\\') + 1);
+        process.env.PATH = msDeployDirectory + ";" + process.env.PATH;
+        await executeMSDeploy(args);
+        return {
+            isSuccess: true
+        } as WebDeployResult;
     }
-    catch(exception) {
-        var msDeployErrorFilePath = tl.getVariable('System.DefaultWorkingDirectory') + '\\' + 'error.txt';
-        var errorFileContent = tl.exist(msDeployErrorFilePath) ? fs.readFileSync(msDeployErrorFilePath, 'utf-8') : "";
+    catch (exception) {
+        tl.debug(JSON.stringify(exception));
+        const msDeployErrorFilePath = tl.getVariable('System.DefaultWorkingDirectory') + '\\' + 'error.txt';
+        const errorFileContent = tl.exist(msDeployErrorFilePath) ? fs.readFileSync(msDeployErrorFilePath, 'utf-8') : "";
         return {
             isSuccess: false,
             error: errorFileContent,
-            errorCode: msDeployUtility.getWebDeployErrorCode(errorFileContent)
+            errorCode: getWebDeployErrorCode(errorFileContent)
         } as WebDeployResult;
     }
-
-    return { isSuccess: true } as WebDeployResult;
+    finally {
+        process.env.PATH = originalPathVar;
+    }
 }
 
 function argStringToArray(argString): string[] {
@@ -151,37 +164,43 @@ function argStringToArray(argString): string[] {
     return args;
 }
 
-async function executeMSDeploy(msDeployCmdArgs) {
-    var deferred = Q.defer();
+async function executeMSDeploy(msDeployCmdArgs: string): Promise<any> {
+    return new Promise<any>(async (resolve, reject) => {
+        const errorFile = path.join(tl.getVariable('System.DefaultWorkingDirectory'), ERROR_FILE_NAME);
+        const fd = fs.openSync(errorFile, "w");
+        const errorStream = fs.createWriteStream("", { fd: fd });
 
-    var msDeployError = null;
-    var errorFile = path.join(tl.getVariable('System.DefaultWorkingDirectory'),"error.txt");
-    var fd = fs.openSync(errorFile, "w");
-    var errObj = fs.createWriteStream("", {fd: fd} );
+        let msDeployError = null;
 
-    errObj.on('finish', async () => {
-        if(msDeployError) {
-           deferred.reject(msDeployError);
+        errorStream.on('finish', async () => {
+            if (msDeployError) {
+                reject(msDeployError);
+            }
+        });
+
+        try {
+            tl.debug("the argument string is:");
+            tl.debug(msDeployCmdArgs);
+            tl.debug("converting the argument string into an array of arguments");
+            const msDeployCmdArgsArray = argStringToArray(msDeployCmdArgs);
+            tl.debug("the array of arguments is:");
+            for (let i = 0; i < msDeployCmdArgsArray.length; i++) {
+                tl.debug("arg#" + i + ": " + msDeployCmdArgsArray[i]);
+            }
+            // set shell: true because C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe has folder with spaces 
+            // see https://github.com/microsoft/azure-pipelines-tasks/issues/17634
+            const options: IExecOptions = { 
+                failOnStdErr: true, 
+                errStream: errorStream, 
+                windowsVerbatimArguments: true, 
+                shell: true
+            };
+            await tl.exec("msdeploy", msDeployCmdArgsArray, options);
+            resolve("Azure App service successfully deployed");
+        } catch (error) {
+            msDeployError = error;
+        } finally {
+            errorStream.end();
         }
     });
-
-    try {
-        tl.debug("the argument string is:");
-        tl.debug(msDeployCmdArgs);
-        tl.debug("converting the argument string into an array of arguments");
-        msDeployCmdArgs = argStringToArray(msDeployCmdArgs);
-        tl.debug("the array of arguments is:");
-        for(var i = 0 ; i < msDeployCmdArgs.length ; i++ ) {
-            tl.debug("arg#" + i + ": " + msDeployCmdArgs[i]);
-        }
-        // set shell: true because C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe has folder with spaces 
-        // see https://github.com/microsoft/azure-pipelines-tasks/issues/17634
-        await tl.exec("msdeploy", msDeployCmdArgs, <any>{failOnStdErr: true, errStream: errObj, windowsVerbatimArguments: true, shell: true});
-        deferred.resolve("Azure App service successfully deployed");
-    } catch (error) {
-        msDeployError = error;
-    } finally {
-        errObj.end();
-    }
-    return deferred.promise;
 }

@@ -1,6 +1,6 @@
 import tl = require('azure-pipelines-task-lib/task');
 import utility = require('./utility');
-var zipUtility = require('azure-pipelines-tasks-webdeployment-common/ziputility.js');
+import { checkIfFilesExistsInZip } from './ziputility';
 import path = require('path');
 
 export enum PackageType {
@@ -66,20 +66,10 @@ export class Package {
     }
 
     public async isMSBuildPackage(): Promise<boolean> {
-        if(this._isMSBuildPackage == undefined) {
-            this._isMSBuildPackage = false;
-            if(this.getPackageType() != PackageType.folder) {
-                var pacakgeComponent = await zipUtility.getArchivedEntries(this._path);
-                if (((pacakgeComponent["entries"].indexOf("parameters.xml") > -1) || (pacakgeComponent["entries"].indexOf("Parameters.xml") > -1)) && 
-                    ((pacakgeComponent["entries"].indexOf("systemInfo.xml") > -1) || (pacakgeComponent["entries"].indexOf("systeminfo.xml") > -1)
-                    || (pacakgeComponent["entries"].indexOf("SystemInfo.xml") > -1))) {
-                    this._isMSBuildPackage = true;
-                }
-            }
-            
-            tl.debug("Is the package an msdeploy package : " + this._isMSBuildPackage);
-        }
-
+        if (this._isMSBuildPackage !== undefined) return this._isMSBuildPackage;
+        const shouldCheckFiles = this.getPackageType() !== PackageType.folder;
+        this._isMSBuildPackage = shouldCheckFiles && await checkIfFilesExistsInZip(this._path, ["parameters.xml", "systeminfo.xml"]);
+        tl.debug(`Is the package an msdeploy package : ${this._isMSBuildPackage}`);
         return this._isMSBuildPackage;
     }
 

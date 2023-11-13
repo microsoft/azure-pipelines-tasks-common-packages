@@ -242,11 +242,11 @@ export class AzureAppServiceUtility {
             let scmAuthPolicy: any = await this._appService.getSitePublishingCredentialPolicies();
             tl.debug(`Site Publishing Policy check: ${JSON.stringify(scmAuthPolicy)}`);
             if (scmAuthPolicy && scmAuthPolicy.properties.allow) {
-                tl.debug("Function App does allow SCM access");
+                tl.debug("Web App does allow SCM access");
                 return true;
             }
             else {
-                tl.debug("Function App does not allow SCM Access");
+                tl.debug("Web App does not allow SCM Access");
                 return false;
             }
         }
