@@ -116,10 +116,19 @@ function Invoke-MSBuild {
             $arguments = "$arguments $AdditionalArguments"
         }
 
+        $shouldUseInvokeProcess = [System.Convert]::ToBoolean($env:AZP_PS_ENABLE_INVOKE_PROCESS)
+        Write-Debug "Should use Invoke-VstsProcess: $shouldUseInvokeProcess"
+
         $global:LASTEXITCODE = ''
         try {
             # Invoke MSBuild.
-            Invoke-VstsTool -FileName $MSBuildPath -Arguments $arguments -RequireExitCodeZero
+            if ($shouldUseInvokeProcess) {
+                Invoke-VstsProcess -FileName $MSBuildPath -Arguments $arguments -RequireExitCodeZero
+            }
+            else {
+                Invoke-VstsTool -FileName $MSBuildPath -Arguments $arguments -RequireExitCodeZero
+            }
+
             if ($LASTEXITCODE -ne 0) {
                 Write-VstsSetResult -Result Failed -DoNotThrow
             }
