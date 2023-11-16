@@ -15,7 +15,7 @@
     "dependencies": {
         "@azure/storage-blob": "^12.16.0",
         "artifact-engine": "^1.4.0",
-        "azure-pipelines-task-lib": "^3.4.0",
+        "azure-pipelines-task-lib": "^4.7.0",
         "q": "1.4.1"
     },
     "devDependencies": {
