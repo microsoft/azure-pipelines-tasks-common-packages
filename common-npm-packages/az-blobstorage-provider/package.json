@@ -14,7 +14,7 @@
     "homepage": "https://github.com/Microsoft/azure-pipelines-tasks#readme",
     "dependencies": {
         "@azure/storage-blob": "^12.16.0",
-        "artifact-engine": "1.2.0",
+        "artifact-engine": "^1.4.0",
         "azure-pipelines-task-lib": "^3.4.0",
         "q": "1.4.1"
     },
