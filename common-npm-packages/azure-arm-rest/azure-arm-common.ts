@@ -201,11 +201,11 @@ export class ApplicationTokenCredentials {
             (taskApi: ITaskApi) => {
                 taskApi.createOidcToken({}, projectId, hub, planId, jobId, serviceConnectionId).then(
                     (response: TaskAgentInterfaces.TaskHubOidcToken) => {
-                        if (response != null) {
+                        if (response != null && response.oidcToken != null) {
                             tl.debug('Got OIDC token');
                             deferred.resolve(response.oidcToken);
                         }
-                        else if (response.oidcToken == null) {
+                        else {
                             if (retryCount < 3) {
                                 let waitedTime = timeToWait;
                                 retryCount += 1;
