@@ -25,12 +25,7 @@ $actual = & $module Invoke-MSBuild -ProjectFile $expectedProjectFile -NoTimeline
 # Assert.
 Assert-WasCalled Assert-VstsPath -- -LiteralPath $expectedMSBuildPath -PathType Leaf
 Assert-WasCalled Assert-VstsPath -- -LiteralPath $expectedLoggerPath -PathType Leaf
-if ($shouldUseInvokeProcess) {
-    Assert-WasCalled Invoke-VstsProcess -- -FileName $expectedMSBuildPath -Arguments "`"$expectedProjectFile`" /nologo /nr:false /fl /flp:`"logfile=$expectedLogFile;verbosity=$expectedLogFileVerbosity`" /dl:CentralLogger,`"$expectedLoggerPath`";`"RootDetailId=|SolutionDir=C:\Some solution dir|enableOrphanedProjectsLogs=true`"*ForwardingLogger,`"$expectedLoggerPath`"" -RequireExitCodeZero
-}
-else {
-    Assert-WasCalled Invoke-VstsTool -- -FileName $expectedMSBuildPath -Arguments "`"$expectedProjectFile`" /nologo /nr:false /fl /flp:`"logfile=$expectedLogFile;verbosity=$expectedLogFileVerbosity`" /dl:CentralLogger,`"$expectedLoggerPath`";`"RootDetailId=|SolutionDir=C:\Some solution dir|enableOrphanedProjectsLogs=true`"*ForwardingLogger,`"$expectedLoggerPath`"" -RequireExitCodeZero
-}
+Assert-WasCalled Invoke-VstsTool -- -FileName $expectedMSBuildPath -Arguments "`"$expectedProjectFile`" /nologo /nr:false /fl /flp:`"logfile=$expectedLogFile;verbosity=$expectedLogFileVerbosity`" /dl:CentralLogger,`"$expectedLoggerPath`";`"RootDetailId=|SolutionDir=C:\Some solution dir|enableOrphanedProjectsLogs=true`"*ForwardingLogger,`"$expectedLoggerPath`"" -RequireExitCodeZero
 Assert-WasCalled Write-VstsSetResult -Times 0
 Assert-WasCalled Write-Host -Times 0
 Assert-AreEqual -Expected @(

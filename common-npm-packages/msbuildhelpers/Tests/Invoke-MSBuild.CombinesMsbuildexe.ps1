@@ -20,13 +20,7 @@ $actual = & $module Invoke-MSBuild -ProjectFile 'Some project file' -NoTimelineL
 # Assert.
 Assert-WasCalled Assert-VstsPath -- -LiteralPath $expectedMSBuildPath -PathType Leaf
 Assert-WasCalled Assert-VstsPath -- -LiteralPath $expectedLoggerPath -PathType Leaf
-$shouldUseInvokeProcess = [System.Convert]::ToBoolean($env:AZP_PS_ENABLE_INVOKE_PROCESS)
-if ($shouldUseInvokeProcess) {
-    Assert-WasCalled Invoke-VstsProcess -- -FileName $expectedMSBuildPath -Arguments "`"Some project file`" /nologo /nr:false /dl:CentralLogger,`"$expectedLoggerPath`";`"RootDetailId=|SolutionDir=|enableOrphanedProjectsLogs=true`"*ForwardingLogger,`"$expectedLoggerPath`"" -RequireExitCodeZero
-}
-else {
-    Assert-WasCalled Invoke-VstsTool -- -FileName $expectedMSBuildPath -Arguments "`"Some project file`" /nologo /nr:false /dl:CentralLogger,`"$expectedLoggerPath`";`"RootDetailId=|SolutionDir=|enableOrphanedProjectsLogs=true`"*ForwardingLogger,`"$expectedLoggerPath`"" -RequireExitCodeZero
-}
+Assert-WasCalled Invoke-VstsTool -- -FileName $expectedMSBuildPath -Arguments "`"Some project file`" /nologo /nr:false /dl:CentralLogger,`"$expectedLoggerPath`";`"RootDetailId=|SolutionDir=|enableOrphanedProjectsLogs=true`"*ForwardingLogger,`"$expectedLoggerPath`"" -RequireExitCodeZero
 Assert-WasCalled Write-VstsSetResult -Times 0
 Assert-AreEqual -Expected @(
         'Some output 1'
