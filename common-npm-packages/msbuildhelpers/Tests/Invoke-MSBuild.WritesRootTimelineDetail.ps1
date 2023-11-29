@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param()
 
+$shouldUseInvokeProcess = [System.Convert]::ToBoolean($env:AZP_PS_ENABLE_INVOKE_PROCESS)
+
 # Arrange.
 . $PSScriptRoot\..\..\..\..\Tests\lib\Initialize-Test.ps1
 $module = Microsoft.PowerShell.Core\Import-Module $PSScriptRoot\..\MSBuildHelpers.psm1 -PassThru
@@ -9,8 +11,8 @@ $expectedLoggerPath = ([System.IO.Path]::GetFullPath("$PSScriptRoot\..\tools\Mic
 Register-Mock Get-MSBuildPath { $expectedMSBuildPath }
 Register-Mock Assert-VstsPath
 Register-Mock Get-VstsTaskVariable { "C:\Some agent home directory" } -- -Name Agent.HomeDirectory -Require
-Register-Mock Invoke-VstsProcess { $global:LASTEXITCODE = 0 ; 'Some output 1', 'Some output 2' }
 Register-Mock Invoke-VstsTool { $global:LASTEXITCODE = 0 ; 'Some output 1' ; 'Some output 2' }
+Register-Mock Invoke-VstsProcess { $global:LASTEXITCODE = 0 ; 'Some output 1' ; 'Some output 2' }
 Register-Mock Write-VstsSetResult
 Register-Mock Write-VstsLogDetail
 $expectedProjectFile = 'C:\Some solution dir\Some solution file.sln'
@@ -32,7 +34,13 @@ Assert-WasCalled Write-VstsLogDetail -ParametersEvaluator {
             $State -eq 'Initialized' -and
             $AsOutput -eq $true
     }
+
+if($shouldUseInvokeProcess){
+    Assert-WasCalled Invoke-VstsProcess -- -FileName $expectedMSBuildPath -Arguments "`"$expectedProjectFile`" /nologo /nr:false /dl:CentralLogger,`"$expectedLoggerPath`";`"RootDetailId=$script:rootDetailId|SolutionDir=C:\Some solution dir|enableOrphanedProjectsLogs=true`"*ForwardingLogger,`"$expectedLoggerPath`"" -RequireExitCodeZero
+}
+else{
     Assert-WasCalled Invoke-VstsTool -- -FileName $expectedMSBuildPath -Arguments "`"$expectedProjectFile`" /nologo /nr:false /dl:CentralLogger,`"$expectedLoggerPath`";`"RootDetailId=$script:rootDetailId|SolutionDir=C:\Some solution dir|enableOrphanedProjectsLogs=true`"*ForwardingLogger,`"$expectedLoggerPath`"" -RequireExitCodeZero
+}
 Assert-WasCalled Write-VstsSetResult -Times 0
 Assert-AreEqual -Expected @(
         'Some output 1'
