@@ -1,3 +1,5 @@
+import path = require("path");
+import util = require('util');
 import * as BlobService from './blobservice';
 
 var config = require("./config.json");

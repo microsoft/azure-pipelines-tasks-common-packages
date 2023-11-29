@@ -1,9 +1,9 @@
 import path = require('path');
+import azureStorage = require('azure-storage');
+import fs = require('fs');
 import models = require('artifact-engine/Models');
 import store = require('artifact-engine/Store');
 import tl = require('azure-pipelines-task-lib/task');
-import { Readable } from 'stream';
-import { BlobItem, BlobServiceClient, ContainerClient, StorageSharedKeyCredential } from '@azure/storage-blob';
 
 const resourcePath: string = path.join(__dirname, 'module.json');
 tl.setResourcePath(resourcePath);
@@ -12,133 +12,158 @@ export class AzureBlobProvider implements models.IArtifactProvider {
 
     public artifactItemStore: store.ArtifactItemStore;
 
-    constructor(storageAccount: string, containerName: string, accessKey: string, prefixFolderPath?: string, addPrefixToDownloadedItems?: boolean) {
+    constructor(storageAccount: string, container: string, accessKey: string, prefixFolderPath?: string, host?: string, addPrefixToDownloadedItems?: boolean) {
         this._storageAccount = storageAccount;
         this._accessKey = accessKey;
-        this._containerName = containerName;
-
+        this._container = container;
         if (!!prefixFolderPath) {
             this._prefixFolderPath = prefixFolderPath.endsWith("/") ? prefixFolderPath : prefixFolderPath + "/";
         } else {
             this._prefixFolderPath = "";
         }
-
-        const sharedKeyCredential = new StorageSharedKeyCredential(this._storageAccount, this._accessKey);
-
-        this._blobServiceClient = new BlobServiceClient(
-            `https://${this._storageAccount}.blob.core.windows.net`,
-            sharedKeyCredential
-        );
-
-        this._containerClient = this._blobServiceClient.getContainerClient(this._containerName);
+        this._blobSvc = azureStorage.createBlobService(this._storageAccount, this._accessKey, host);
         this._addPrefixToDownloadedItems = !!addPrefixToDownloadedItems;
     }
 
-    public async putArtifactItem(item: models.ArtifactItem, readStream: Readable): Promise<models.ArtifactItem> {
-        await this._containerClient.createIfNotExists();
-        console.log(tl.loc("UploadingItem", item.path));
+    public putArtifactItem(item: models.ArtifactItem, readStream: NodeJS.ReadableStream): Promise<models.ArtifactItem> {
+        return new Promise(async (resolve, reject) => {
+            await this._ensureContainerExistence();
 
-        const blobPath = this._prefixFolderPath ? this._prefixFolderPath + "/" + item.path : item.path;
-        const blockBlobClient = this._containerClient.getBlockBlobClient(blobPath);
-        
-        try {
-            await blockBlobClient.uploadStream(readStream);
-            const blobUrl = blockBlobClient.url + "/" + this._containerName + "/" + blobPath;
-            
-            console.log(tl.loc("CreatedBlobForItem", item.path, blobUrl));
-            item.metadata["destinationUrl"] = blobUrl;
-            
-            return item;
-        } catch (error) {
-            console.log(tl.loc("FailedToUploadBlob", blobPath, error.message));
-            throw error;
-        }
+            var self = this;
+            console.log(tl.loc("UploadingItem", item.path));
+            var blobPath = this._prefixFolderPath ? this._prefixFolderPath + "/" + item.path : item.path;
+
+            var writeStream = this._blobSvc.createWriteStreamToBlockBlob(this._container, blobPath, null, function (error, result, response) {
+                if (error) {
+                    console.log(tl.loc("FailedToUploadBlob", blobPath, error.message));
+                    reject(error);
+                } else {
+                    var blobUrl = self._blobSvc.getUrl(self._container, blobPath);
+                    console.log(tl.loc("CreatedBlobForItem", item.path, blobUrl));
+                    item.metadata["destinationUrl"] = blobUrl;
+                    resolve(item);
+                }
+            });
+
+            readStream.pipe(writeStream);
+            writeStream.on("error",
+                (error) => {
+                    console.log("ErrorInWriteStream", error);
+                    reject(error);
+                });
+            readStream.on("error",
+                (error) => {
+                    console.log(tl.loc("ErrorInReadStream", error));
+                    reject(error);
+                });
+        });
     }
 
     public getRootItems(): Promise<models.ArtifactItem[]> {
-        return this._getItems(this._containerName, this._prefixFolderPath);
+        return this._getItems(this._container, this._prefixFolderPath);
     }
 
     public getArtifactItems(artifactItem: models.ArtifactItem): Promise<models.ArtifactItem[]> {
         throw new Error(tl.loc("GetArtifactItemsNotSupported"));
     }
 
-    public async getArtifactItem(artifactItem: models.ArtifactItem): Promise<NodeJS.ReadableStream> {
-        let blobPath = artifactItem.path;
-
-        if (!this._addPrefixToDownloadedItems && !!this._prefixFolderPath) {
-            blobPath += this._prefixFolderPath;
-        }
-
-        const blockBlobClient = this._containerClient.getBlockBlobClient(blobPath);
-    
-        try {
-            const downloadResponse = await blockBlobClient.download();
-
+    public getArtifactItem(artifactItem: models.ArtifactItem): Promise<NodeJS.ReadableStream> {
+        return new Promise((resolve, reject) => {
+            var readStream: NodeJS.ReadableStream;
+            if (!this._addPrefixToDownloadedItems && !!this._prefixFolderPath) {
+                // Adding prefix path to get the absolute path
+                readStream = this._blobSvc.createReadStream(this._container, this._prefixFolderPath + artifactItem.path, null); 
+            } else {
+                readStream = this._blobSvc.createReadStream(this._container, artifactItem.path, null);
+            }
             // Replace full path by filename in order to save the file directly to destination folder
             artifactItem.path = path.basename(artifactItem.path);
-            return downloadResponse.readableStreamBody;
-        } catch (error) {
-            console.log(tl.loc("FailedToDownloadBlob", blobPath, error.message));
-            throw error;
-        }
+            resolve(readStream);
+        });
     }
 
     public dispose() {
     }
 
-    private async _getItems(container: string, parentRelativePath?: string): Promise<models.ArtifactItem[]> { 
-        try {
-            const result = await this._getListOfItemsInsideContainer(container, parentRelativePath);
-            const artifactItems: models.ArtifactItem[] = this._convertBlobResultToArtifactItem(result);
+    private _ensureContainerExistence(): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            if (!this._isContainerExists) {
+                var self = this;
+                this._blobSvc.createContainerIfNotExists(this._container, function (error, result, response) {
+                    if (!!error) {
+                        console.log(tl.loc("FailedToCreateContainer", self._container, error.message));
+                        reject(error);
+                    } else {
+                        self._isContainerExists = true;
+                        console.log(tl.loc("CreatedContainer", self._container));
+                        resolve();
+                    }
+                });
+            } else {
+                resolve();
+            }
+        });
+    }
+
+    private _getItems(container: string, parentRelativePath?: string): Promise<models.ArtifactItem[]> {
+        var promise = new Promise<models.ArtifactItem[]>(async (resolve, reject) => {
+            var items: models.ArtifactItem[] = [];
+            var continuationToken = null;
+            var result;
+            do {
+                result = await this._getListOfItemsInsideContainer(container, parentRelativePath, continuationToken);
+                items = items.concat(this._convertBlobResultToArtifactItem(result.entries));
+                continuationToken = result.continuationToken;
+                if (!!continuationToken) {
+                    console.log(tl.loc("ContinuationTokenExistsFetchingRemainingFiles"));
+                }
+            } while (continuationToken);
 
             console.log(tl.loc("SuccessFullyFetchedItemList"));
+            resolve(items);
+        });
 
-            return artifactItems;
-        } catch (error) {
-            console.log(tl.loc("FailedToListItemInsideContainer", container, error.message));
-            throw error;
-        }
+        return promise;
     }
 
-    private async _getListOfItemsInsideContainer(containerName: string, parentRelativePath: string): Promise<BlobItem[]> {
-        const options = { prefix: parentRelativePath };
-        const items: BlobItem[] = [];
-        const maxPageSize = 100;
+    private async _getListOfItemsInsideContainer(container, parentRelativePath, continuationToken): Promise<azureStorage.BlobService.ListBlobsResult> {
+        var promise = new Promise<azureStorage.BlobService.ListBlobsResult>((resolve, reject) => {
+            this._blobSvc.listBlobsSegmentedWithPrefix(container, parentRelativePath, continuationToken, async (error, result) => {
+                if (!!error) {
+                    console.log(tl.loc("FailedToListItemInsideContainer", container, error.message));
+                    reject(error);
+                } else {
+                    resolve(result);
+                }
+            });
+        });
 
-        for await (const page of this._containerClient.listBlobsFlat(options).byPage({ maxPageSize })) {
-            for (const blob of page.segment.blobItems) {
-                items.push(blob);
-            }
-        }
-
-        return items;
+        return promise;
     }
 
-    private _convertBlobResultToArtifactItem(blobItems: BlobItem[]): models.ArtifactItem[] {
+    private _convertBlobResultToArtifactItem(blobResult: azureStorage.BlobService.BlobResult[]): models.ArtifactItem[] {
         var artifactItems: models.ArtifactItem[] = new Array<models.ArtifactItem>();
-        blobItems.forEach(item => {
+        blobResult.forEach(element => {
             var artifactitem: models.ArtifactItem = new models.ArtifactItem();
             artifactitem.itemType = models.ItemType.File;
-            artifactitem.fileLength = item.properties.contentLength;
-            artifactitem.lastModified = new Date(item.properties.lastModified + 'Z');
+            artifactitem.fileLength = parseInt(element.contentLength);
+            artifactitem.lastModified = new Date(element.lastModified + 'Z');
             if (!this._addPrefixToDownloadedItems && !!this._prefixFolderPath) {
                  // Supplying relative path without prefix; removing the first occurence
-                artifactitem.path = item.name.replace(this._prefixFolderPath, "").trim();
+                artifactitem.path = element.name.replace(this._prefixFolderPath, "").trim();
             } else {
-                artifactitem.path = item.name;
+                artifactitem.path = element.name;
             }
             artifactItems.push(artifactitem);
         });
 
         return artifactItems;
     }
-
     private _storageAccount: string;
     private _accessKey: string;
-    private _containerName: string;
-    private _containerClient: ContainerClient;
-    private _blobServiceClient: BlobServiceClient;
+    private _container: string;
     private _prefixFolderPath: string;
+    private _isContainerExists: boolean = false;
+    private _blobSvc: azureStorage.BlobService;
     private _addPrefixToDownloadedItems: boolean = false;
 }
