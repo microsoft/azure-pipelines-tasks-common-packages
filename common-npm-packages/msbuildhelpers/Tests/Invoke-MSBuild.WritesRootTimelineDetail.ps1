@@ -9,6 +9,7 @@ $expectedLoggerPath = ([System.IO.Path]::GetFullPath("$PSScriptRoot\..\tools\Mic
 Register-Mock Get-MSBuildPath { $expectedMSBuildPath }
 Register-Mock Assert-VstsPath
 Register-Mock Get-VstsTaskVariable { "C:\Some agent home directory" } -- -Name Agent.HomeDirectory -Require
+Register-Mock Invoke-VstsProcess { $global:LASTEXITCODE = 0 ; 'Some output 1', 'Some output 2' }
 Register-Mock Invoke-VstsTool { $global:LASTEXITCODE = 0 ; 'Some output 1' ; 'Some output 2' }
 Register-Mock Write-VstsSetResult
 Register-Mock Write-VstsLogDetail
