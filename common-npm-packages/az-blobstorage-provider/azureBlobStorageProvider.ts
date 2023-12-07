@@ -38,10 +38,7 @@ export class AzureBlobProvider implements models.IArtifactProvider {
 
         const sharedKeyCredential = new StorageSharedKeyCredential(this._storageAccount, this._accessKey);
 
-        this._blobServiceClient = new BlobServiceClient(
-            `https://${this._storageAccount}.blob.core.windows.net`,
-            sharedKeyCredential
-        );
+        this._blobServiceClient = new BlobServiceClient(this.getStorageUrl(this._storageAccount), sharedKeyCredential);
 
         this._containerClient = this._blobServiceClient.getContainerClient(this._containerName);
 
@@ -57,8 +54,12 @@ export class AzureBlobProvider implements models.IArtifactProvider {
         const blockBlobClient = this._containerClient.getBlockBlobClient(blobPath);
 
         try {
-            await blockBlobClient.uploadStream(readStream, 8 * 1024 * 1024, 20, {
-                abortSignal: abortController.AbortController.timeout(30 * 60 * 1000),
+            const bufferSize = 8 * 1024 * 1024;
+            const maxConcurrency = 20;
+            const timeoutInMs = 30 * 60 * 1000;
+
+            await blockBlobClient.uploadStream(readStream, bufferSize, maxConcurrency, {
+                abortSignal: abortController.AbortController.timeout(timeoutInMs),
             });
     
             const blobUrl = blockBlobClient.url;
@@ -91,10 +92,14 @@ export class AzureBlobProvider implements models.IArtifactProvider {
         }
 
         const blockBlobClient = this._containerClient.getBlockBlobClient(blobPath);
+
+        const timeoutInMs = 30 * 60 * 1000;
+        const offset = 0;
+        const count = undefined; // download to the end
             
         try {
-            let downloadResponse = await blockBlobClient.download(0, undefined, {
-                abortSignal: abortController.AbortController.timeout(30 * 60 * 1000),
+            let downloadResponse = await blockBlobClient.download(offset, count, {
+                abortSignal: abortController.AbortController.timeout(timeoutInMs),
                 maxRetryRequests: 10
             });
                     
@@ -107,7 +112,7 @@ export class AzureBlobProvider implements models.IArtifactProvider {
             console.log(tl.loc("ErrorInReadStream", error instanceof Error 
                 ? error.message
                 : "Error in read stream"));
-                
+
             throw error;
         }
     }
@@ -157,5 +162,9 @@ export class AzureBlobProvider implements models.IArtifactProvider {
         });
 
         return artifactItems;
+    }
+
+    private getStorageUrl(storageAccount: string): string {
+        return `https://${storageAccount}.blob.core.windows.net`;
     }
 }
