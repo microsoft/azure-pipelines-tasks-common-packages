@@ -1,9 +1,6 @@
-// Workaround to define globalThis for Node 10
-declare global {
-    var globalThis: typeof global;
-}
-
-(global as any).globalThis = global;
+// // Workaround to define globalThis for Node 10
+var globalThis = require('globalthis')();
+(global as any).globalThis = globalThis;
 
 import path = require('path');
 import { Readable } from 'stream';
@@ -58,11 +55,9 @@ export class AzureBlobProvider implements models.IArtifactProvider {
         console.log(tl.loc("UploadingItem", blobPath));
 
         const blockBlobClient = this._containerClient.getBlockBlobClient(blobPath);
-        console.log("readableHighWaterMark: ", readStream.readableHighWaterMark);
 
         try {
             await blockBlobClient.uploadStream(readStream, 8 * 1024 * 1024, 20, {
-                onProgress: (e) => console.log(e),
                 abortSignal: abortController.AbortController.timeout(30 * 60 * 1000),
             });
     
@@ -72,7 +67,10 @@ export class AzureBlobProvider implements models.IArtifactProvider {
     
             return item;
         } catch(error) {
-            console.log(tl.loc("ErrorInWriteStream", error.details.message));
+            console.log(tl.loc("ErrorInWriteStream", error instanceof Error 
+                ? error.message 
+                : "Error in write stream"));
+
             throw error;
         }
     }
@@ -96,7 +94,6 @@ export class AzureBlobProvider implements models.IArtifactProvider {
             
         try {
             let downloadResponse = await blockBlobClient.download(0, undefined, {
-                onProgress: (e) => console.log(e),
                 abortSignal: abortController.AbortController.timeout(30 * 60 * 1000),
                 maxRetryRequests: 10
             });
@@ -107,7 +104,10 @@ export class AzureBlobProvider implements models.IArtifactProvider {
             return downloadResponse.readableStreamBody;
 
         } catch (error) {
-            console.log(tl.loc("ErrorInReadStream", error.details.message));
+            console.log(tl.loc("ErrorInReadStream", error instanceof Error 
+                ? error.message
+                : "Error in read stream"));
+                
             throw error;
         }
     }
