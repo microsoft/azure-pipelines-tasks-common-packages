@@ -1,6 +1,6 @@
 {
     "name": "azp-tasks-az-blobstorage-provider",
-    "version": "3.232.1",
+    "version": "3.232.2",
     "description": "Common Library to download blobs from azure storage",
     "repository": {
         "type": "git",
@@ -13,9 +13,10 @@
     },
     "homepage": "https://github.com/Microsoft/azure-pipelines-tasks#readme",
     "dependencies": {
-        "@azure/storage-blob": "^12.7.0",
+        "@azure/storage-blob": "^12.17.0",
         "artifact-engine": "^1.4.0",
         "azure-pipelines-task-lib": "^4.7.0",
+        "globalthis": "^1.0.3",
         "q": "1.4.1"
     },
     "devDependencies": {
