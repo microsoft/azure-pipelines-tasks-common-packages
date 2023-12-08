@@ -2,8 +2,6 @@ import artifactProviders = require('artifact-engine/Providers');
 import azureBlobProvider = require('./azureBlobStorageProvider');
 import artifactProcessor = require('artifact-engine/Engine');
 import models = require('artifact-engine/Models');
-import path = require('path');
-import util = require('util');
 
 export class BlobService {
     private _storageAccountName: string;
