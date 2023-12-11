@@ -29,5 +29,8 @@
   "loc.messages.VariableSubstitutionInitiated": "Substitution de variables lancée dans le fichier config : %s",
   "loc.messages.ConfigFileUpdated": "Fichier config %s mis à jour.",
   "loc.messages.SkippedUpdatingFile": "Mise à jour du fichier ignorée : %s",
-  "loc.messages.PwshNotAvailable": "##WARNING##:P Shell Core (pwsh.exe) n’est pas disponible sur l’ordinateur agent. revenir à l’utilisation de Windows PowerShell (powershell.exe). Cela peut entraîner une baisse des performances. Veuillez installer la version plus récente de PowerShell pour améliorer les performances."
+  "loc.messages.PwshNotAvailable": "##WARNING##:P Shell Core (pwsh.exe) n’est pas disponible sur l’ordinateur agent. revenir à l’utilisation de Windows PowerShell (powershell.exe). Cela peut entraîner une baisse des performances. Veuillez installer la version plus récente de PowerShell pour améliorer les performances.",
+  "loc.messages.UnabletofindthelocationofMSDeployfromregistryonmachineError": "Impossible de trouver l'emplacement de MSDeploy dans le registre. Erreur : %s",
+  "loc.messages.MissingMSDeployInstallPathRegistryKey": "Clé de registre MSDeploy InstallPath manquante.",
+  "loc.messages.UnsupportedinstalledversionfoundforMSDeployversionshouldbeatleast3orabove": "Version installée non prise en charge : %s trouvée pour MSDeploy. La version doit être au moins 3 ou supérieure."
 }
