@@ -252,7 +252,7 @@ export function jacocoMavenPluginEnable(includeFilter: string[], excludeFilter: 
     let plugin = {
         "groupId": "org.jacoco",
         "artifactId": "jacoco-maven-plugin",
-        "version": "0.8.8",
+        "version": "0.8.11",
         "configuration": {
             "includes": [{
                 "include": includeFilter,
@@ -329,7 +329,7 @@ export function jacocoMavenMultiModuleReport(
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>0.8.8</version>
+                        <version>0.8.11</version>
                         <executions>
                             <execution>
                                 <id>jacoco-report-aggregate</id>
