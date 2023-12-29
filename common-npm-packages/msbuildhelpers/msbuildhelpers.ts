@@ -6,7 +6,10 @@ import tl = require('azure-pipelines-task-lib/task');
  */
 export async function getMSBuildPath(version) {
     let toolPath: string;
-
+    const versionRegex: RegExp = /^\d+$/;
+    if(versionRegex.test(version)){
+        version+='.0';
+    }
     if (version === '15.0' || version === 'latest') {
         let msbuildPath: string = tl.which('msbuild', false);
         if (msbuildPath) {
