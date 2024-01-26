@@ -206,7 +206,7 @@ export function shareBuiltImageId(builtImageId: string) {
     let builtImages: string = tl.getVariable("DOCKER_TASK_BUILT_IMAGES");
 
     if (builtImages && builtImages != "") {
-        const newImageId = `${IMAGE_SEPARATOR_CHAR}${builtImages}`;
+        const newImageId = `${IMAGE_SEPARATOR_CHAR}${builtImageId}`;
 
         if (newImageId.length + builtImages.length > ENV_VARIABLE_MAX_SIZE) {
             tl.debug("Images id truncated maximum environment variable size reached.");
