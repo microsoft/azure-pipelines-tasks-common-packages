@@ -29,5 +29,8 @@
   "loc.messages.VariableSubstitutionInitiated": "構成ファイルでの変数の置換を開始しました: %s",
   "loc.messages.ConfigFileUpdated": "構成ファイル %s が更新されました。",
   "loc.messages.SkippedUpdatingFile": "ファイルの更新がスキップされました: %s",
-  "loc.messages.PwshNotAvailable": "##WARNING##: PowerShell Core (pwsh.exe) は、エージェント コンピューターでは使用できません。Windows PowerShell (powershell.exe) の使用に戻ります。これにより、パフォーマンスが低下する可能性があります。パフォーマンスを向上させるには、新しいバージョンの PowerShell をインストールしてください。"
+  "loc.messages.PwshNotAvailable": "##WARNING##: PowerShell Core (pwsh.exe) は、エージェント コンピューターでは使用できません。Windows PowerShell (powershell.exe) の使用に戻ります。これにより、パフォーマンスが低下する可能性があります。パフォーマンスを向上させるには、新しいバージョンの PowerShell をインストールしてください。",
+  "loc.messages.UnabletofindthelocationofMSDeployfromregistryonmachineError": "レジストリから MSDeploy の場所が見つかりません。エラー: %s",
+  "loc.messages.MissingMSDeployInstallPathRegistryKey": "MSDeploy InstallPath レジストリ キーがありません。",
+  "loc.messages.UnsupportedinstalledversionfoundforMSDeployversionshouldbeatleast3orabove": "サポートされていないインストール済みバージョン: %s がMSDeploy 用に見つかりました。バージョンは 3 以上である必要があります。"
 }
