@@ -60,7 +60,7 @@ export async function getArtifactToolFromService(serviceUri: string, accessToken
         }
     }
 
-    if (arch.toLowerCase() !== "amd64") {
+    if (arch.toLowerCase() !== "amd64" && arch.toLowerCase() !== "arm64") {
         throw new Error(tl.loc("Error_ProcessorArchitectureNotSupported"));
     }
 
