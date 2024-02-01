@@ -58,6 +58,9 @@ export async function getArtifactToolFromService(serviceUri: string, accessToken
         if (process.env.PROCESSOR_ARCHITEW6432 != null && process.env.PROCESSOR_ARCHITEW6432.toUpperCase() === "AMD64") {
             arch = "amd64";
         }
+        else if (!process.env.hasOwnProperty('PROCESSOR_ARCHITEW6432') && process.arch.toUpperCase() === "ARM64") {
+            arch = "arm64";
+        }
     }
 
     if (arch.toLowerCase() !== "amd64" && arch.toLowerCase() !== "arm64") {
