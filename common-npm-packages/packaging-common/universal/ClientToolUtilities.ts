@@ -70,10 +70,6 @@ export function getSupportedArchitecture(): string {
         }
     }
 
-    if (architecture.toLowerCase() !== "amd64" && arch.toLowerCase() !== "arm64") {
-        throw new Error(`The processing architecture of ${architecture} is not supported.`);
-    }
-
     return architecture;
 }
 

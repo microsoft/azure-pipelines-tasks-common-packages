@@ -63,10 +63,6 @@ export async function getArtifactToolFromService(serviceUri: string, accessToken
         }
     }
 
-    if (arch.toLowerCase() !== "amd64" && arch.toLowerCase() !== "arm64") {
-        throw new Error(tl.loc("Error_ProcessorArchitectureNotSupported"));
-    }
-
     const blobstoreAreaName = "clienttools";
     const blobstoreAreaId = "187ec90d-dd1e-4ec6-8c57-937d979261e5";
     const ApiVersion = "5.0-preview";
