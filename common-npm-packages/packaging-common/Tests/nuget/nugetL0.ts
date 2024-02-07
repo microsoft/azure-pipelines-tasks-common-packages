@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import * as mockery from "mockery";
+import * as mocker from "azure-pipelines-task-lib/lib-mocker";
 import { INuGetXmlHelper } from "../../nuget/INuGetXmlHelper";
 import { InternalAuthInfo, IPackageSourceBase, IPackageSource, NuGetExtendedAuthInfo } from "../../nuget/Authentication";
 
@@ -41,11 +41,11 @@ var mockedTask: MockedTask = new MockedTask();
 var mockedProxy: string = "http://proxy/";
 var mockedUsername: string = "mockedUsername";
 var mockedPassword: string = "mockedPassword";
-mockery.registerMock("azure-pipelines-task-lib/task", mockedTask);
+mocker.registerMock("azure-pipelines-task-lib/task", mockedTask);
 
 export function nugetcommon() {
     beforeEach(() => {
-        mockery.enable({
+        mocker.enable({
             useCleanCache: true,
             warnOnReplace: false,
             warnOnUnregistered: false
@@ -53,7 +53,7 @@ export function nugetcommon() {
     });
 
     afterEach(() => {
-        mockery.disable();
+        mocker.disable();
     });
 
     it("No HTTP_PROXY", (done: MochaDone) => {
@@ -98,7 +98,7 @@ export function nugetcommon() {
 
     it("getSourcesFromTempNuGetConfig sets isInternal", (done: MochaDone) => {    
         let packageSourceBase: IPackageSourceBase[];
-        mockery.registerMock("./Utility", {
+        mocker.registerMock("./Utility", {
             getSourcesFromNuGetConfig: () => packageSourceBase
         });
 
@@ -129,7 +129,7 @@ export function nugetcommon() {
 
     it("getSourcesFromNuGetConfig gets sources", (done: MochaDone) => {    
         let configFile: string;
-        mockery.registerMock("fs", {
+        mocker.registerMock("fs", {
             readFileSync: () => configFile
         });
 
@@ -164,7 +164,7 @@ export function nugetcommon() {
 
     it("getSourcesFromNuGetConfig recognises package.config files", (done: MochaDone) => {    
         let configFile: string;
-        mockery.registerMock("fs", {
+        mocker.registerMock("fs", {
             readFileSync: () => configFile
         });
 
@@ -184,7 +184,7 @@ export function nugetcommon() {
 
     it("getSourcesFromNuGetConfig recognises invalid nuget.config files", (done: MochaDone) => {    
         let configFile: string;
-        mockery.registerMock("fs", {
+        mocker.registerMock("fs", {
             readFileSync: () => configFile
         });
 
@@ -205,7 +205,7 @@ not xml
 
     it("NuGetXmlHelper adds source to NuGetConfig", (done: MochaDone) => {
         let configFile: string;
-        mockery.registerMock("fs", {
+        mocker.registerMock("fs", {
             readFileSync: () => configFile,
             writeFileSync: (path, content) => { configFile = content; }
         });
@@ -239,7 +239,7 @@ not xml
 
     it("NuGetXmlHelper correctly encodes element names", (done: MochaDone) => {
         let configFile: string;
-        mockery.registerMock("fs", {
+        mocker.registerMock("fs", {
             readFileSync: () => configFile,
             writeFileSync: (path, content) => { configFile = content; }
         });
@@ -293,7 +293,7 @@ not xml
         mockedTask.setMockedValues(mockedProxy, mockedUsername, mockedPassword, '["mydomain\.com", "pkgs\.mydomain\.com", "github\.com"]');
 
         let packageSourceBase: IPackageSourceBase[];
-        mockery.registerMock("./Utility", {
+        mocker.registerMock("./Utility", {
             getSourcesFromNuGetConfig: () => packageSourceBase
         });
 
@@ -312,7 +312,7 @@ not xml
         mockedTask.setMockedValues(mockedProxy, mockedUsername, mockedPassword, '["foo\.com", "pkgs\.mydomain\.com", "github\.com"]');
 
         let packageSourceBase: IPackageSourceBase[];
-        mockery.registerMock("./Utility", {
+        mocker.registerMock("./Utility", {
             getSourcesFromNuGetConfig: () => packageSourceBase
         });
 
@@ -332,7 +332,7 @@ not xml
         mockedTask.setMockedValues(mockedProxy, mockedUsername, mockedPassword, '["foo\.com", "bar\.com"]');
 
         let packageSourceBase: IPackageSourceBase[];
-        mockery.registerMock("./Utility", {
+        mocker.registerMock("./Utility", {
             getSourcesFromNuGetConfig: () => packageSourceBase
         });
 
