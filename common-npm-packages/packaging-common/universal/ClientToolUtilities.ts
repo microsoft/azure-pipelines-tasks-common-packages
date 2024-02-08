@@ -66,7 +66,7 @@ export function getSupportedArchitecture(): string {
             architecture = "amd64";
         }
 	else if (process.env.PROCESSOR_ARCHITEW6432 === null && process.arch.toUpperCase() === "ARM64") {
-            arch = "arm64";
+            architecture = "arm64";
         }
     }
 
