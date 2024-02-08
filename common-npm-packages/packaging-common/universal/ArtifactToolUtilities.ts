@@ -60,7 +60,8 @@ export async function getArtifactToolFromService(serviceUri: string, accessToken
         }
     }
 
-    if (arch.toLowerCase() !== "amd64") {
+    // If architecture is amd64 & Darwin the Artifact Tool can run using Rosetta.
+    if (arch.toLowerCase() !== "amd64" && osName.toLowerCase() !== "darwin") {
         throw new Error(tl.loc("Error_ProcessorArchitectureNotSupported"));
     }
 
