@@ -58,10 +58,9 @@ export async function getArtifactToolFromService(serviceUri: string, accessToken
         if (process.env.PROCESSOR_ARCHITEW6432 != null && process.env.PROCESSOR_ARCHITEW6432.toUpperCase() === "AMD64") {
             arch = "amd64";
         }
-    }
-
-    if (arch.toLowerCase() !== "amd64") {
-        throw new Error(tl.loc("Error_ProcessorArchitectureNotSupported"));
+        else if (process.env.PROCESSOR_ARCHITEW6432 == null && process.arch.toUpperCase() === "ARM64") {
+            arch = "arm64";
+        }
     }
 
     const blobstoreAreaName = "clienttools";
