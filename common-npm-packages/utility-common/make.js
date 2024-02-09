@@ -5,7 +5,7 @@ var { downloadArchive } = require('../build-scripts/downloadArchive');
 
 var buildPath = './_build'
 var toolPath = './tools'
-var zipUrl = 'https://vstsagenttools.blob.core.windows.net/tools/7zip/4/7zip.zip'
+var zipUrl = 'https://vstsagenttools.blob.core.windows.net/tools/7zip/5/7zip.zip'
 
 const targetPath = downloadArchive(zipUrl, path.join('../_download', toolPath));
 if (!fs.existsSync(toolPath)) {
