@@ -195,37 +195,29 @@ export class ApplicationTokenCredentials {
         }
     }
 
-    private static initOIDCToken(connection: WebApi, projectId: string, hub: string, planId: string, jobId: string, serviceConnectionId: string, retryCount: number, timeToWait: number): Q.Promise<string> {
-        var deferred = Q.defer<string>();
-        connection.getTaskApi().then(
-            (taskApi: ITaskApi) => {
-                taskApi.createOidcToken({}, projectId, hub, planId, jobId, serviceConnectionId).then(
-                    (response: TaskAgentInterfaces.TaskHubOidcToken) => {
-                        if (response != null && response.oidcToken != null) {
-                            tl.debug('Got OIDC token');
-                            deferred.resolve(response.oidcToken);
-                        }
-                        else {
-                            if (retryCount < 3) {
-                                let waitedTime = timeToWait;
-                                retryCount += 1;
-                                setTimeout(() => {
-                                    deferred.resolve(this.initOIDCToken(connection, projectId, hub, planId, jobId, serviceConnectionId, retryCount, waitedTime));
-                                }, waitedTime);
-                            }
-                            else {
-                                deferred.reject(tl.loc('CouldNotFetchAccessTokenforAAD'));
-                            }
-                        }
-                    },
-                    (error) => {
-                        deferred.reject(tl.loc('CouldNotFetchAccessTokenforAAD') + " " + error);
-                    }
-                );
+    private static async initOIDCToken(connection: WebApi, projectId: string, hub: string, planId: string, jobId: string, serviceConnectionId: string, retryCount: number, timeToWait: number): Promise<string> {
+        let error: any;
+        for (let i = retryCount > 0 ? retryCount : 3; i > 0; i--) {
+            try {
+                const api = await connection.getTaskApi();
+                const response = await api.createOidcToken({}, projectId, hub, planId, jobId, serviceConnectionId);
+                if (response && response.oidcToken) {
+                    tl.debug('Got OIDC token');
+                    return response.oidcToken;
+                }
+            } catch (e: any) {
+                error = e;            
             }
-        );
+            await new Promise(r => setTimeout(r, timeToWait));
+            tl.debug(`Retrying OIDC token fetch. Retries left: ${i}`);
+        } 
 
-        return deferred.promise;
+        let message = tl.loc('CouldNotFetchAccessTokenforAAD');
+        if (error) {
+            message += " " + error;
+        }
+
+        return Promise.reject(message);
     }
 
     private static getSystemAccessToken() : string {
@@ -461,7 +453,7 @@ export class ApplicationTokenCredentials {
             planId,
             jobId,
             this.connectedServiceName,
-            0,
+            3,
             2000);
 
         return oidc_token;
