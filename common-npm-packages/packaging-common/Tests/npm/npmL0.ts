@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import * as mockery from "mockery";
+import * as mocker from "azure-pipelines-task-lib/lib-mocker";
 
 import Lazy_NpmRegistry = require('../../npm/npmregistry');
 
@@ -11,23 +11,23 @@ const ALWAYS_AUTH_REGEX = /\/\/.*\/:always-auth=true.*/g;
 
 export function npmcommon() {
     before(() => {
-        mockery.disable(); // needed to ensure that we can mock vsts-task-lib/task
-        mockery.enable({
+        mocker.disable(); // needed to ensure that we can mock vsts-task-lib/task
+        mocker.enable({
             useCleanCache: true,
             warnOnUnregistered: false
-        } as mockery.MockeryEnableArgs);
+        } as mocker.MockOptions);
     });
 
     after(() => {
-        mockery.disable();
+        mocker.disable();
     });
 
     beforeEach(() => {
-        mockery.resetCache();
+        mocker.resetCache();
     });
 
     afterEach(() => {
-        mockery.deregisterAll();
+        mocker.deregisterAll();
     });
 
     it('gets npm registries', (done: MochaDone) => {
@@ -36,7 +36,7 @@ export function npmcommon() {
                 // no-op
             }
         };
-        mockery.registerMock('azure-pipelines-task-lib/task', mockTask);
+        mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
         let npmrc = `registry=http://example.com
                      always-auth=true
                      @scoped:registry=http://scoped.com
@@ -49,7 +49,7 @@ export function npmcommon() {
         let mockFs = {
             readFileSync: (path: string) => npmrc
         };
-        mockery.registerMock('fs', mockFs);
+        mocker.registerMock('fs', mockFs);
 
         let npmrcParser = require('../../npm/npmrcparser');
         let registries = npmrcParser.GetRegistries('');
@@ -66,7 +66,7 @@ export function npmcommon() {
         let mockTask = {
             debug: message => {}
         };
-        mockery.registerMock('vsts-task-lib/task', mockTask);
+        mocker.registerMock('vsts-task-lib/task', mockTask);
         let npmutil = require('../../npm/npmutil');
 
         assert.equal(npmutil.getFeedIdFromRegistry(
@@ -96,7 +96,7 @@ export function npmcommon() {
                 'http://localTFSServer/npmRegistry/'
             ]
         };
-        mockery.registerMock('./npmrcparser', mockParser);
+        mocker.registerMock('./npmrcparser', mockParser);
         let mockTask = {
             getVariable: (v: string) => {
                 if (v === 'System.TeamFoundationCollectionUri') {
@@ -110,7 +110,7 @@ export function npmcommon() {
                 // no-op
             }
         };
-        mockery.registerMock('azure-pipelines-task-lib/task', mockTask);
+        mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
 
         let npmutil = require('../../npm/npmutil');
 
@@ -151,9 +151,9 @@ export function npmcommon() {
                 return;
             }
         };
-        mockery.registerMock('azure-pipelines-task-lib/task', mockTask);
+        mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
 
-        mockery.registerMock('typed-rest-client/HttpClient', {
+        mocker.registerMock('typed-rest-client/HttpClient', {
             HttpClient: function() {
                 return {
                     get: function(url, headers) {
@@ -204,9 +204,9 @@ export function npmcommon() {
                 return null;
             }
         };
-        mockery.registerMock('azure-pipelines-task-lib/task', mockTask);
+        mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
 
-        mockery.registerMock('typed-rest-client/HttpClient', {
+        mocker.registerMock('typed-rest-client/HttpClient', {
             HttpClient: function() {
                 return {
                     get: function(url, headers) {
@@ -253,8 +253,8 @@ export function npmcommon() {
         const mockParser = {
             GetRegistries: (npmrc: string) => [registry]
         };
-        mockery.registerMock('azure-pipelines-task-lib/task', mockTask);
-        mockery.registerMock('./npmrcparser', mockParser);
+        mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
+        mocker.registerMock('./npmrcparser', mockParser);
         
         const npmutil = require('../../npm/npmutil');
         const registries = await npmutil.getLocalNpmRegistries("foobarPath", ['https://mytfsserver.pkgs.visualstudio.com']);

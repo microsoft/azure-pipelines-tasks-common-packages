@@ -248,7 +248,7 @@ cobertura {
 export const jacocoMavenSingleProject = {
     'groupId': 'org.jacoco',
     'artifactId': 'jacoco-maven-plugin',
-    'version': '0.8.8',
+    'version': '0.8.11',
     'configuration': {
         'includes': [{
             'include': [
@@ -298,7 +298,7 @@ export const jacocoMavenMultiProject = `<?xml version="1.0" encoding="UTF-8"?>
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>0.8.8</version>
+                        <version>0.8.11</version>
                         <executions>
                             <execution>
                                 <id>jacoco-report-aggregate</id>
