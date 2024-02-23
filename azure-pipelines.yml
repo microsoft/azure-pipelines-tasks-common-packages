@@ -4,6 +4,8 @@ trigger:
 - main
 - releases/*
 variables:
+- name: skipBuildTagsForGitHubPullRequests
+  value: true
 - group: npm-tokens
 resources:
   repositories:
