@@ -55,13 +55,20 @@ export async function getArtifactToolFromService(serviceUri: string, accessToken
 
     // https://github.com/nodejs/node-v0.x-archive/issues/2862
     if (arch === "ia32") {
-        if (process.env.PROCESSOR_ARCHITEW6432 != null && process.env.PROCESSOR_ARCHITEW6432.toUpperCase() === "AMD64") {
-            arch = "amd64";
-        }
-        else if ((process.env.PROCESSOR_ARCHITEW6432 == null && process.arch.toUpperCase() === "ARM64") ||
-                (process.env.PROCESSOR_ARCHITEW6432 != null && process.env.PROCESSOR_ARCHITEW6432.toUpperCase() == "ARM64")) {
-                arch = "arm64";
-            }
+        if (process.env.PROCESSOR_ARCHITEW6432 != null)
+		{ 
+			if(process.env.PROCESSOR_ARCHITEW6432.toUpperCase() === "AMD64") 
+			{
+				arch = "amd64";
+			}
+			else if(process.env.PROCESSOR_ARCHITEW6432.toUpperCase() == "ARM64")
+			{
+				arch = "arm64";
+			}
+		}
+		else if (process.env.PROCESSOR_ARCHITEW6432 == null && process.arch.toUpperCase() === "ARM64") {
+			arch = "arm64";
+		}
     }
 
     const blobstoreAreaName = "clienttools";

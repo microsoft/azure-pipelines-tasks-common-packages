@@ -62,11 +62,18 @@ export function getSupportedArchitecture(): string {
 
     // https://github.com/nodejs/node-v0.x-archive/issues/2862
     if (architecture == "ia32") {
-        if (process.env.PROCESSOR_ARCHITEW6432 != null && process.env.PROCESSOR_ARCHITEW6432.toUpperCase() === "AMD64") {
-            architecture = "amd64";
+        if (process.env.PROCESSOR_ARCHITEW6432 != null)
+        { 
+            if(process.env.PROCESSOR_ARCHITEW6432.toUpperCase() === "AMD64") 
+            {
+                architecture = "amd64";
+            }
+            else if (process.env.PROCESSOR_ARCHITEW6432.toUpperCase() == "ARM64")
+            {
+                architecture = "arm64";
+            }
         }
-		else if ((process.env.PROCESSOR_ARCHITEW6432 == null && process.arch.toUpperCase() === "ARM64") ||
-                (process.env.PROCESSOR_ARCHITEW6432 != null && process.env.PROCESSOR_ARCHITEW6432.toUpperCase() == "ARM64")) {
+        else if (process.env.PROCESSOR_ARCHITEW6432 == null && process.arch.toUpperCase() === "ARM64") {
                     architecture = "arm64";
         }
     }
