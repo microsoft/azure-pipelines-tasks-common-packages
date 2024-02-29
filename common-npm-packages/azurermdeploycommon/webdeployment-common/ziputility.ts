@@ -13,6 +13,7 @@ export async function unzip(zipLocation, unzipLocation) {
     tl.mkdirP(unzipLocation);
     const zip = new StreamZip.async({ file: zipLocation});
         zip.extract(null, unzipLocation).then(() => {
+            zip.close();
             defer.resolve();
         }).catch((error) => {
             console.log(`error extracting ${zipLocation}: ${error}`);
@@ -52,6 +53,7 @@ export async function getArchivedEntries(archivedPackage: string)  {
         var packageConmponent = {
             'entries': Object.keys(entries)
         }
+        zip.close();
         deferred.resolve(packageConmponent);
     }).catch(error => {
         deferred.reject(error);
