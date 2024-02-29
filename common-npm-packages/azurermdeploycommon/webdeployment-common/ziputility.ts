@@ -2,8 +2,7 @@ import tl = require('azure-pipelines-task-lib/task');
 import path = require('path');
 import Q = require('q');
 import fs = require('fs');
-import StreamZip = require('node-stream-zip');
-var DecompressZip = require('decompress-zip');
+import StreamZip from 'node-stream-zip';
 var archiver = require('archiver');
 
 export async function unzip(zipLocation, unzipLocation) {
@@ -11,19 +10,14 @@ export async function unzip(zipLocation, unzipLocation) {
     if(tl.exist(unzipLocation)) {
       tl.rmRF(unzipLocation);
     }
-    var unzipper = new DecompressZip(zipLocation);
-    tl.debug('extracting ' + zipLocation + ' to ' + unzipLocation);
-    unzipper.on('error', function (error) {
-        defer.reject(error);
-    });
-    unzipper.on('extract', function (log) {
-        tl.debug('extracted ' + zipLocation + ' to ' + unzipLocation + ' Successfully');
-        defer.resolve(unzipLocation);
-    });
-    unzipper.extract({
-      path: unzipLocation
-    });
-    return defer.promise;
+    tl.mkdirP(unzipLocation);
+    const zip = new StreamZip.async({ file: zipLocation});
+        zip.extract(null, unzipLocation).then(() => {
+            defer.resolve();
+        }).catch((error) => {
+            console.log(`error extracting ${zipLocation}: ${error}`);
+            defer.reject(error);
+        })
 }
 
 export async function archiveFolder(folderPath, targetPath, zipName) {
@@ -53,17 +47,15 @@ export async function archiveFolder(folderPath, targetPath, zipName) {
  */
 export async function getArchivedEntries(archivedPackage: string)  {
     var deferred = Q.defer();
-    var unzipper = new DecompressZip(archivedPackage);
-    unzipper.on('error', function (error) {
+    const zip = new StreamZip.async({file: archivedPackage});
+    zip.entries().then(entries => {
+        var packageConmponent = {
+            'entries': Object.keys(entries)
+        }
+        deferred.resolve(packageConmponent);
+    }).catch(error => {
         deferred.reject(error);
-    });
-    unzipper.on('list', function (files) {
-        var packageComponent = {
-            "entries":files
-        };
-        deferred.resolve(packageComponent); 
-    });
-    unzipper.list();
+    })
     return deferred.promise;
 }
 
