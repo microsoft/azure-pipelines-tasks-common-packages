@@ -492,11 +492,15 @@ export class ApplicationTokenCredentials {
             }
 
             if (error.errorMessage && error.errorMessage.toString().startsWith("7000222")) {
-                // additional error message when clientSecret has been expired
-                tl.error(tl.loc('ExpiredServicePrincipal'));
-            }
+                // Additional error message when clientSecret has been expired
+                const organizationURL = tl.getVariable('System.CollectionUri');
+                const projectName = tl.getVariable('System.TeamProject');
+                const serviceConnectionLink = encodeURI(`${organizationURL}${projectName}/_settings/adminservices?resourceId=${this.connectedServiceName}`);
 
-            throw new Error(tl.loc('CouldNotFetchAccessTokenforAzureStatusCode', error.errorCode, error.errorMessage));
+                throw new Error(tl.loc('ExpiredServicePrincipal', serviceConnectionLink));
+            } else {
+                throw new Error(tl.loc('CouldNotFetchAccessTokenforAzureStatusCode', error.errorCode, error.errorMessage));
+            }
         }
     }
 
