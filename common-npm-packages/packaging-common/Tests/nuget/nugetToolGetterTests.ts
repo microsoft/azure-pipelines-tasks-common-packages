@@ -1,4 +1,4 @@
-import * as mockery from "mockery";
+import * as mocker from "azure-pipelines-task-lib/lib-mocker";
 import * as assert from "assert";
 import VersionInfoVersion from '../../pe-parser/VersionInfoVersion'
 import {VersionInfo} from '../../pe-parser/VersionResource'
@@ -28,28 +28,28 @@ export function nugettoolgetter() {
     };
 
     before(() => {
-        mockery.disable(); // needed to ensure that we can mock vsts-task-lib/task
-        mockery.enable({
+        mocker.disable(); // needed to ensure that we can mock vsts-task-lib/task
+        mocker.enable({
             useCleanCache: true,
             warnOnUnregistered: false
-        } as mockery.MockeryEnableArgs);
+        } as mocker.MockOptions);
     });
 
     after(() => {
-        mockery.disable();
+        mocker.disable();
     });
 
     beforeEach(() => {
-        mockery.resetCache();
-        mockery.registerMock('azure-pipelines-task-lib/task', mockTask);
+        mocker.resetCache();
+        mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
     });
 
     afterEach(() => {
-        mockery.deregisterAll();
+        mocker.deregisterAll();
     });
 
     it("Resolve correct nuget version based on msbuild 15", async() => {    
-        mockery.registerMock('../pe-parser', {
+        mocker.registerMock('../pe-parser', {
             getFileVersionInfoAsync: function(msbuildPath) {
                 let result: VersionInfo = { strings: {} };
                 result.fileVersion = new VersionInfoVersion(15, 0, 0, 0);
@@ -66,7 +66,7 @@ export function nugettoolgetter() {
     });
     
     it("Resolve correct nuget version based on msbuild 16.12", async() => {    
-        mockery.registerMock('../pe-parser', {
+        mocker.registerMock('../pe-parser', {
             getFileVersionInfoAsync: function(msbuildPath) {
                 let result: VersionInfo = { strings: {} };
                 result.fileVersion = new VersionInfoVersion(16, 12, 0, 0);
@@ -83,7 +83,7 @@ export function nugettoolgetter() {
     });
 
     it("Resolve correct nuget version based on msbuild 17.1", async() => {    
-        mockery.registerMock('../pe-parser', {
+        mocker.registerMock('../pe-parser', {
             getFileVersionInfoAsync: function(msbuildPath) {
                 let result: VersionInfo = { strings: {} };
                 result.fileVersion = new VersionInfoVersion(17, 1, 0, 0);
