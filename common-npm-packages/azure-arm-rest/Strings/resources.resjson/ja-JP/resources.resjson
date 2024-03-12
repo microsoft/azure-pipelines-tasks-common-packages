@@ -163,7 +163,7 @@
   "loc.messages.ResponseNotValid": "応答が有効な形式ではありません",
   "loc.messages.NotAbleToCreateFirewallRule": "ファイアウォール規則を Azure MySql サーバーに追加する際にエラーが発生しました。エラー: %s",
   "loc.messages.MethodNotImplementedError": "メソッド '%s' は実装されていません。",
-  "loc.messages.ExpiredServicePrincipal": "Azure のアクセス トークンをフェッチできませんでした。使用されているサービス プリンシパルが有効であり、有効期限が切れていないことをご確認ください。詳細については、https://aka.ms/azureappservicedeploytsg をご覧ください",
+  "loc.messages.ExpiredServicePrincipalMessageWithLink": "Azure のアクセス トークンをフェッチできませんでした。使用されているサービス プリンシパルが有効であり、有効期限が切れていないことをご確認ください。詳細については、https://aka.ms/azureappservicedeploytsg をご覧ください",
   "loc.messages.CorrelationIdForARM": "ARM API 呼び出しの応答からの関連付け ID: %s",
   "loc.messages.CantDownloadAccessProfile": "クラスター %s のアクセス プロファイルまたは kube 構成ファイルをダウンロードできません。理由 %s。",
   "loc.messages.FailedToPatchAppServiceConfiguration": "App Service '%s' の構成を修正できませんでした。エラー: %s",
