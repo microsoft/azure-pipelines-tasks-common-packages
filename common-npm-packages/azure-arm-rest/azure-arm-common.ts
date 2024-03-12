@@ -497,7 +497,7 @@ export class ApplicationTokenCredentials {
                 const projectName = tl.getVariable('System.TeamProject');
                 const serviceConnectionLink = encodeURI(`${organizationURL}${projectName}/_settings/adminservices?resourceId=${this.connectedServiceName}`);
 
-                throw new Error(tl.loc('ExpiredServicePrincipal', serviceConnectionLink));
+                throw new Error(tl.loc('ExpiredServicePrincipalMessageWithLink', serviceConnectionLink));
             } else {
                 throw new Error(tl.loc('CouldNotFetchAccessTokenforAzureStatusCode', error.errorCode, error.errorMessage));
             }
