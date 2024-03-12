@@ -14,6 +14,7 @@ const physicalRootPath: string = '/site/wwwroot';
 const deploymentFolder: string = 'site/deployments';
 const manifestFileName: string = 'manifest';
 const VSTS_ZIP_DEPLOY: string = 'VSTS_ZIP_DEPLOY';
+const VSTS_ONE_DEPLOY: string = 'VSTS_ONE_DEPLOY';
 const VSTS_DEPLOY: string = 'VSTS';
 
 export class KuduServiceUtility {
@@ -193,6 +194,45 @@ export class KuduServiceUtility {
         }
         catch(error) {
             tl.debug('Failed to warm-up Kudu: ' + error.toString());
+        }
+    }
+
+    public async deployUsingOneDeploy(packagePath: string, customMessage?: any, targetPath?: any, type?: any, clean?: any, restart?: any): Promise<string> {
+        try {
+            console.log(tl.loc('Package deployment using OneDeploy initiated.'));
+            let queryParameters: Array<string> = [
+                'async=true',
+                'deployer=' + VSTS_ONE_DEPLOY
+            ];
+
+            if (type) {
+                queryParameters.push('type=' + encodeURIComponent(type));
+            }
+
+            if (targetPath) {
+                queryParameters.push('path=' + encodeURIComponent(targetPath));
+            }
+
+            if (clean) {
+                queryParameters.push('clean=' + encodeURIComponent(clean));
+            }
+
+            if (restart) {
+                queryParameters.push('restart=' + encodeURIComponent(restart));
+            }
+
+            var deploymentMessage = this._getUpdateHistoryRequest(null, null, customMessage).message;
+            queryParameters.push('message=' + encodeURIComponent(deploymentMessage));
+            let deploymentDetails = await this._appServiceKuduService.oneDeploy(packagePath, queryParameters);
+            console.log(tl.loc(deploymentDetails));
+            await this._processDeploymentResponse(deploymentDetails);
+            console.log(tl.loc('Successfully deployed web package to App Service.'));
+
+            return deploymentDetails.id;
+        }
+        catch (error) {
+            tl.error(tl.loc('PackageDeploymentFailed'));
+            throw error;
         }
     }
 
