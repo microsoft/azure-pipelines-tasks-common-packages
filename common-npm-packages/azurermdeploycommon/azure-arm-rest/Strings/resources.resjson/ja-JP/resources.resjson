@@ -96,6 +96,7 @@
   "loc.messages.FailedToGetAppServiceApplicationSettings": "App Service '%s' アプリケーション設定を取得できませんでした。エラー: %s",
   "loc.messages.FailedToUpdateAppServiceApplicationSettings": "App Service '%s' アプリケーション設定を更新できませんでした。エラー: %s",
   "loc.messages.KuduSCMDetailsAreEmpty": "KUDU SCM の詳細が空です",
+  "loc.messages.KuduStackTraceURL": "To debug further please check Kudu stack trace URL : %s",
   "loc.messages.FailedToGetContinuousWebJobs": "継続的 WebJob を取得できませんでした。エラー: %s",
   "loc.messages.FailedToStartContinuousWebJob": "継続的 WebJob '%s' を開始できませんでした。エラー: %s",
   "loc.messages.FailedToStopContinuousWebJob": "継続的 WebJob '%s' を停止できませんでした。エラー: %s",

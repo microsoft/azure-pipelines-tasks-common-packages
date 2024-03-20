@@ -96,6 +96,7 @@
   "loc.messages.FailedToGetAppServiceApplicationSettings": "無法取得 App Service '%s' 應用程式設定。錯誤: %s",
   "loc.messages.FailedToUpdateAppServiceApplicationSettings": "無法更新 App Service '%s' 應用程式設定。錯誤: %s",
   "loc.messages.KuduSCMDetailsAreEmpty": "KUDU SCM 詳細資料空白",
+  "loc.messages.KuduStackTraceURL": "To debug further please check Kudu stack trace URL : %s",
   "loc.messages.FailedToGetContinuousWebJobs": "無法取得持續 WebJob。錯誤: %s",
   "loc.messages.FailedToStartContinuousWebJob": "無法啟動持續 WebJob '%s'。錯誤: %s",
   "loc.messages.FailedToStopContinuousWebJob": "無法停止持續 WebJob '%s'。錯誤: %s",

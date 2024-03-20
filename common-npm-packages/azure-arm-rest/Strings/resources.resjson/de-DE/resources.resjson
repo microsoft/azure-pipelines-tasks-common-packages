@@ -163,7 +163,7 @@
   "loc.messages.ResponseNotValid": "Das Format der Antwort ist ungültig.",
   "loc.messages.NotAbleToCreateFirewallRule": "Fehler beim Hinzufügen der Firewallregel zum Azure MySQL-Server. Fehler: %s",
   "loc.messages.MethodNotImplementedError": "Die Methode \"%s\" ist nicht implementiert.",
-  "loc.messages.ExpiredServicePrincipalMessageWithLink": "Das Zugriffstoken für Azure konnte nicht abgerufen werden. Stellen Sie sicher, dass der verwendete Dienstprinzipal gültig und nicht abgelaufen ist. Weitere Informationen finden Sie unter https://aka.ms/azureappservicedeploytsg.",
+  "loc.messages.ExpiredServicePrincipalMessageWithLink": "Secret expired, update service connection at %s See https://aka.ms/azdo-rm-workload-identity-conversion to learn more about conversion to secret-less service connections.",
   "loc.messages.CorrelationIdForARM": "Korrelations-ID aus ARM-API-Aufrufantwort: %s",
   "loc.messages.CantDownloadAccessProfile": "Zugriffsprofil/Kube-Konfigurationsdatei für den Cluster \"%s\" kann nicht heruntergeladen werden. Ursache: %s.",
   "loc.messages.FailedToPatchAppServiceConfiguration": "Fehler beim Patchen der Konfiguration für App Service „%s“. Fehler: %s",
