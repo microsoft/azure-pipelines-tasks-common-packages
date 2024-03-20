@@ -528,6 +528,41 @@ export class Kudu {
         }
     }
 
+    public async oneDeploy(webPackage: string, queryParameters?: Array<string>): Promise<any> {
+        let httpRequest = new webClient.WebRequest();
+        httpRequest.method = 'POST';
+        httpRequest.uri = this.client.getRequestUri(`/api/publish`, queryParameters);
+        httpRequest.body = fs.createReadStream(webPackage);
+        let requestOptions = new webClient.WebRequestOptions();
+        //Bydefault webclient.sendRequest retries for  [500, 502, 503, 504]
+        requestOptions.retriableStatusCodes = [500, 502, 503, 504];
+        requestOptions.retryIntervalInSeconds = 5;
+        try {
+            let response = await this.client.beginRequest(httpRequest, requestOptions, 'application/octet-stream');
+            tl.debug(`OneDeploy response: ${JSON.stringify(response)}`);
+            if (response.statusCode == 200) {
+                tl.debug('Deployment passed');
+                return null;
+            }
+            else if (response.statusCode == 202) {
+                let pollableURL: string = response.headers.location;
+                if (!!pollableURL) {
+                    tl.debug(`Polling for OneDeploy URL: ${pollableURL}`);
+                    return await this._getDeploymentDetailsFromPollURL(pollableURL);
+                }
+                else {
+                    tl.debug('OneDeploy returned 202 without pollable URL.');
+                    return null;
+                }
+            }
+            else {
+                throw response;
+            }
+        }
+        catch (error) {
+            throw new Error(tl.loc('PackageDeploymentFailed', this._getFormattedError(error)));
+        }
+    }
 
     public async getDeploymentDetails(deploymentID: string): Promise<any> {
         try {

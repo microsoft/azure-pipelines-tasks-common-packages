@@ -1,3 +1,4 @@
+# This Yaml Document has been converted by ESAI Yaml Pipeline Conversion Tool.
 jobs:
 - job: 'BuildCommonNpmPackages'
   displayName: 'Build Common Npm Packages'
@@ -14,20 +15,20 @@ jobs:
     displayName: Use npm version 6.14.12
 
   - script: |
-        npm install
+      npm install
     displayName: Npm install
 
   - script: |
-        npm run build
+      npm run build
     displayName: Build Common Npm packages
 
   - script: |
-        node ./ci/verify-source-changes.js
+      node ./ci/verify-source-changes.js
     displayName: Verify task source changes
     condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/main'))
 
   - script: |
-        npm run test
+      npm run test
     displayName: Test Common Npm packages
 
   - task: PublishTestResults@2
@@ -44,7 +45,7 @@ jobs:
 
   # For CI runs on master, automatically publish packages
   - bash: |
-        npm run publish
+      npm run publish
     condition: and(succeeded(), in(variables['build.reason'], 'IndividualCI', 'BatchedCI', 'Manual'), eq(variables['Agent.OS'], 'Windows_NT'))
     env:
       NPM_TOKEN: $(npm-automation.token)

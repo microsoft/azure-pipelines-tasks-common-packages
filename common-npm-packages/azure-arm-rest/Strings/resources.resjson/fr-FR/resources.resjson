@@ -163,7 +163,7 @@
   "loc.messages.ResponseNotValid": "La réponse n’est pas dans un format valide",
   "loc.messages.NotAbleToCreateFirewallRule": "Obtention d’une erreur durant l’ajout d’une règle de pare-feu au serveur Azure MySQL. Erreur : %s",
   "loc.messages.MethodNotImplementedError": "La méthode '%s' n'est pas implémentée.",
-  "loc.messages.ExpiredServicePrincipal": "Impossible de récupérer (fetch) le jeton d'accès pour Azure. Vérifiez si le principal de service utilisé est valide et s'il n'a pas expiré. Pour plus d'informations, consultez https://aka.ms/azureappservicedeploytsg",
+  "loc.messages.ExpiredServicePrincipalMessageWithLink": "Impossible de récupérer (fetch) le jeton d'accès pour Azure. Vérifiez si le principal de service utilisé est valide et s'il n'a pas expiré. Pour plus d'informations, consultez https://aka.ms/azureappservicedeploytsg",
   "loc.messages.CorrelationIdForARM": "ID de corrélation de la réponse à l'appel d'API ARM : %s",
   "loc.messages.CantDownloadAccessProfile": "Impossible de télécharger le fichier config de profil d'accès/kube pour le cluster %s. Raison : %s.",
   "loc.messages.FailedToPatchAppServiceConfiguration": "Nous n’avons pas pu patcher l’application du correctif à la configuration de l’App Service '%s'. Erreur : %s",
