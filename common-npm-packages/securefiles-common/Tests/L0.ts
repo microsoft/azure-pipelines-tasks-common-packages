@@ -11,8 +11,9 @@ import {
     enable
 } from "mockery";
 
+export const secureFileName = "securefilename";
 export const secureFileId = Math.random().toString(36).slice(2, 7);
-process.env['SECUREFILE_NAME_' + secureFileId] = 'securefilename';
+process.env['SECUREFILE_NAME_' + secureFileId] = secureFileName;
 
 const tmAnswers = {
     'exist': {
@@ -30,6 +31,11 @@ class AgentAPI {
         rs.push('data');
         rs.push(null);
         return rs;
+    }
+    getSecureFilesByNames() {
+        return new Promise((resolve) => {
+            resolve([{ id: secureFileId }]);
+        });
     }
 }
 
@@ -109,22 +115,22 @@ describe("securefiles-common package suites", function() {
         registerMock("fs", fsMock);
         const secureFiles = require("../securefiles-common");
         const secureFileHelpers = new secureFiles.SecureFileHelpers();
-        const secureFilePath = await secureFileHelpers.downloadSecureFile(secureFileId);
-        const pseudoResolvedPath = await secureFileHelpers.getSecureFileTempDownloadPath(secureFileId);
+        const secureFilePath = await secureFileHelpers.downloadSecureFile(secureFileName);
+        const pseudoResolvedPath = await secureFileHelpers.getSecureFileTempDownloadPath(secureFileName);
         strictEqual(secureFilePath, pseudoResolvedPath, `Result should be equal to ${pseudoResolvedPath}`);
     });
 
     it("Check deleteSecureFile", async() => {
         const secureFiles = require("../securefiles-common");
         const secureFileHelpers = new secureFiles.SecureFileHelpers();
-        secureFileHelpers.deleteSecureFile(secureFileId);
+        secureFileHelpers.deleteSecureFile(secureFileName);
     });
 
     it("Check getSecureFileTempDownloadPath", async() => {
         const secureFiles = require("../securefiles-common");
         const secureFileHelpers = new secureFiles.SecureFileHelpers();
-        const resolvedPath = secureFileHelpers.getSecureFileTempDownloadPath(secureFileId);
-        const pseudoResolvedPath = tlClone.resolve(tlClone.getVariable("Agent.TempDirectory"), tlClone.getSecureFileName(secureFileId));
+        const resolvedPath = secureFileHelpers.getSecureFileTempDownloadPath(secureFileName);
+        const pseudoResolvedPath = tlClone.resolve(tlClone.getVariable("Agent.TempDirectory"), secureFileName);
         strictEqual(resolvedPath, pseudoResolvedPath, `Resolved path "${resolvedPath}" should be equal to "${pseudoResolvedPath}"`);
     });
 });
