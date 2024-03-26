@@ -1,5 +1,4 @@
 import * as tl from "azure-pipelines-task-lib/task";
-import {randomUUID} from "node:crypto";
 
 export class SecureFileHelpers {
     private static fileExtension: string = ".filename";
