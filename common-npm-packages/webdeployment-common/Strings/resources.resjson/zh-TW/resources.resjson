@@ -29,5 +29,8 @@
   "loc.messages.VariableSubstitutionInitiated": "已起始組態檔中的變數替代: %s",
   "loc.messages.ConfigFileUpdated": "組態檔: %s 已更新。",
   "loc.messages.SkippedUpdatingFile": "已跳過更新檔案: %s",
-  "loc.messages.PwshNotAvailable": "##警告##: PowerShell Core (pwsh.exe) 無法在代理程式機器上使用。請回復為使用 Windows PowerShell (powershell.exe)。這可能會降低效能。如需提升效能，請安裝新版 PowerShell。"
+  "loc.messages.PwshNotAvailable": "##警告##: PowerShell Core (pwsh.exe) 無法在代理程式機器上使用。請回復為使用 Windows PowerShell (powershell.exe)。這可能會降低效能。如需提升效能，請安裝新版 PowerShell。",
+  "loc.messages.UnabletofindthelocationofMSDeployfromregistryonmachineError": "無法從登錄找到 MSDeploy 的位置。錯誤: %s",
+  "loc.messages.MissingMSDeployInstallPathRegistryKey": "缺少 MSDeploy InstallPath 登錄機碼。",
+  "loc.messages.UnsupportedinstalledversionfoundforMSDeployversionshouldbeatleast3orabove": "MSDeploy 找到不支援的安裝版本: %s。版本至少應為 3 或更新版本。"
 }

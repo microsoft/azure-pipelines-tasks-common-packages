@@ -29,5 +29,8 @@
   "loc.messages.VariableSubstitutionInitiated": "已在配置文件 %s 中启动变量替换",
   "loc.messages.ConfigFileUpdated": "配置文件 %s 已更新。",
   "loc.messages.SkippedUpdatingFile": "已跳过更新文件: %s",
-  "loc.messages.PwshNotAvailable": "##WARNING#: PowerShell Core (pwsh.exe)在代理计算机上不可用。回到使用 Windows PowerShell (powershell.exe)。这可能会导致性能降低。请安装 PowerShell 的较新版本以提高性能。"
+  "loc.messages.PwshNotAvailable": "##WARNING#: PowerShell Core (pwsh.exe)在代理计算机上不可用。回到使用 Windows PowerShell (powershell.exe)。这可能会导致性能降低。请安装 PowerShell 的较新版本以提高性能。",
+  "loc.messages.UnabletofindthelocationofMSDeployfromregistryonmachineError": "无法从注册表中找到 MSDeploy 的位置。错误: %s",
+  "loc.messages.MissingMSDeployInstallPathRegistryKey": "缺少 MSDeploy InstallPath 注册表项。",
+  "loc.messages.UnsupportedinstalledversionfoundforMSDeployversionshouldbeatleast3orabove": "安装的版本不受支持: 找到 MSDeploy 的 %s。版本应至少为 3 或更高版本。"
 }

@@ -4,8 +4,6 @@ import Q = require('q');
 import fs = require('fs');
 import StreamZip = require('node-stream-zip');
 import tr = require('azure-pipelines-task-lib/toolrunner');
-
-var DecompressZip = require('decompress-zip');
 var archiver = require('archiver');
 
 const deleteDir = (path: string) => tl.exist(path) && tl.rmRF(path);
@@ -148,17 +146,16 @@ export async function archiveFolder(folderPath, targetPath, zipName) {
  */
 export async function getArchivedEntries(archivedPackage: string)  {
     var deferred = Q.defer();
-    var unzipper = new DecompressZip(archivedPackage);
-    unzipper.on('error', function (error) {
+    const zip = new StreamZip.async({file: archivedPackage});
+    zip.entries().then(entries => {
+        var packageConmponent = {
+            'entries': Object.keys(entries)
+        }
+        zip.close();
+        deferred.resolve(packageConmponent);
+    }).catch(error => {
         deferred.reject(error);
     });
-    unzipper.on('list', function (files) {
-        var packageComponent = {
-            "entries":files
-        };
-        deferred.resolve(packageComponent); 
-    });
-    unzipper.list();
     return deferred.promise;
 }
 

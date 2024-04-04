@@ -163,7 +163,7 @@
   "loc.messages.ResponseNotValid": "El formato de la respuesta no es válido.",
   "loc.messages.NotAbleToCreateFirewallRule": "Error al agregar la regla de firewall al servidor MySQL de Azure: %s",
   "loc.messages.MethodNotImplementedError": "El método \"%s\" no está implementado.",
-  "loc.messages.ExpiredServicePrincipal": "Se produjo un error al capturar el token de acceso de Azure. Compruebe que la entidad de servicio que se usa es válida y no ha expirado. Para obtener más información, consulte https://aka.ms/azureappservicedeploytsg",
+  "loc.messages.ExpiredServicePrincipalMessageWithLink": "Se produjo un error al capturar el token de acceso de Azure. Compruebe que la entidad de servicio que se usa es válida y no ha expirado. Para obtener más información, consulte https://aka.ms/azureappservicedeploytsg",
   "loc.messages.CorrelationIdForARM": "Identificador de correlación de la respuesta de llamada API de ARM: %s",
   "loc.messages.CantDownloadAccessProfile": "No se puede descargar el archivo de configuración del perfil de acceso o kube para el clúster %s. Motivo %s.",
   "loc.messages.FailedToPatchAppServiceConfiguration": "Se produjo un error al aplicar una revisión a la configuración de App Service \"%s\". Error: %s",
