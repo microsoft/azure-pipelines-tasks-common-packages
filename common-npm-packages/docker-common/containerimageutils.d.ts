@@ -4,4 +4,3 @@ export declare function generateValidImageName(imageName: string): string;
 export declare function getBaseImageNameFromDockerFile(dockerFilePath: string): string;
 export declare function getBaseImageName(contents: string): string;
 export declare function getResourceName(image: string, digest: string): string;
-export declare function getBaseImageDigestDockerFile(dockerFileContent: string): string;
