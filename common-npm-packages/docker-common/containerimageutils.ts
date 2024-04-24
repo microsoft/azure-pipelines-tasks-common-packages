@@ -253,3 +253,48 @@ export function getImageIdFromBuildOutput(output: string): string {
 
     return "";
 }
+export function getBaseImageDigestDockerFile(dockerFileContent: string): string {
+    // This method checks if there is FROM image@sha256:digest present in Dockerfile
+    // if matched it returns digest
+    // if not, it returns null
+    
+    try {
+        if (!dockerFileContent || dockerFileContent == "") {
+            return null;
+        }
+    
+        var lines = dockerFileContent.split(/[\r?\n]/);
+        var aliasToImageNameMapping: Map<string, string> = new Map<string, string>();
+        var baseImage = "";
+    
+        for (var i = 0; i < lines.length; i++) {
+            const currentLine = lines[i].trim();
+            if (!currentLine.toUpperCase().startsWith("FROM")) {
+                continue;
+            }
+            var nameComponents = currentLine.substring(4).toLowerCase().split(" as ");
+            var prospectImageName = nameComponents[0].trim();
+    
+            if (nameComponents.length > 1) {
+                var alias = nameComponents[1].trim();
+    
+                if (aliasToImageNameMapping.has(prospectImageName)) {
+                    aliasToImageNameMapping.set(alias, aliasToImageNameMapping.get(prospectImageName));
+                } else {
+                    aliasToImageNameMapping.set(alias, prospectImageName);
+                }
+    
+                baseImage = aliasToImageNameMapping.get(alias);
+            } else {
+                baseImage = aliasToImageNameMapping.has(prospectImageName)
+                    ? aliasToImageNameMapping.get(prospectImageName)
+                    : prospectImageName;
+            }
+        }
+    
+        return baseImage.split('@')[1].split(':')[1];
+    } catch (error) {
+        tl.debug(`An error ocurred getting the base image digest. ${error.message}`);
+        return null;
+    }
+}
