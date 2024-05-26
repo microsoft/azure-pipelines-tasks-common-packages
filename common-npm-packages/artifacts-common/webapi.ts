@@ -53,9 +53,9 @@ export async function getFederatedToken(connectedServiceName: string): Promise<s
         connectedServiceName,
         0,
         2000);
-    
+
     tl.setSecret(oidc_token);
-    
+
     return oidc_token;
 }
 
@@ -65,19 +65,17 @@ function initOIDCToken(connection: WebApi, projectId: string, hub: string, planI
         (taskApi: ITaskApi) => {
             taskApi.createOidcToken({}, projectId, hub, planId, jobId, serviceConnectionId).then(
                 (response: TaskHubOidcToken) => {
-                    if (response != null) {
+                    if (response?.oidcToken !== null) {
                         tl.debug('Got OIDC token');
                         deferred.resolve(response.oidcToken);
-                    }
-                    else if (response.oidcToken == null) {
+                    } else {
                         if (retryCount < 3) {
                             let waitedTime = timeToWait;
                             retryCount += 1;
                             setTimeout(() => {
                                 deferred.resolve(initOIDCToken(connection, projectId, hub, planId, jobId, serviceConnectionId, retryCount, waitedTime));
                             }, waitedTime);
-                        }
-                        else {
+                        } else {
                             deferred.reject(tl.loc('CouldNotFetchAccessTokenforAAD'));
                         }
                     }
