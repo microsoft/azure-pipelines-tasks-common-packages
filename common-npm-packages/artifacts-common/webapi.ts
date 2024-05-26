@@ -65,7 +65,7 @@ function initOIDCToken(connection: WebApi, projectId: string, hub: string, planI
         (taskApi: ITaskApi) => {
             taskApi.createOidcToken({}, projectId, hub, planId, jobId, serviceConnectionId).then(
                 (response: TaskHubOidcToken) => {
-                    if (response?.oidcToken !== null) {
+                    if (response?.oidcToken) {
                         tl.debug('Got OIDC token');
                         deferred.resolve(response.oidcToken);
                     } else {
