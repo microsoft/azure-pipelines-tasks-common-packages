@@ -96,6 +96,7 @@
   "loc.messages.FailedToGetAppServiceApplicationSettings": "Nous n’avons pas pu obtenir des paramètres d’application de l’App Service '%s'. Erreur : %s",
   "loc.messages.FailedToUpdateAppServiceApplicationSettings": "Nous n’avons pas pu effectuer la mise à jour des paramètres d’application de l’App Service '%s'. Erreur : %s",
   "loc.messages.KuduSCMDetailsAreEmpty": "Les détails du GCS KUDU sont vides",
+  "loc.messages.KuduStackTraceURL": "Pour déboguer davantage, consultez l'URL de l'arborescence des appels de procédure Kudu : %s",
   "loc.messages.FailedToGetContinuousWebJobs": "Échec de l’obtention des WebJobs continus. Erreur : %s",
   "loc.messages.FailedToStartContinuousWebJob": "Échec du démarrage du WebJob continu '%s'. Erreur : %s",
   "loc.messages.FailedToStopContinuousWebJob": "Échec de l’arrêt du WebJob continu '%s'. Erreur : %s",

@@ -96,6 +96,7 @@
   "loc.messages.FailedToGetAppServiceApplicationSettings": "Не удалось получить параметры приложения для службы приложений \"%s\". Ошибка: %s",
   "loc.messages.FailedToUpdateAppServiceApplicationSettings": "Не удалось обновить параметры приложения для службы приложений \"%s\". Ошибка: %s",
   "loc.messages.KuduSCMDetailsAreEmpty": "Сведения о SCM KUDU отсутствуют",
+  "loc.messages.KuduStackTraceURL": "Для дальнейшей отладки проверьте URL-адрес трассировки стека Kudu: %s",
   "loc.messages.FailedToGetContinuousWebJobs": "Не удалось получить непрерывные веб-задания. Ошибка: %s",
   "loc.messages.FailedToStartContinuousWebJob": "Не удалось запустить непрерывное веб-задание \"%s\". Ошибка: %s",
   "loc.messages.FailedToStopContinuousWebJob": "Не удалось остановить непрерывное веб-задание \"%s\". Ошибка: %s",
