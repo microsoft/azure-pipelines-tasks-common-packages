@@ -1,4 +1,4 @@
-import * as assert from 'assert';
+import assert = require("assert");
 import * as ttm from 'azure-pipelines-task-lib/mock-test';
 import tl = require('azure-pipelines-task-lib');
 import * as path from 'path';
