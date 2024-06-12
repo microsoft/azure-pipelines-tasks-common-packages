@@ -96,6 +96,7 @@
   "loc.messages.FailedToGetAppServiceApplicationSettings": "Fehler beim Abrufen der Anwendungseinstellungen für App Service „%s“. Fehler: %s",
   "loc.messages.FailedToUpdateAppServiceApplicationSettings": "Fehler beim Aktualisieren der Anwendungseinstellungen für App Service \"%s\". Fehler: %s",
   "loc.messages.KuduSCMDetailsAreEmpty": "KUDU SCM-Details sind leer.",
+  "loc.messages.KuduStackTraceURL": "Überprüfen Sie zum weiteren Debuggen die URL für die Kudu-Stapelüberwachung: %s",
   "loc.messages.FailedToGetContinuousWebJobs": "Fehler beim Abrufen fortlaufender WebJobs. Fehler: %s",
   "loc.messages.FailedToStartContinuousWebJob": "Fehler beim Starten des fortlaufenden WebJobs „%s“. Fehler: %s",
   "loc.messages.FailedToStopContinuousWebJob": "Fehler beim Beenden des fortlaufenden WebJobs „%s“. Fehler: %s",
