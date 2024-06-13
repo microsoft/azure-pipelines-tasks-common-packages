@@ -75,19 +75,19 @@ export class AzureAppServiceUtility {
         return physicalToVirtualPathMap.physicalPath;
     }
 
-    public async getKuduServiceNew() : Promise<Kudu> {
+    public async getKuduService() : Promise<Kudu> {
         const app = await this._appService.get()
         const scmUri = (app.properties["hostNameSslStates"] || []).find(n => n.hostType == "Repository");
         if (!scmUri) {
             throw Error(tl.loc('KuduSCMDetailsAreEmpty'));
         }
 
-        const authHeader = await this.getKuduAuthHeaderNew();
+        const authHeader = await this.getKuduAuthHeader();
         return new Kudu(`https://${scmUri["name"]}`, authHeader);
 
     }
 
-    public async getKuduAuthHeaderNew() : Promise<string> {
+    public async getKuduAuthHeader() : Promise<string> {
         let token = "";
         let method = "";
 
@@ -120,7 +120,7 @@ export class AzureAppServiceUtility {
 
         return method + " " + token;
     }
-    
+
     public async updateAndMonitorAppSettings(addProperties?: any, deleteProperties?: any, formatJSON?: boolean, perSlot: boolean = true): Promise<boolean> {
         if (formatJSON) {
             var appSettingsProperties = {};

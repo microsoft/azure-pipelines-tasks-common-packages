@@ -265,14 +265,6 @@ export class AzureAppService {
         return this._appServiceConfigurationDetails;
     }
 
-    public async getPublishingProfileWithSecrets(force?: boolean): Promise<any>{
-        if (force || !this._appServicePublishingProfile) {
-            this._appServicePublishingProfile = await this._getPublishingProfileWithSecrets();
-        }
-
-        return this._appServicePublishingProfile;
-    }
-
     public async getPublishingCredentials(): Promise<any> {
         try {
             var httpRequest = new webClient.WebRequest();

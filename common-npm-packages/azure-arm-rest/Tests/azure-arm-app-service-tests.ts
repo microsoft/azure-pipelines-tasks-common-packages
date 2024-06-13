@@ -135,34 +135,12 @@ class AzureAppServiceTests {
         }
     }
 
-    public static async getPublishingProfileWithSecrets() {
-        var appSerivce: AzureAppService = new AzureAppService(endpoint, "MOCK_RESOURCE_GROUP_NAME", "MOCK_APP_SERVICE_NAME");
-        try {
-            var value = await appSerivce.getPublishingProfileWithSecrets();
-            console.log('MOCK_APP_SERVICE_NAME PUBLISHING_PROFILE : ' + value);
-        }
-        catch(error) {
-            console.log(error);
-            tl.setResult(tl.TaskResult.Failed, 'AzureAppServiceTests.getPublishingProfileWithSecrets() should have passed but failed');
-        }
-        
-        
-        var appSerivceSlot: AzureAppService = new AzureAppService(endpoint, "MOCK_RESOURCE_GROUP_NAME", "MOCK_APP_SERVICE_NAME", "MOCK_SLOT_NAME");
-        try {
-            await appSerivceSlot.getPublishingProfileWithSecrets();
-            tl.setResult(tl.TaskResult.Failed, 'AzureAppServiceTests.getPublishingProfileWithSecrets() should have failed but passed');
-        }
-        catch(error) {
-            console.log(error);
-        }      
-    }
-
     public static async getPublishingCredentials() {
         var appSerivce: AzureAppService = new AzureAppService(endpoint, "MOCK_RESOURCE_GROUP_NAME", "MOCK_APP_SERVICE_NAME");
         try {
-            var value = await appSerivce.getPublishingCredentials();
-            console.log('MOCK_APP_SERVICE_NAME PUBLISHINGCREDENTIALS ID: ' + value.id);
-        }
+                var value = await appSerivce.getPublishingCredentials();
+                console.log('MOCK_APP_SERVICE_NAME PUBLISHINGCREDENTIALS ID: ' + value.id);
+            }
         catch(error) {
             console.log(error);
             tl.setResult(tl.TaskResult.Failed, 'AzureAppServiceTests.getPublishingCredentials() should have passed but failed');
@@ -369,7 +347,6 @@ async function RUNTESTS() {
     await AzureAppServiceTests.swapSlotWithPreview();
     await AzureAppServiceTests.cancelSwapSlotWithPreview();
     await AzureAppServiceTests.get();
-    await AzureAppServiceTests.getPublishingProfileWithSecrets();
     await AzureAppServiceTests.getPublishingCredentials();
     await AzureAppServiceTests.getApplicationSettings();
     await AzureAppServiceTests.updateApplicationSettings();
