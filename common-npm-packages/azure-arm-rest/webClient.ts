@@ -13,7 +13,8 @@ var requestOptions: httpInterfaces.IRequestOptions = proxyUrl ? {
         proxyBypassHosts: tl.getVariable("agent.proxybypasslist") ? JSON.parse(tl.getVariable("agent.proxybypasslist")) : null
     }
 } : {
-    allowRedirects: false
+    allowRedirects: false,
+    keepAlive: true
 };
 
 let ignoreSslErrors: string = tl.getVariable("VSTS_ARM_REST_IGNORE_SSL_ERRORS");
