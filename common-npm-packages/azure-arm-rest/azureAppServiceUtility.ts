@@ -75,56 +75,52 @@ export class AzureAppServiceUtility {
         return physicalToVirtualPathMap.physicalPath;
     }
 
-    public async getKuduService(): Promise<Kudu> {
-
-        const publishingCredentials = await this._appService.getPublishingCredentials();
-        const scmUri = publishingCredentials.properties["scmUri"];
-
+    public async getKuduServiceNew() : Promise<Kudu> {
+        const app = await this._appService.get()
+        const scmUri = (app.properties["hostNameSslStates"] || []).find(n => n.hostType == "Repository");
         if (!scmUri) {
             throw Error(tl.loc('KuduSCMDetailsAreEmpty'));
         }
 
-        const authHeader = await this.getKuduAuthHeader(publishingCredentials);
-        return new Kudu(publishingCredentials.properties["scmUri"], authHeader);
+        const authHeader = await this.getKuduAuthHeaderNew();
+        return new Kudu(`https://${scmUri["name"]}`, authHeader);
+
     }
 
-    private async getKuduAuthHeader(publishingCredentials: any): Promise<string> {
-        const scmPolicyCheck = await this.isSitePublishingCredentialsEnabled();
-
+    public async getKuduAuthHeaderNew() : Promise<string> {
         let token = "";
         let method = "";
 
-        const password = publishingCredentials.properties["publishingPassword"];
-
-        if (scmPolicyCheck === false) {
+        try {
             token = await this._appService._client.getCredentials().getToken();
             method = "Bearer";
-            // Though bearer AuthN is used, lets try to set publish profile password for mask hints to maintain compat with old behavior for MSDEPLOY.
-            // This needs to be cleaned up once MSDEPLOY suppport is removed. Safe handle the exception setting up mask hint as we dont want to fail here.
-            try {
-                tl.setVariable(`AZURE_APP_MSDEPLOY_${this._appService.getSlot()}_PASSWORD`, password, true);
-            }
-            catch (error) {
-                // safe handle the exception setting up mask hint
-                tl.debug(`Setting mask hint for publish profile password failed with error: ${error}`);
-            }
-        } else {
-            tl.setVariable(`AZURE_APP_SERVICE_KUDU_${this._appService.getSlot()}_PASSWORD`, password, true);
+        } catch (error) {
+            console.log('Error getting accessToken. Attempting to fall back to publishing profile: ' + error);
+        }
+
+        const scmPolicyCheck = await this.isSitePublishingCredentialsEnabled();
+        if (scmPolicyCheck) {
+            var publishingCredentials = await this._appService.getPublishingCredentials();
             const userName = publishingCredentials.properties["publishingUserName"];
+            const password = publishingCredentials.properties["publishingPassword"];
             const buffer = Buffer.from(userName + ':' + password);
             token = buffer.toString('base64');
             method = "Basic";
+        }
+        else {
+            throw Error('Publishing profile is not enabled.');
         }
 
         const authMethodtelemetry = {
             authMethod: method
         };
+
         tl.debug(`Using ${method} authentication method for Kudu service.`);
         console.log(`##vso[telemetry.publish area=TaskDeploymentMethod;feature=${this._telemetryFeature}]${JSON.stringify(authMethodtelemetry)}`);
 
         return method + " " + token;
     }
-
+    
     public async updateAndMonitorAppSettings(addProperties?: any, deleteProperties?: any, formatJSON?: boolean, perSlot: boolean = true): Promise<boolean> {
         if (formatJSON) {
             var appSettingsProperties = {};
