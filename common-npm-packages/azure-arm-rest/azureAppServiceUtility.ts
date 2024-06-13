@@ -15,31 +15,10 @@ export class AzureAppServiceUtility {
         this._telemetryFeature = telemetryFeature || "AzureAppServiceDeployment"; //TODO modify telemetry.publish command so that agent automatically pass task name and version to the server then remove this parameter
     }
 
-    public async getWebDeployPublishingProfile(): Promise<any> {
-        var publishingProfile = await this._appService.getPublishingProfileWithSecrets();
-        var defer = Q.defer<any>();
-        parseString(publishingProfile, (error, result) => {
-            if (!!error) {
-                defer.reject(error);
-            }
-            var publishProfile = result && result.publishData && result.publishData.publishProfile ? result.publishData.publishProfile : null;
-            if (publishProfile) {
-                for (var index in publishProfile) {
-                    if (publishProfile[index].$ && publishProfile[index].$.publishMethod === "MSDeploy") {
-                        defer.resolve(result.publishData.publishProfile[index].$);
-                    }
-                }
-            }
-
-            defer.reject(tl.loc('ErrorNoSuchDeployingMethodExists'));
-        });
-
-        return defer.promise;
-    }
-
     public async getApplicationURL(virtualApplication?: string): Promise<string> {
-        let webDeployProfile: any =  await this.getWebDeployPublishingProfile();
-        return await webDeployProfile.destinationAppUrl + ( virtualApplication ? "/" + virtualApplication : "" );
+        var app = await this._appService.get()
+        var applicationUri = (app.properties["hostNameSslStates"] || []).find(n => n.hostType == "Standard");
+        return `https://${applicationUri["name"]}` + ( virtualApplication ? "/" + virtualApplication : "" );
     }
 
     public async pingApplication(): Promise<void> {
