@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-packaging-common",
-    "version": "3.239.0",
+    "version": "3.241.0",
     "description": "Azure Pipelines Packaging Tasks Common",
     "scripts": {
         "test": "mocha _build/Tests/L0.js",
@@ -9,7 +9,7 @@
     "author": "Microsoft Corporation",
     "repository": {
         "type": "git",
-        "url": "https://github.com/Microsoft/azure-pipelines-tasks"
+        "url": "https://github.com/microsoft/azure-pipelines-tasks-common-packages/tree/main/common-npm-packages/packaging-common"
     },
     "license": "MIT",
     "dependencies": {
@@ -27,7 +27,7 @@
         "ltx": "^2.6.2",
         "mocha": "^8.4.0",
         "q": "^1.5.0",
-        "semver": "^5.5.0",
+        "semver": "^5.7.2",
         "typed-rest-client": "1.8.4"
     },
     "devDependencies": {

@@ -116,7 +116,8 @@ export function getSystemAccessToken(): string {
     tl.debug('Getting credentials for local feeds');
     const auth = tl.getEndpointAuthorization('SYSTEMVSSCONNECTION', false);
     if (auth.scheme === 'OAuth') {
-        tl.debug('Got auth token');
+        tl.debug('Got auth token, setting it as secret so it does not print in console log');
+        tl.setSecret(auth.parameters['AccessToken']);
         return auth.parameters['AccessToken'];
     } else {
         tl.warning('Could not determine credentials to use');
