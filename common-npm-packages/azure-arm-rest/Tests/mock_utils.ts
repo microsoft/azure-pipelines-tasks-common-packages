@@ -4,7 +4,7 @@ import * as querystring from "querystring";
 import { ApplicationTokenCredentials } from '../azure-arm-common';
 export var nock = require('nock');
 
-export function getMockEndpoint(scheme?: string, msiClientId?: string) {
+export function getMockEndpoint(scheme?: string, msiClientId?: string, mockMsi2019: boolean = false) {
     process.env["AZURE_HTTP_USER_AGENT"] = "TEST_AGENT";
 
     var endpoint: AzureEndpoint = {
@@ -37,13 +37,22 @@ export function getMockEndpoint(scheme?: string, msiClientId?: string) {
         access_token: "DUMMY_ACCESS_TOKEN"
     }).persist(); 
 
+    const tokenEndpoint = "http://169.254.169.254/metadata/identity/oauth2/token";
+    const reqheaders = {
+        "Metadata": true
+    };
+
+    if (mockMsi2019) {
+        const identityHeader = "00000000-0000-0000-0000-000000000000";
+        process.env["IDENTITY_ENDPOINT"] = tokenEndpoint;
+        process.env["IDENTITY_HEADER"] = identityHeader;
+        reqheaders["X-Identity-Header"] = identityHeader;
+    }
     let apiVersion = "2018-02-01";
     let msiClientIdUrl =  msiClientId ? "&client_id=" + msiClientId : "";
-    var msiUrl = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=" + apiVersion + "&resource=https://management.azure.com/" + msiClientIdUrl;
+    var msiUrl = tokenEndpoint + "?api-version=" + apiVersion + "&resource=https://management.azure.com/" + msiClientIdUrl;
     nock(msiUrl, {
-        reqheaders: {
-            "Metadata": true
-          }
+        reqheaders: reqheaders
     })
     .get("/oauth2/token?resource=https://management.azure.com/")
     .reply(200, { 
