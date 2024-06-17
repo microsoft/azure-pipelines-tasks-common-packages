@@ -202,7 +202,8 @@ export function npmcommon() {
             },
             getHttpProxyConfiguration: (endpoint) => {
                 return null;
-            }
+            },
+            setSecret : msg => null
         };
         mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
 
