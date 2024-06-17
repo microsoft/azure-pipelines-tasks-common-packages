@@ -112,6 +112,7 @@ export async function getPackagingUris(protocolType: ProtocolType): Promise<Pack
     return pkgLocation;
 }
 
+/** Return a masked SystemAccessToken */
 export function getSystemAccessToken(): string {
     tl.debug('Getting credentials for local feeds');
     const auth = tl.getEndpointAuthorization('SYSTEMVSSCONNECTION', false);
