@@ -76,6 +76,7 @@ export class NpmRegistry implements INpmRegistry {
                     // Azure DevOps does not support PATs+Bearer only JWTs+Bearer
                     email = 'VssEmail';
                     username = 'VssToken';
+                    password64 = Buffer.from(apitoken).toString('base64');
 
                     auth = nerfed + ':username=' + username + lineEnd;
                     auth += nerfed + ':_password=' + password64 + lineEnd;
