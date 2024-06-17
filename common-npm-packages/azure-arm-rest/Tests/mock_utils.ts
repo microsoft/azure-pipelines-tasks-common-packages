@@ -48,7 +48,7 @@ export function getMockEndpoint(scheme?: string, msiClientId?: string, mockMsi20
         process.env["IDENTITY_HEADER"] = identityHeader;
         reqheaders["X-Identity-Header"] = identityHeader;
     }
-    let apiVersion = "2018-02-01";
+    let apiVersion = mockMsi2019 ? "2019-08-01" : "2018-02-01";
     let msiClientIdUrl =  msiClientId ? "&client_id=" + msiClientId : "";
     var msiUrl = tokenEndpoint + "?api-version=" + apiVersion + "&resource=https://management.azure.com/" + msiClientIdUrl;
     nock(msiUrl, {
