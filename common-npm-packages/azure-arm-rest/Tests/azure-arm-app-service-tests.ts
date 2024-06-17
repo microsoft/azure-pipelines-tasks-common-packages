@@ -4,6 +4,7 @@ import { AzureEndpoint } from '../azureModels';
 import * as querystring from 'querystring';
 import tl = require('azure-pipelines-task-lib/task');
 var endpoint = getMockEndpoint();
+var msi2018endpoint = getMockEndpoint("ManagedServiceIdentity");
 var msi2019endpoint = getMockEndpoint("ManagedServiceIdentity", null, true);
 
 mockAzureAppServiceTests();
@@ -380,7 +381,8 @@ async function RUNTESTS() {
     await AzureAppServiceTests.getMetadata();
     await AzureAppServiceTests.updateMetadata();
 
-    // Test MSI v2019 behavior
+    // Test MSI behaviors
+    await AzureAppServiceTests.get(msi2018endpoint);
     await AzureAppServiceTests.get(msi2019endpoint);
 }
 
