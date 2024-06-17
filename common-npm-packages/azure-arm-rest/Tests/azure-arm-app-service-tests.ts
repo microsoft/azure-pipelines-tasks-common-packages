@@ -4,6 +4,7 @@ import { AzureEndpoint } from '../azureModels';
 import * as querystring from 'querystring';
 import tl = require('azure-pipelines-task-lib/task');
 var endpoint = getMockEndpoint();
+var msi2019endpoint = getMockEndpoint("ManagedServiceIdentity", null, true);
 
 mockAzureAppServiceTests();
 
@@ -114,8 +115,8 @@ class AzureAppServiceTests {
         });
     }
 
-    public static async get() {
-        var appSerivce: AzureAppService = new AzureAppService(endpoint, "MOCK_RESOURCE_GROUP_NAME", "MOCK_APP_SERVICE_NAME");
+    public static async get(testEndpoint: AzureEndpoint) {
+        var appSerivce: AzureAppService = new AzureAppService(testEndpoint, "MOCK_RESOURCE_GROUP_NAME", "MOCK_APP_SERVICE_NAME");
         try {
             var value = await appSerivce.get();
             console.log('MOCK_APP_SERVICE_NAME ID: ' + value.id);
@@ -125,7 +126,7 @@ class AzureAppServiceTests {
             tl.setResult(tl.TaskResult.Failed, 'AzureAppServiceTests.get() should have passed but failed');
         }
         
-        var appSerivceSlot: AzureAppService = new AzureAppService(endpoint, "MOCK_RESOURCE_GROUP_NAME", "MOCK_APP_SERVICE_NAME", "MOCK_SLOT_NAME");
+        var appSerivceSlot: AzureAppService = new AzureAppService(testEndpoint, "MOCK_RESOURCE_GROUP_NAME", "MOCK_APP_SERVICE_NAME", "MOCK_SLOT_NAME");
         try {
             await appSerivceSlot.get();
             tl.setResult(tl.TaskResult.Failed, 'AzureAppServiceTests.get() should have failed but passed');
@@ -368,7 +369,7 @@ async function RUNTESTS() {
     await AzureAppServiceTests.swap();
     await AzureAppServiceTests.swapSlotWithPreview();
     await AzureAppServiceTests.cancelSwapSlotWithPreview();
-    await AzureAppServiceTests.get();
+    await AzureAppServiceTests.get(endpoint);
     await AzureAppServiceTests.getPublishingProfileWithSecrets();
     await AzureAppServiceTests.getPublishingCredentials();
     await AzureAppServiceTests.getApplicationSettings();
@@ -378,6 +379,9 @@ async function RUNTESTS() {
     await AzureAppServiceTests.patchConfiguration();
     await AzureAppServiceTests.getMetadata();
     await AzureAppServiceTests.updateMetadata();
+
+    // Test MSI v2019 behavior
+    await AzureAppServiceTests.get(msi2019endpoint);
 }
 
 RUNTESTS();
