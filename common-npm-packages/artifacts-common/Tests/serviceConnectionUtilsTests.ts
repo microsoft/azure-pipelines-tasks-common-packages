@@ -239,7 +239,8 @@ export function serviceConnectionUtilsTests() {
                 }
                 return values[key];
             },
-            setResourcePath: (path) => {}
+            setResourcePath: (path) => {},
+            setSecret : msg => null
         };
         mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
 
