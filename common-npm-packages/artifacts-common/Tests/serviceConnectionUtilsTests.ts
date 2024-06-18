@@ -1,31 +1,32 @@
 import * as assert from "assert";
-import * as mockery from "mockery";
+// import * as mockery from "mockery";
 import { EndpointAuthorization } from "azure-pipelines-task-lib";
 import { ServiceConnectionAuthType, TokenServiceConnection, UsernamePasswordServiceConnection, ApiKeyServiceConnection, IAdditionalData } from "../serviceConnectionUtils";
+import * as mocker from "azure-pipelines-task-lib/lib-mocker";
 
 export function serviceConnectionUtilsTests() {
 
     const serviceConnectionsKey = "someProtocolServiceConnections";
 
     before(() => {
-        mockery.disable(); // needed to ensure that we can mock vsts-task-lib/task
-        mockery.enable({
+        mocker.disable(); // needed to ensure that we can mock vsts-task-lib/task
+        mocker.enable({
             useCleanCache: true,
             warnOnUnregistered: true
-        } as mockery.MockeryEnableArgs);
+        } as mocker.MockOptions);
     });
 
     after(() => {
-        mockery.disable();
+        mocker.disable();
     });
 
     beforeEach(() => {
-        mockery.resetCache();
-        mockery.registerAllowable("../serviceConnectionUtils");
+        mocker.resetCache();
+        mocker.registerAllowable("../serviceConnectionUtils");
     });
 
     afterEach(() => {
-        mockery.deregisterAll();
+        mocker.deregisterAll();
     });
 
     it("getPackagingServiceConnections null returns empty", (done: MochaDone) => {
@@ -35,7 +36,7 @@ export function serviceConnectionUtilsTests() {
             },
             setResourcePath: (path) => {}
         };
-        mockery.registerMock('azure-pipelines-task-lib/task', mockTask);
+        mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
         
         let serviceConnectionUtilsWithMocks = require("../serviceConnectionUtils");
         assert.deepEqual(serviceConnectionUtilsWithMocks.getPackagingServiceConnections(serviceConnectionsKey), []);
@@ -49,7 +50,7 @@ export function serviceConnectionUtilsTests() {
             },
             setResourcePath: (path) => {}
         };
-        mockery.registerMock('azure-pipelines-task-lib/task', mockTask);
+        mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
 
         let serviceConnectionUtilsWithMocks = require("../serviceConnectionUtils");
         assert.deepEqual(serviceConnectionUtilsWithMocks.getPackagingServiceConnections(serviceConnectionsKey), []);
@@ -67,9 +68,10 @@ export function serviceConnectionUtilsTests() {
                 scheme: "token"
             },
             setResourcePath: (path) => {},
-            getEndpointAuthorizationScheme: (key, optional): string => "token"
+            getEndpointAuthorizationScheme: (key, optional): string => "token",
+            setSecret : msg => null
         };
-        mockery.registerMock('azure-pipelines-task-lib/task', mockTask);
+        mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
 
         let serviceConnectionUtilsWithMocks = require("../serviceConnectionUtils");
         assert.deepEqual(serviceConnectionUtilsWithMocks.getPackagingServiceConnections(serviceConnectionsKey), [<TokenServiceConnection>{
@@ -96,7 +98,7 @@ export function serviceConnectionUtilsTests() {
             setResourcePath: (path) => {},
             getEndpointAuthorizationScheme: (key, optional): string => "token"
         };
-        mockery.registerMock('azure-pipelines-task-lib/task', mockTask);
+        mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
 
         let serviceConnectionUtilsWithMocks = require("../serviceConnectionUtils");
         assert.throws(() => serviceConnectionUtilsWithMocks.getPackagingServiceConnections(serviceConnectionsKey));
@@ -114,9 +116,10 @@ export function serviceConnectionUtilsTests() {
                 scheme: "usernamepassword"
             },
             setResourcePath: (path) => {},
-            getEndpointAuthorizationScheme: (key, optional): string => "usernamepassword"
+            getEndpointAuthorizationScheme: (key, optional): string => "usernamepassword",
+            setSecret : msg => null
         };
-        mockery.registerMock('azure-pipelines-task-lib/task', mockTask);
+        mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
 
         let serviceConnectionUtilsWithMocks = require("../serviceConnectionUtils");
         assert.deepEqual(serviceConnectionUtilsWithMocks.getPackagingServiceConnections(serviceConnectionsKey), [<UsernamePasswordServiceConnection>{
@@ -144,7 +147,7 @@ export function serviceConnectionUtilsTests() {
             setResourcePath: (path) => {},
             getEndpointAuthorizationScheme: (key, optional): string => "usernamepassword"
         };
-        mockery.registerMock('azure-pipelines-task-lib/task', mockTask);
+        mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
 
         let serviceConnectionUtilsWithMocks = require("../serviceConnectionUtils");
         assert.throws(() => serviceConnectionUtilsWithMocks.getPackagingServiceConnections(serviceConnectionsKey));
@@ -163,7 +166,7 @@ export function serviceConnectionUtilsTests() {
             setResourcePath: (path) => {},
             getEndpointAuthorizationScheme: (key, optional): string => "usernamepassword"
         };
-        mockery.registerMock('azure-pipelines-task-lib/task', mockTask);
+        mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
 
         let serviceConnectionUtilsWithMocks = require("../serviceConnectionUtils");
         assert.throws(() => serviceConnectionUtilsWithMocks.getPackagingServiceConnections(serviceConnectionsKey));
@@ -181,9 +184,10 @@ export function serviceConnectionUtilsTests() {
                 scheme: "none"
             },
             setResourcePath: (path) => {},
-            getEndpointAuthorizationScheme: (key, optional): string => "none"
+            getEndpointAuthorizationScheme: (key, optional): string => "none",
+            setSecret : msg => null
         };
-        mockery.registerMock('azure-pipelines-task-lib/task', mockTask);
+        mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
 
         let serviceConnectionUtilsWithMocks = require("../serviceConnectionUtils");
         assert.deepEqual(serviceConnectionUtilsWithMocks.getPackagingServiceConnections(serviceConnectionsKey), [<ApiKeyServiceConnection>{
@@ -210,7 +214,7 @@ export function serviceConnectionUtilsTests() {
             setResourcePath: (path) => {},
             getEndpointAuthorizationScheme: (key, optional): string => "none"
         };
-        mockery.registerMock('azure-pipelines-task-lib/task', mockTask);
+        mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
 
         let serviceConnectionUtilsWithMocks = require("../serviceConnectionUtils");
         assert.throws(() => serviceConnectionUtilsWithMocks.getPackagingServiceConnections(serviceConnectionsKey));
@@ -237,7 +241,7 @@ export function serviceConnectionUtilsTests() {
             },
             setResourcePath: (path) => {}
         };
-        mockery.registerMock('azure-pipelines-task-lib/task', mockTask);
+        mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
 
         let serviceConnectionUtilsWithMocks = require("../serviceConnectionUtils");
         assert.deepEqual(serviceConnectionUtilsWithMocks.getPackagingServiceConnections(serviceConnectionsKey, ["key1", "key2"]), [<TokenServiceConnection>{
@@ -270,9 +274,10 @@ export function serviceConnectionUtilsTests() {
                     "key2" : "value2"
                 }
                 return values[key];
-            }
+            },
+            setSecret : msg => null
         };
-        mockery.registerMock('azure-pipelines-task-lib/task', mockTask);
+        mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
 
         let serviceConnectionUtilsWithMocks = require("../serviceConnectionUtils");
         assert.deepEqual(serviceConnectionUtilsWithMocks.getPackagingServiceConnections(serviceConnectionsKey, ["key1", "key2"]), [<TokenServiceConnection>{
