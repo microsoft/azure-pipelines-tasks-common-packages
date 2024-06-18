@@ -96,6 +96,7 @@
   "loc.messages.FailedToGetAppServiceApplicationSettings": "Se produjo un error al obtener la configuración de aplicación de App Service \"%s\". Error: %s",
   "loc.messages.FailedToUpdateAppServiceApplicationSettings": "No se pudo actualizar la configuración de aplicación de la instancia de App Service \"%s\". Error: %s",
   "loc.messages.KuduSCMDetailsAreEmpty": "Los detalles de KUDU SCM están vacíos.",
+  "loc.messages.KuduStackTraceURL": "Para depurar aún más, compruebe la dirección URL de seguimiento de pila de Kudu: %s",
   "loc.messages.FailedToGetContinuousWebJobs": "Se produjo un error al obtener WebJobs continuos. Error: %s",
   "loc.messages.FailedToStartContinuousWebJob": "Se produjo un error al iniciar el WebJob continuo \"%s\". Error: %s",
   "loc.messages.FailedToStopContinuousWebJob": "Se produjo un error al detener el WebJob continuo \"%s\". Error: %s",
