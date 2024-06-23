@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-webdeployment-common",
-    "version": "4.233.0",
+    "version": "4.236.0",
     "description": "Common Lib for MSDeploy Utility",
     "repository": {
         "type": "git",
@@ -23,7 +23,6 @@
         "@xmldom/xmldom": "git+https://github.com/xmldom/xmldom.git#0.8.6",
         "archiver": "1.2.0",
         "azure-pipelines-task-lib": "^4.2.0",
-        "decompress-zip": "^0.3.3",
         "ltx": "2.8.0",
         "node-stream-zip": "^1.15.0",
         "q": "1.4.1",

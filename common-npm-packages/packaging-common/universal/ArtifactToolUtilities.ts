@@ -11,7 +11,7 @@ import * as toollib from "azure-pipelines-tool-lib/tool";
 export function getArtifactToolLocation(dirName: string): string {
     let toolPath: string = path.join(dirName, "ArtifactTool.exe");
     if (tl.osType() !== "Windows_NT"){
-        toolPath = path.join(dirName, "artifacttool");
+        toolPath = path.join(dirName, "Artifacttool");
     }
     return toolPath;
 }
@@ -19,7 +19,7 @@ export function getArtifactToolLocation(dirName: string): string {
 function _createExtractFolder(dest?: string): string {
     if (!dest) {
         // create a temp dir
-        dest = path.join(tl.getVariable("Agent.TempDirectory"), "artifactTool");
+        dest = path.join(tl.getVariable("Agent.TempDirectory"), "ArtifactTool");
     }
     tl.mkdirP(dest);
     return dest;
@@ -55,13 +55,17 @@ export async function getArtifactToolFromService(serviceUri: string, accessToken
 
     // https://github.com/nodejs/node-v0.x-archive/issues/2862
     if (arch === "ia32") {
-        if (process.env.PROCESSOR_ARCHITEW6432 != null && process.env.PROCESSOR_ARCHITEW6432.toUpperCase() === "AMD64") {
-            arch = "amd64";
+        if (process.env.PROCESSOR_ARCHITEW6432 != null) {
+            if (process.env.PROCESSOR_ARCHITEW6432.toUpperCase() === "AMD64") {
+                arch = "amd64";
+            }
+            else if (process.env.PROCESSOR_ARCHITEW6432.toUpperCase() == "ARM64") {
+                arch = "arm64";
+            }
         }
-    }
-
-    if (arch.toLowerCase() !== "amd64") {
-        throw new Error(tl.loc("Error_ProcessorArchitectureNotSupported"));
+        else if (process.env.PROCESSOR_ARCHITEW6432 == null && process.arch.toUpperCase() === "ARM64") {
+            arch = "arm64";
+        }
     }
 
     const blobstoreAreaName = "clienttools";

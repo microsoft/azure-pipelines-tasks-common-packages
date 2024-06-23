@@ -13,13 +13,14 @@ var requestOptions: httpInterfaces.IRequestOptions = proxyUrl ? {
         proxyBypassHosts: tl.getVariable("agent.proxybypasslist") ? JSON.parse(tl.getVariable("agent.proxybypasslist")) : null
     }
 } : {
-    allowRedirects: false
+    allowRedirects: false,
+    keepAlive: true
 };
 
 let ignoreSslErrors: string = tl.getVariable("VSTS_ARM_REST_IGNORE_SSL_ERRORS");
 requestOptions.ignoreSslError = ignoreSslErrors && ignoreSslErrors.toLowerCase() == "true";
 
-var httpCallbackClient = new httpClient.HttpClient(tl.getVariable("AZURE_HTTP_USER_AGENT"), null, requestOptions);
+var azureHttpUserAgent = tl.getVariable("AZURE_HTTP_USER_AGENT");
 
 export class WebRequest {
     public method: string;
@@ -111,8 +112,13 @@ export function sleepFor(sleepDurationInSeconds): Promise<any> {
 
 async function sendRequestInternal(request: WebRequest): Promise<WebResponse> {
     tl.debug(util.format("[%s]%s", request.method, request.uri));
+    var httpCallbackClient = new httpClient.HttpClient(azureHttpUserAgent, null, requestOptions);
+    
     var response: httpClient.HttpClientResponse = await httpCallbackClient.request(request.method, request.uri, request.body, request.headers);
-    return await toWebResponse(response);
+    const weResponse = await toWebResponse(response);
+    
+    httpCallbackClient.dispose();
+    return weResponse;
 }
 
 async function toWebResponse(response: httpClient.HttpClientResponse): Promise<WebResponse> {
