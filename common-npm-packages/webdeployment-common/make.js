@@ -16,3 +16,4 @@ util.cp('-r', 'node_modules', buildPath);
 util.cp('-r', 'Strings', buildPath);
 util.cp('-r', 'WebConfigTemplates', buildPath);
 util.cp('-r', 'Tests', buildPath);
+util.rm('-rf', path.join(buildPath, 'Tests', 'L1ZipUtility'));
