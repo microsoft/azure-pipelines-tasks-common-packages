@@ -1,6 +1,6 @@
 {
   "name": "azure-pipelines-tasks-codeanalysis-common",
-  "version": "2.226.0",
+  "version": "2.226.1",
   "author": "Microsoft Corporation",
   "description": "Build with Gradle",
   "license": "MIT",
@@ -13,6 +13,7 @@
     "glob": "7.1.0",
     "mocha": "^8.4.0",
     "rewire": "^6.0.0",
+    "semver": "^7.5.1",
     "sinon": "^14.0.0",
     "xml2js": "^0.6.2"
   },
