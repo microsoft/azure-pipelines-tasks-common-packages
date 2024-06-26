@@ -13,11 +13,14 @@
         "CredProvider_SettingUpForOrgFeeds": "Setting up the credential provider to use the identity '%s' for feeds in your organization/collection starting with:",
         "CredProvider_SettingUpForServiceConnections": "Setting up the credential provider for these service connections:",
         "ErrorInSettingUpSubscription": "Error in setting up subscription",
+        "Error_FederatedTokenAquisitionFailed": "Failed to aquire federated token. Error: %s",
+        "Error_GetFeedTenantIdFailed": "Failed to find tenantId for feedUrl : %s. Error: %s",
         "LoginFailed": "Azure login failed",
         "MSILoginFailed": "Azure login failed using Managed Service Identity",
         "ServiceConnections_Error_FailedToParseServiceEndpoint_MissingParameter": "Failed to parse the service endpoint '%s' because it was missing the parameter '%s'",
         "ServiceConnections_Error_FailedToParseServiceEndpoint_BadScheme": "Failed to parse the service endpoint '%s' because the auth scheme '%s' was invalid",
         "SettingAzureCloud": "Setting active cloud to: %s",
-        "Info_GotAndMaskAuth":"Got auth token, setting it as secret so it does not print in console log"
+        "Info_GotAndMaskAuth":"Got auth token, setting it as secret so it does not print in console log",
+        "Info_UsingTenantId" : "Using tenant id: %s"
     }
 }
