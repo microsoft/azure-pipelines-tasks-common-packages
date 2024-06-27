@@ -10,21 +10,21 @@ export function credentialProviderUtilsTests() {
     afterEach(() => {
     });
 
-    it("buildExternalFeedEndpointsJson null returns null", (done: MochaDone) => {
+    it("buildExternalFeedEndpointsJson null returns null", (done: Mocha.Done) => {
         assert.equal(buildExternalFeedEndpointsJson(null), null);
         done();
     });
 
-    it("buildExternalFeedEndpointsJson empty returns null", (done: MochaDone) => {
+    it("buildExternalFeedEndpointsJson empty returns null", (done: Mocha.Done) => {
         assert.equal(buildExternalFeedEndpointsJson([]), null);
         done();
     });
 
-    it("buildExternalFeedEndpointsJson token", (done: MochaDone) => {
+    it("buildExternalFeedEndpointsJson token", (done: Mocha.Done) => {
         const json = buildExternalFeedEndpointsJson([
             <TokenServiceConnection>{
                 packageSource: {
-                    uri: "https://contoso.com/nuget/v3/index.json" 
+                    uri: "https://contoso.com/nuget/v3/index.json"
                 },
                 authType: ServiceConnectionAuthType.Token,
                 token: "sometoken"
@@ -36,11 +36,11 @@ export function credentialProviderUtilsTests() {
         done();
     });
 
-    it("buildExternalFeedEndpointsJson usernamepassword", (done: MochaDone) => {
+    it("buildExternalFeedEndpointsJson usernamepassword", (done: Mocha.Done) => {
         const json = buildExternalFeedEndpointsJson([
             <UsernamePasswordServiceConnection>{
                 packageSource: {
-                    uri: "https://fabrikam.com/nuget/v3/index.json" 
+                    uri: "https://fabrikam.com/nuget/v3/index.json"
                 },
                 authType: ServiceConnectionAuthType.UsernamePassword,
                 username: "someusername",
@@ -53,18 +53,18 @@ export function credentialProviderUtilsTests() {
         done();
     });
 
-    it("buildExternalFeedEndpointsJson token + usernamepassword", (done: MochaDone) => {
+    it("buildExternalFeedEndpointsJson token + usernamepassword", (done: Mocha.Done) => {
         const json = buildExternalFeedEndpointsJson([
             <TokenServiceConnection>{
                 packageSource: {
-                    uri: "https://contoso.com/nuget/v3/index.json" 
+                    uri: "https://contoso.com/nuget/v3/index.json"
                 },
                 authType: ServiceConnectionAuthType.Token,
                 token: "sometoken"
             },
             <UsernamePasswordServiceConnection>{
                 packageSource: {
-                    uri: "https://fabrikam.com/nuget/v3/index.json" 
+                    uri: "https://fabrikam.com/nuget/v3/index.json"
                 },
                 authType: ServiceConnectionAuthType.UsernamePassword,
                 username: "someusername",
@@ -77,12 +77,12 @@ export function credentialProviderUtilsTests() {
         done();
     });
 
-    it("buildExternalFeedEndpointsJson apikey throws", (done: MochaDone) => {
+    it("buildExternalFeedEndpointsJson apikey throws", (done: Mocha.Done) => {
         assert.throws(() => {
             buildExternalFeedEndpointsJson([
                 <ApiKeyServiceConnection>{
                     packageSource: {
-                        uri: "https://contoso.com/nuget/v3/index.json" 
+                        uri: "https://contoso.com/nuget/v3/index.json"
                     },
                     authType: ServiceConnectionAuthType.ApiKey,
                     apiKey: "someapikey"
@@ -93,14 +93,15 @@ export function credentialProviderUtilsTests() {
         done();
     });
 
-    it("buildExternalFeedEndpointsJson otherauthtype throws", (done: MochaDone) => {
+    it("buildExternalFeedEndpointsJson otherauthtype throws", (done: Mocha.Done) => {
         assert.throws(() => {
             buildExternalFeedEndpointsJson([
                 {
                     packageSource: {
-                        uri: "https://contoso.com/nuget/v3/index.json" 
+                        uri: "https://contoso.com/nuget/v3/index.json"
                     },
                     authType: <any>"unsupportedauthtype",
+                    maskSecret: () => void {}
                 }
             ])
         });

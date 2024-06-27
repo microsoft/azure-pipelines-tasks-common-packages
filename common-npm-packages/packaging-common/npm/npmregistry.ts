@@ -25,6 +25,7 @@ export class NpmRegistry implements INpmRegistry {
         this.authOnly = authOnly || false;
     }
 
+    /** Return NpmRegistry with masked auth from Service Endpoint. */
     public static async FromServiceEndpoint(endpointId: string, authOnly?: boolean): Promise<NpmRegistry> {
         const lineEnd = os.EOL;
         let endpointAuth: tl.EndpointAuthorization;
@@ -59,8 +60,7 @@ export class NpmRegistry implements INpmRegistry {
                 username = endpointAuth.parameters['username'];
                 password = endpointAuth.parameters['password'];
                 email = username; // npm needs an email to be set in order to publish, this is ignored on npmjs
-                password64 = (new Buffer(password).toString('base64'));
-                tl.setSecret(password64);
+                password64 = Buffer.from(password).toString('base64');
 
                 auth = nerfed + ':username=' + username + lineEnd;
                 auth += nerfed + ':_password=' + password64 + lineEnd;
@@ -68,6 +68,7 @@ export class NpmRegistry implements INpmRegistry {
                 break;
             case 'Token':
                 const apitoken = endpointAuth.parameters['apitoken'];
+                tl.setSecret(apitoken);
                 if (!isVstsTokenAuth){
                     // Use Bearer auth as it was intended.
                     auth = nerfed + ':_authToken=' + apitoken + lineEnd;
@@ -75,8 +76,7 @@ export class NpmRegistry implements INpmRegistry {
                     // Azure DevOps does not support PATs+Bearer only JWTs+Bearer
                     email = 'VssEmail';
                     username = 'VssToken';
-                    password64 = (new Buffer(apitoken).toString('base64'));
-                    tl.setSecret(password64);
+                    password64 = Buffer.from(apitoken).toString('base64');
 
                     auth = nerfed + ':username=' + username + lineEnd;
                     auth += nerfed + ':_password=' + password64 + lineEnd;
@@ -84,6 +84,8 @@ export class NpmRegistry implements INpmRegistry {
                 }
                 break;
         }
+        tl.setSecret(password);
+        tl.setSecret(password64);
 
         auth += nerfed + ':always-auth=true';
         return new NpmRegistry(url, auth, authOnly);

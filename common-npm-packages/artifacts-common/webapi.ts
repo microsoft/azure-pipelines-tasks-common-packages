@@ -20,11 +20,13 @@ export function getWebApiWithProxy(serviceUri: string, accessToken: string, opti
     return new api.WebApi(serviceUri, credentialHandler, {...defaultOptions, ...options});
 }
 
+/** Return a masked SystemAccessToken */
 export function getSystemAccessToken(): string {
     tl.debug('Getting credentials for local feeds');
     const auth = tl.getEndpointAuthorization('SYSTEMVSSCONNECTION', false);
     if (auth.scheme === 'OAuth') {
-        tl.debug('Got auth token');
+        tl.debug(tl.loc("Info_GotAndMaskAuth"));
+        tl.setSecret(auth.parameters['AccessToken']);
         return auth.parameters['AccessToken'];
     } else {
         tl.warning('Could not determine credentials to use');
