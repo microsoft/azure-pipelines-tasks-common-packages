@@ -2,7 +2,7 @@ import fs = require("fs");
 import path = require("path");
 import * as tl from 'azure-pipelines-task-lib/task';
 import { IExecSyncResult } from 'azure-pipelines-task-lib/toolrunner';
-import { getFederatedToken } from './webapi';
+import { getFederatedToken } from './accesstoken';
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
