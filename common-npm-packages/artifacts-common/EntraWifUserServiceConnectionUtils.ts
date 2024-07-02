@@ -22,9 +22,8 @@ export async function getFederatedWorkloadIdentityCredentials(serviceConnectionN
                 'Authorization': 'Bearer '+ systemAccessToken
             }
         })).json() as {oidcToken: string};
-
         tl.setSecret(ADOResponse.oidcToken);
-        let entraURI = "https://login.windows-ppe.net/"+tenant+"/oauth2/v2.0/token";
+        let entraURI = "https://login.windows.net/"+tenant+"/oauth2/v2.0/token";
         let clientId = tl.getEndpointAuthorizationParameterRequired(serviceConnectionName, "ServicePrincipalId");
 
         let body = {
@@ -48,7 +47,7 @@ export async function getFederatedWorkloadIdentityCredentials(serviceConnectionN
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
         })).json() as {access_token: string};
-
+        tl.debug("access token: " + entraResponse.access_token)
         tl.setSecret(entraResponse.access_token);
         return entraResponse.access_token;
     } 
