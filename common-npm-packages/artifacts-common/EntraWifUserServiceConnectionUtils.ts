@@ -1,6 +1,7 @@
 import path = require("path");
 import * as tl from 'azure-pipelines-task-lib/task';
 import { getSystemAccessToken } from "./webapi";
+import fetch from "node-fetch";
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
@@ -10,8 +11,9 @@ export async function getFederatedWorkloadIdentityCredentials(serviceConnectionN
         let tenant = tenantId ?? tl.getEndpointAuthorizationParameterRequired(serviceConnectionName, "TenantId");
         tl.debug(tl.loc('Info_UsingTenantId', tenantId));
         const systemAccessToken = getSystemAccessToken();
-
-        const ADOResponse: {oidcToken: string} = await (await fetch(process.env["SYSTEM_OIDCREQUESTURI"]+"?api-version=7.1&serviceConnectionId="+serviceConnectionName, 
+        const url = process.env["SYSTEM_OIDCREQUESTURI"]+"?api-version=7.1&serviceConnectionId="+serviceConnectionName;
+        
+        const ADOResponse: {oidcToken: string} = await (await fetch(url, 
         {
             method: 'POST', 
             headers: 
@@ -65,6 +67,6 @@ export async function getFeedTenantId(feedUrl: string) : Promise<string>
     } 
     catch (error)
     {
-        tl.error(tl.loc("Error_GetFeedTenantIdFailed", error));
+        tl.warning(tl.loc("Error_GetFeedTenantIdFailed", error));
     }
 }
