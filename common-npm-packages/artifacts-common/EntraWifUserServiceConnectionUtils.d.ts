@@ -1,2 +1,2 @@
-export declare function getFederatedWorkloadIdentityCredentials(serviceConnectionName: string, tenantId?: string) : Promise<string>
-export declare function getFeedTenantId(feedUrl: string) : Promise<string>
+export declare function getFederatedWorkloadIdentityCredentials(serviceConnectionName: string, tenantId?: string) : Promise<string | undefined>
+export declare function getFeedTenantId(feedUrl: string) : Promise<string | undefined>

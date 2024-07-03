@@ -5,7 +5,11 @@ import fetch from "node-fetch";
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
-export async function getFederatedWorkloadIdentityCredentials(serviceConnectionName: string, tenantId?: string) : Promise<string>
+const ADO_RESOURCE : string = "499b84ac-1321-427f-aa17-267ca6975798/.default";
+const CLIENT_ASSERTION_TYPE : string = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
+const GRANT_TYPE = "client_credentials";
+
+export async function getFederatedWorkloadIdentityCredentials(serviceConnectionName: string, tenantId?: string) : Promise<string | undefined>
 {
     try {
         let tenant = tenantId ?? tl.getEndpointAuthorizationParameterRequired(serviceConnectionName, "TenantId");
@@ -22,16 +26,17 @@ export async function getFederatedWorkloadIdentityCredentials(serviceConnectionN
                 'Authorization': 'Bearer '+ systemAccessToken
             }
         })).json() as {oidcToken: string};
+
         tl.setSecret(ADOResponse.oidcToken);
         let entraURI = "https://login.windows.net/"+tenant+"/oauth2/v2.0/token";
         let clientId = tl.getEndpointAuthorizationParameterRequired(serviceConnectionName, "ServicePrincipalId");
 
         let body = {
-            'scope': "499b84ac-1321-427f-aa17-267ca6975798/.default",
+            'scope': ADO_RESOURCE,
             'client_id': clientId,
-            'client_assertion_type': "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+            'client_assertion_type': CLIENT_ASSERTION_TYPE,
             'client_assertion': ADOResponse.oidcToken,
-            'grant_type': "client_credentials"
+            'grant_type': GRANT_TYPE
         };
 
         let formBody = Object.keys(body)
@@ -47,17 +52,17 @@ export async function getFederatedWorkloadIdentityCredentials(serviceConnectionN
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
         })).json() as {access_token: string};
-        tl.debug("access token: " + entraResponse.access_token)
         tl.setSecret(entraResponse.access_token);
         return entraResponse.access_token;
     } 
     catch (error) 
     {
         tl.error(tl.loc("Error_FederatedTokenAquisitionFailed", error));
+        return undefined;
     }
 }
 
-export async function getFeedTenantId(feedUrl: string) : Promise<string>
+export async function getFeedTenantId(feedUrl: string) : Promise<string | undefined>
 {
     try
     {
@@ -67,5 +72,6 @@ export async function getFeedTenantId(feedUrl: string) : Promise<string>
     catch (error)
     {
         tl.warning(tl.loc("Error_GetFeedTenantIdFailed", error));
+        return undefined;
     }
 }
