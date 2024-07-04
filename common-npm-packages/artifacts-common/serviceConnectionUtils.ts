@@ -20,7 +20,10 @@ export abstract class ServiceConnection
         public packageSource: IExternalPackageSource,
         public authType: ServiceConnectionAuthType,
         public additionalData?: IAdditionalData) {
+            this.maskSecret();
     }
+
+    abstract maskSecret() : void;
 }
 
 export class TokenServiceConnection extends ServiceConnection
@@ -31,6 +34,10 @@ export class TokenServiceConnection extends ServiceConnection
         public additionalData?: IAdditionalData)
     {
         super(packageSource, ServiceConnectionAuthType.Token, additionalData);
+    }
+
+    maskSecret(): void {
+        tl.setSecret(this.token);
     }
 }
 
@@ -44,6 +51,10 @@ export class UsernamePasswordServiceConnection extends ServiceConnection
     {
         super(packageSource, ServiceConnectionAuthType.UsernamePassword, additionalData);
     }
+
+    maskSecret(): void {
+        tl.setSecret(this.password);
+    }
 }
 
 export class ApiKeyServiceConnection extends ServiceConnection
@@ -55,6 +66,10 @@ export class ApiKeyServiceConnection extends ServiceConnection
     {
         super(packageSource, ServiceConnectionAuthType.ApiKey, additionalData);
     }
+
+    maskSecret(): void {
+        tl.setSecret(this.apiKey);
+    }
 }
 
 export class PrivateKeyServiceConnection extends ServiceConnection {
@@ -65,6 +80,10 @@ export class PrivateKeyServiceConnection extends ServiceConnection {
         public additionalData?: IAdditionalData) 
     {
         super(packageSource, ServiceConnectionAuthType.PrivateKey, additionalData)
+    }
+
+    maskSecret(): void {
+        tl.setSecret(this.privateKey);
     }
 }
 

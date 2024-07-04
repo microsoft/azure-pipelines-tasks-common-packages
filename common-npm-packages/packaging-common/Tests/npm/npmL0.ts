@@ -202,7 +202,8 @@ export function npmcommon() {
             },
             getHttpProxyConfiguration: (endpoint) => {
                 return null;
-            }
+            },
+            setSecret : msg => null
         };
         mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
 
@@ -248,7 +249,8 @@ export function npmcommon() {
             },
             getEndpointAuthorization: (id, optional) => {
                 return { scheme: 'OAuth', parameters: { 'AccessToken': authToken } };
-            }
+            },
+            setSecret : msg => null
         };
         const mockParser = {
             GetRegistries: (npmrc: string) => [registry]
