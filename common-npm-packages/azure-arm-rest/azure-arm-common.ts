@@ -15,7 +15,7 @@ import { getHandlerFromToken, WebApi } from "azure-devops-node-api";
 import { ITaskApi } from "azure-devops-node-api/TaskApi";
 import TaskAgentInterfaces = require("azure-devops-node-api/interfaces/TaskAgentInterfaces");
 
-// Important note! Since the msal v2.** doesn't work with Node 10, and we still need to support Node 10 tasks, a dynamic msal loading was implemented.
+// Important note! Since the msal v2.** doesn't work with Node 10, and we still need to support Node 10 execution handler, a dynamic msal loading was implemented.
 // Dynamic loading imposes restrictions on type validation when compiling TypeScript and we can't use it in this case.
 // For this reason, all msal types were temporarily replaced with 'any' type.
 // When the support for Node 10 is dropped, the types should be restored and the dynamic loading should be removed.
