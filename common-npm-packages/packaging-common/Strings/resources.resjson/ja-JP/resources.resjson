@@ -13,7 +13,7 @@
   "loc.messages.Info_UsingToolPath": "使用するツール パス: %s",
   "loc.messages.Info_UsingVersion": "使用するバージョン: %s",
   "loc.messages.Info_BasicCredRestriction": "このタスクでは、これらの資格情報の送信に基本スキームだけを使用するよう、NuGet が構成\nされるようになりました。ほとんどのユーザーは、この変更の影響を受けません。これらが Windows ドメインの\n資格情報であり、最近機能しなくなった場合、ビルド\n変数 %s を値 '%s' (引用符は使用しません) に設定してみてください。",
-  "loc.messages.Info_GotAndMaskAuth":"認証トークンを取得しました。コンソール ログに出力されないように秘密に設定しています",
+  "loc.messages.Info_GotAndMaskAuth": "Got auth token, setting it as secret so it does not print in console log",
   "loc.messages.NGCommon_AddingSources": "NuGet.config での資格証明の設定",
   "loc.messages.NGCommon_AreaNotFoundInSps": "'%s' [%s] 領域を特定できません。この領域を含むサービスは、ご利用の地域では提供されません。",
   "loc.messages.NGCommon_DetectedNuGetExtensionsPath": "NuGet 拡張機能のローダー パス (NUGET_EXTENSIONS_PATH 環境変数) が検出されました: %s",

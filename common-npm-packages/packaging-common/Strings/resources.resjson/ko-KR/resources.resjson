@@ -13,7 +13,7 @@
   "loc.messages.Info_UsingToolPath": "도구 경로 %s 사용",
   "loc.messages.Info_UsingVersion": "버전 %s 사용",
   "loc.messages.Info_BasicCredRestriction": "이제 이 작업은 기본 체계만 사용하여 이러한 자격 증명을 보내도록 NuGet을 구성합니다.\n대부분의 사용자는 이러한 변경에 영향을 받지 않습니다. 해당 자격 증명이 Windows 도메인 자격 증명이고\n최근에 작업을 중지한 경우 빌드 변수 %s을(를) '%s' 값(따옴표 없음)에\n설정해 보세요.",
-  "loc.messages.Info_GotAndMaskAuth":"인증 토큰을 얻었습니다. 콘솔 로그에 인쇄되지 않도록 비밀로 설정했습니다.",
+  "loc.messages.Info_GotAndMaskAuth": "Got auth token, setting it as secret so it does not print in console log",
   "loc.messages.NGCommon_AddingSources": "NuGet.config에서 자격 증명을 설정하는 중",
   "loc.messages.NGCommon_AreaNotFoundInSps": "'%s' [%s] 영역을 찾을 수 없습니다. 해당 영역을 포함하는 서비스를 사용자의 지역에서 사용하지 못할 수도 있습니다.",
   "loc.messages.NGCommon_DetectedNuGetExtensionsPath": "검색된 NuGet 확장 로더 경로(NUGET_EXTENSIONS_PATH 환경 변수): %s",
