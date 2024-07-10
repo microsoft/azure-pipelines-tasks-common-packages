@@ -90,6 +90,15 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
+      <Item ItemId=";loc.messages.Info_GotAndMaskAuth" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Got auth token, setting it as secret so it does not print in console log]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[获取身份验证令牌，将其设置为机密，以便其不会在控制台日志中打印]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
       <Item ItemId=";loc.messages.Info_MatchingUrlWasFoundSettingAuth" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Using authentication information for the following URI: ]]></Val>
