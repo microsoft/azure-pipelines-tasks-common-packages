@@ -32,8 +32,7 @@ export async function getFederatedWorkloadIdentityCredentials(serviceConnectionN
             }
             return oidcObject.oidcToken;
         });
-
-        tl.debug("oidc token: " + oidcToken);
+        
         tl.setSecret(oidcToken);
         let entraURI = getEntraLoginUrl() + tenant + "/oauth2/v2.0/token";
         let clientId = tl.getEndpointAuthorizationParameterRequired(serviceConnectionName, "ServicePrincipalId");
@@ -58,7 +57,6 @@ export async function getFederatedWorkloadIdentityCredentials(serviceConnectionN
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
         }).then(async response => {
-            tl.debug("response Status:" + response.status);
             var tokenObject = await (response?.json()) as {access_token: string};
     
             if (!tokenObject?.access_token){
