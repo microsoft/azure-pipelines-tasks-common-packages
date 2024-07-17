@@ -7,7 +7,7 @@ import { getConnectionDataForProtocol } from './connectionDataUtils';
 import { getPackagingAccessMappings } from './packagingAccessMappingUtils';
 import { getSystemAccessToken } from './webapi';
 import { ProtocolType } from './protocols';
-import { ServiceConnection, ServiceConnectionAuthType, UsernamePasswordServiceConnection, TokenServiceConnection } from './serviceConnectionUtils';
+import { ServiceConnection, ServiceConnectionAuthType, UsernamePasswordServiceConnection, EntraServiceConnection, TokenServiceConnection } from './serviceConnectionUtils';
 import { retryOnException } from './retryUtils'
 
 tl.setResourcePath(path.join(__dirname , 'module.json'), true);
@@ -114,24 +114,13 @@ export function getUserProfileNuGetPluginsDir(): string {
  */
 export async function configureCredProvider(protocol: ProtocolType, serviceConnections: ServiceConnection[]) {
     await configureCredProviderForSameOrganizationFeeds(protocol);
+
+    // Enforce a singular service connection for the Entra service connection type
+    if (serviceConnections && serviceConnections.length > 1 && serviceConnections[0].authType === ServiceConnectionAuthType.Entra) {
+        throw Error(tl.loc('CredProvider_Error_MultipleServiceConnections'));
+    }
+
     configureCredProviderForServiceConnectionFeeds(serviceConnections);
-}
-
-/**
- * Configure the credential provider to provide credentials for feeds within the pipeline's organization
- * and for a single provided service connections.
- */
-export async function configureSingleCredProvider(
-  protocol: ProtocolType,
-  serviceConnections: ServiceConnection[]
-) {
-  await configureCredProviderForSameOrganizationFeeds(protocol);
-
-  if (serviceConnections && serviceConnections.length > 1) {
-    throw Error(tl.loc('CredProvider_Error_MultipleServiceConnections'));
-  }
-
-  configureSingleCredProviderForServiceConnectionFeeds(serviceConnections);
 }
 
 /**
@@ -161,50 +150,31 @@ export async function configureCredProviderForSameOrganizationFeeds(protocol: Pr
  * using VSS_NUGET_EXTERNAL_FEED_ENDPOINTS to do so.
  */
 export function configureCredProviderForServiceConnectionFeeds(serviceConnections: ServiceConnection[]) {
+    var configuredEndpoints = tl.getVariable(CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR);
+    const existingCredentialsArray = configuredEndpoints ? JSON.parse(configuredEndpoints)['endpointCredentials'] : [];
+
     if (serviceConnections && serviceConnections.length) {
         console.log(tl.loc('CredProvider_SettingUpForServiceConnections'));
         // Ideally we'd also show the service connection name, but the agent doesn't expose it :-(
         serviceConnections.map(authInfo => `${authInfo.packageSource.uri}`).forEach(serviceConnectionUri => console.log('  ' + serviceConnectionUri));
         console.log();
 
-        const externalFeedEndpointsJson = buildExternalFeedEndpointsJson(serviceConnections);
-        tl.setVariable(CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR, externalFeedEndpointsJson, false /* while this contains secrets, we need the environment variable to be set */);
-    }
-}
-
-/**
- * Configure the credential provider to provide credentials for a single service connections,
- * using VSS_NUGET_EXTERNAL_FEED_ENDPOINTS to do so.
- */
-export function configureSingleCredProviderForServiceConnectionFeeds(serviceConnections: ServiceConnection[]) {
-    var configuredEndpoints = tl.getVariable(CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR);
-
-    if (serviceConnections) {
-        console.log(tl.loc('CredProvider_SettingUpForServiceConnections'));
-        
-        serviceConnections.map(authInfo => `${authInfo.packageSource.uri}`).forEach(serviceConnectionUri => console.log('  ' + serviceConnectionUri))
-        
-        // Ideally we'd also show the service connection name, but the agent doesn't expose it :-(
-        console.log();
-
-        const externalFeedEndpointsJson = buildExternalFeedEndpointsJson(serviceConnections);
-        const additionalCredentials = JSON.parse(externalFeedEndpointsJson).endpointCredentials;
-        const existingCredentials = configuredEndpoints ? JSON.parse(configuredEndpoints).endpointCredentials : [];
-        
-        for (const cred of existingCredentials) {
-            if (cred.hasOwnProperty("endpoint") && cred["endpoint"] === additionalCredentials[0]["endpoint"]) 
-            { 
-                // 
+        var credentialContainer;
+        if (existingCredentialsArray.length > 0) {
+            // Verify that any new service connections are not already in the existing credentials
+            if (serviceConnections.some(serviceConnection =>
+                existingCredentialsArray.some(cred => cred['endpoint'] === serviceConnection.packageSource.uri))) {
                 throw Error(tl.loc('CredProvider_Error_ServiceConnectionExists'));
-            }  
+            }
+            
+            var mergedCredentials = existingCredentialsArray.concat(JSON.parse(buildExternalFeedEndpointsJson(serviceConnections))['endpointCredentials'])
+            credentialContainer = JSON.stringify({'endpointCredentials': mergedCredentials});
+        }
+        else {
+            credentialContainer = buildExternalFeedEndpointsJson(serviceConnections);
         }
 
-        // Superset credentials and create JSON to set
-        const mergedCredentials = additionalCredentials.concat(existingCredentials);
-        const endpointCredentials = { endpointCredentials: mergedCredentials };
-        const endpointCredentialsJson = JSON.stringify(endpointCredentials);
-
-        tl.setVariable(CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR, endpointCredentialsJson, false /* while this contains secrets, we need the environment variable to be set */);
+        tl.setVariable(CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR, credentialContainer, false /* while this contains secrets, we need the environment variable to be set */);
     }
 }
 
@@ -243,6 +213,14 @@ export function buildExternalFeedEndpointsJson(serviceConnections: ServiceConnec
                 } as EndpointCredentials);
                 tl.debug(`Detected token credentials for '${serviceConnection.packageSource.uri}'`);
                 break;
+            case(ServiceConnectionAuthType.Entra):
+                const EntraAuthInfo = serviceConnection as EntraServiceConnection;
+                endpointCredentialsContainer.endpointCredentials.push({
+                    endpoint: serviceConnection.packageSource.uri,
+                    password: EntraAuthInfo.token
+                } as EndpointCredentials);
+                tl.debug(`Detected Entra credentials for '${serviceConnection.packageSource.uri}'`);
+                break;
             case (ServiceConnectionAuthType.ApiKey):
                 // e.g. ApiKey based service connections are not supported and cause a hard failure in authentication tasks
                 const serviceConnectionDisplayText = serviceConnection.packageSource.uri; // Ideally we'd also show the service connection name, but the agent doesn't expose it :-(
@@ -253,4 +231,11 @@ export function buildExternalFeedEndpointsJson(serviceConnections: ServiceConnec
     });
 
     return JSON.stringify(endpointCredentialsContainer);
+}
+
+
+
+
+export function addSingleServiceConn(){
+
 }

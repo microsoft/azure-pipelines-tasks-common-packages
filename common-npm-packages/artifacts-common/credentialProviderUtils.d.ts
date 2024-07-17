@@ -20,20 +20,10 @@ export declare function configureCredProvider(protocol: ProtocolType, serviceCon
  */
 export declare function configureCredProviderForSameOrganizationFeeds(protocol: ProtocolType): Promise<void>;
 /**
- * Configure the credential provider to provide credentials for feeds within the pipeline's organization
- * and for a single provided service connection.
- */
-export declare function configureSingleCredProvider(protocol: ProtocolType, serviceConnections: ServiceConnection[]) : Promise<void>;
-/**
  * Configure the credential provider to provide credentials for service connections,
  * using VSS_NUGET_EXTERNAL_FEED_ENDPOINTS to do so.
  */
 export declare function configureCredProviderForServiceConnectionFeeds(serviceConnections: ServiceConnection[]): void;
-/**
- * Configure the credential provider to provide credentials for a single service connections,
- * using VSS_NUGET_EXTERNAL_FEED_ENDPOINTS to do so.
- */
-export function configureSingleCredProviderForServiceConnectionFeeds(serviceConnections: ServiceConnection[]): void;
 /**
  * Build the JSON for VSS_NUGET_EXTERNAL_FEED_ENDPOINTS
  *

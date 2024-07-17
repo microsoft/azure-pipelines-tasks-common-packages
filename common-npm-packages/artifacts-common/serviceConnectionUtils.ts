@@ -87,12 +87,28 @@ export class PrivateKeyServiceConnection extends ServiceConnection {
     }
 }
 
+export class EntraServiceConnection extends ServiceConnection {
+    constructor(
+        public packageSource: IExternalPackageSource,
+        public entraConnectionName: string,
+        public token: string,
+        public additionalData?: IAdditionalData) 
+    {
+        super(packageSource, ServiceConnectionAuthType.Entra, additionalData)
+    }
+    
+    maskSecret(): void {
+        tl.setSecret(this.entraConnectionName);
+    }
+}
+
 export enum ServiceConnectionAuthType
 {
     Token, 
     UsernamePassword,
     ApiKey,
-    PrivateKey
+    PrivateKey,
+    Entra
 }
 
 /**
