@@ -14,7 +14,7 @@
         "CredProvider_SettingUpForOrgFeeds": "Setting up the credential provider to use the identity '%s' for feeds in your organization/collection starting with:",
         "CredProvider_SettingUpForServiceConnections": "Setting up the credential provider for these service connections:",
         "ErrorInSettingUpSubscription": "Error in setting up subscription",
-        "Error_FederatedTokenAquisitionFailed": "Failed to aquire federated token. %s",
+        "Error_FederatedTokenAquisitionFailed": "Failed to aquire federated token.",
         "Error_GetFeedTenantIdFailed": "Failed to find tenantId for feedUrl. %s",
         "LoginFailed": "Azure login failed",
         "MSILoginFailed": "Azure login failed using Managed Service Identity",
