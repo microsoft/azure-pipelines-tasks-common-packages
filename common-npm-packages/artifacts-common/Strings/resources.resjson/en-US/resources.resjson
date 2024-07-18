@@ -8,6 +8,7 @@
   "loc.messages.CredProvider_Error_InvalidServiceConnection_ApiKey": "The service connection for '%s' is not valid. ApiKey service connections are not supported in this task. Instead, use -ApiKey (NuGet) or --api-key (dotnet) when invoking the tool itself. See the task documentation for more details.",
   "loc.messages.CredProvider_InstallingNetCoreTo": "Installing the Azure Artifacts Credential Provider (.NET Core) to '%s'. This credential provider is compatible with dotnet SDK 2.1.400 or later.",
   "loc.messages.CredProvider_InstallingNetFxTo": "Installing the Azure Artifacts Credential Provider (.NET Framework) to '%s'. This credential provider is compatible with nuget.exe 4.8.0.5385 or later, and MSBuild 15.8.166.59604 or later.",
+  "loc.messages.CredProvider_Error_ServiceConnectionExists": "An existing service connection already exists for the endpoint '%s'.",
   "loc.messages.ErrorInSettingUpSubscription": "Error in setting up subscription",
   "loc.messages.LoginFailed": "Azure login failed",
   "loc.messages.MSILoginFailed": "Azure login failed using Managed Service Identity",
@@ -15,5 +16,6 @@
   "loc.messages.CredProvider_SettingUpForServiceConnections": "Setting up the credential provider for these service connections:",
   "loc.messages.ServiceConnections_Error_FailedToParseServiceEndpoint_MissingParameter": "Failed to parse the service endpoint '%s' because it was missing the parameter '%s'",
   "loc.messages.ServiceConnections_Error_FailedToParseServiceEndpoint_BadScheme": "Failed to parse the service endpoint '%s' because the auth scheme '%s' was invalid",
+  "loc.messages.ServiceConnections_Error_FailedToGetServiceConnectionAuth" : "Unable to get federated credentials from service connection: %s.",
   "loc.messages.SettingAzureCloud": "Setting active cloud to: %s"
 }

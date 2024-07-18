@@ -8,6 +8,7 @@ import { getPackagingAccessMappings } from './packagingAccessMappingUtils';
 import { getSystemAccessToken } from './webapi';
 import { ProtocolType } from './protocols';
 import { ServiceConnection, ServiceConnectionAuthType, UsernamePasswordServiceConnection, EntraServiceConnection, TokenServiceConnection } from './serviceConnectionUtils';
+import { getFederatedWorkloadIdentityCredentials, getFeedTenantId } from "./EntraWifUserServiceConnectionUtils";
 import { retryOnException } from './retryUtils'
 
 tl.setResourcePath(path.join(__dirname , 'module.json'), true);
@@ -114,13 +115,24 @@ export function getUserProfileNuGetPluginsDir(): string {
  */
 export async function configureCredProvider(protocol: ProtocolType, serviceConnections: ServiceConnection[]) {
     await configureCredProviderForSameOrganizationFeeds(protocol);
-
-    // Enforce a singular service connection for the Entra service connection type
-    if (serviceConnections && serviceConnections.length > 1 && serviceConnections[0].authType === ServiceConnectionAuthType.Entra) {
-        throw Error(tl.loc('CredProvider_Error_MultipleServiceConnections'));
-    }
-
     configureCredProviderForServiceConnectionFeeds(serviceConnections);
+}
+
+/**
+ * Configure the credential provider to provide credentials for feeds within the pipeline's organization,
+ * as well as for a single Entra backed service connection.
+ */
+export async function configureEntraCredProvider(protocol: ProtocolType, feedUrl: string, entraWifServiceConnectionName: string) {
+    await configureCredProviderForSameOrganizationFeeds(protocol);
+
+    const feedTenant = await getFeedTenantId(feedUrl);
+    let token = await getFederatedWorkloadIdentityCredentials(entraWifServiceConnectionName, feedTenant);
+    if (token) {
+        configureCredProviderForServiceConnectionFeeds([new EntraServiceConnection({uri:feedUrl}, entraWifServiceConnectionName, token)]);
+    }
+    else {
+        throw new Error(tl.loc("FailedToGetServiceConnectionAuth", entraWifServiceConnectionName)); 
+    }
 }
 
 /**
@@ -162,13 +174,15 @@ export function configureCredProviderForServiceConnectionFeeds(serviceConnection
         var credentialContainer;
         if (existingCredentialsArray.length > 0) {
             // Verify that any new service connections are not already in the existing credentials
-            if (serviceConnections.some(serviceConnection =>
-                existingCredentialsArray.some(cred => cred['endpoint'] === serviceConnection.packageSource.uri))) {
-                throw Error(tl.loc('CredProvider_Error_ServiceConnectionExists'));
+            for (const serviceConnection of serviceConnections) {
+                const matchedCredential = existingCredentialsArray.find(cred => cred['endpoint'] === serviceConnection.packageSource.uri);
+                if (matchedCredential) {
+                    throw Error(tl.loc('CredProvider_Error_ServiceConnectionExists', matchedCredential['endpoint']));
+                }
+
+                var mergedCredentials = existingCredentialsArray.concat(JSON.parse(buildExternalFeedEndpointsJson(serviceConnections))['endpointCredentials'])
+                credentialContainer = JSON.stringify({'endpointCredentials': mergedCredentials});
             }
-            
-            var mergedCredentials = existingCredentialsArray.concat(JSON.parse(buildExternalFeedEndpointsJson(serviceConnections))['endpointCredentials'])
-            credentialContainer = JSON.stringify({'endpointCredentials': mergedCredentials});
         }
         else {
             credentialContainer = buildExternalFeedEndpointsJson(serviceConnections);
@@ -231,11 +245,4 @@ export function buildExternalFeedEndpointsJson(serviceConnections: ServiceConnec
     });
 
     return JSON.stringify(endpointCredentialsContainer);
-}
-
-
-
-
-export function addSingleServiceConn(){
-
 }
