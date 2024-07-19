@@ -7,7 +7,6 @@ import constants = require('./constants');
 import path = require('path');
 import fs = require('fs');
 import jwt = require('jsonwebtoken');
-import msal = require('@azure/msal-node');
 import crypto = require("crypto");
 import { Mutex } from 'async-mutex';
 import HttpsProxyAgent = require('https-proxy-agent');
@@ -15,6 +14,19 @@ import fetch = require('node-fetch');
 import { getHandlerFromToken, WebApi } from "azure-devops-node-api";
 import { ITaskApi } from "azure-devops-node-api/TaskApi";
 import TaskAgentInterfaces = require("azure-devops-node-api/interfaces/TaskAgentInterfaces");
+
+// Important note! Since the msal v2.** doesn't work with Node 10, and we still need to support Node 10 execution handler, a dynamic msal loading was implemented.
+// Dynamic loading imposes restrictions on type validation when compiling TypeScript and we can't use it in this case.
+// For this reason, all msal types were temporarily replaced with 'any' type.
+// When the support for Node 10 is dropped, the types should be restored and the dynamic loading should be removed.
+
+/// Dynamic msal loading based on the node version
+const nodeVersion = parseInt(process.version.split('.')[0].replace('v', ''));
+const msalVer = nodeVersion < 16 ? "msalv1": "msalv2";
+
+tl.debug('Using ' + msalVer);
+const msal = require(msalVer);
+///
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
@@ -36,7 +48,7 @@ export class ApplicationTokenCredentials {
     private isADFSEnabled?: boolean;
     private token_deferred: Q.Promise<string>;
     private useMSAL: boolean;
-    private msalInstance: msal.ConfidentialClientApplication;
+    private msalInstance: any; //msal.ConfidentialClientApplication
 
     private readonly tokenMutex: Mutex;
 
@@ -232,7 +244,7 @@ export class ApplicationTokenCredentials {
         }
     }
 
-    private async getMSAL(): Promise<msal.ConfidentialClientApplication> {
+    private async getMSAL(): Promise<any> /*Promise<msal.ConfidentialClientApplication>*/ {
         // use same instance if it already exists
         if (!this.msalInstance) {
             this.msalInstance = await this.buildMSAL();
@@ -241,7 +253,7 @@ export class ApplicationTokenCredentials {
         return this.msalInstance;
     }
 
-    private getProxyClient(agentProxyURL: URL): msal.INetworkModule {
+    private getProxyClient(agentProxyURL: URL): any /*msal.INetworkModule*/ {
         let proxyURL = `${agentProxyURL.protocol}//${agentProxyURL.host}`;
 
         const agentProxyUsername: string = tl.getVariable("agent.proxyusername");
@@ -262,7 +274,7 @@ export class ApplicationTokenCredentials {
         // direct usage of msalConfig.system.proxyUrl is not available at the moment due to the fact that Object.fromEntries requires >=Node12
         const proxyAgent = new HttpsProxyAgent(proxyURL);
 
-        const proxyNetworkClient: msal.INetworkModule = {
+        const proxyNetworkClient: any /*msal.INetworkModule*/ = {
             async sendGetRequestAsync(url, options) {
                 const customOptions = { ...options, ...{ method: "GET", agent: proxyAgent } }
                 const response = await fetch(url, customOptions);
@@ -286,11 +298,11 @@ export class ApplicationTokenCredentials {
         return proxyNetworkClient;
     }
 
-    private async buildMSAL(): Promise<msal.ConfidentialClientApplication> {
+    private async buildMSAL(): Promise<any> /*Promise<msal.ConfidentialClientApplication>*/ {
         // default configuration
         const authorityURL = (new URL(this.tenantId, this.authorityUrl)).toString();
 
-        const msalConfig: msal.Configuration = {
+        const msalConfig: any /*msal.Configuration*/ = {
             auth: {
                 clientId: this.clientId,
                 authority: authorityURL
@@ -325,7 +337,7 @@ export class ApplicationTokenCredentials {
             }
         }
 
-        let msalInstance: msal.ConfidentialClientApplication;
+        let msalInstance: any; //msal.ConfidentialClientApplication
 
         // setup msal according to parameters
         switch (this.scheme) {
@@ -344,13 +356,13 @@ export class ApplicationTokenCredentials {
         return msalInstance;
     }
 
-    private configureMSALWithMSI(msalConfig: msal.Configuration): msal.ConfidentialClientApplication {
+    private configureMSALWithMSI(msalConfig: any /*msal.Configuration*/): any /*msal.ConfidentialClientApplication*/ {
         let resourceId = this.activeDirectoryResourceId;
-        let accessTokenProvider: msal.IAppTokenProvider = (appTokenProviderParameters: msal.AppTokenProviderParameters): Promise<msal.AppTokenProviderResult> => {
+        let accessTokenProvider: any /*msal.IAppTokenProvider*/ = (appTokenProviderParameters: any /*msal.AppTokenProviderParameters*/): Promise<any> /*Promise<msal.AppTokenProviderResult>*/ => {
 
             tl.debug("MSAL - ManagedIdentity is used.");
 
-            let providerResultPromise = new Promise<msal.AppTokenProviderResult>(function (resolve, reject) {
+            let providerResultPromise = new Promise<any>/*Promise<msal.AppTokenProviderResult>*/(function (resolve, reject) {
                 // same for MSAL
                 let webRequest = new webClient.WebRequest();
                 webRequest.method = "GET";
@@ -363,7 +375,7 @@ export class ApplicationTokenCredentials {
                 webClient.sendRequest(webRequest).then(
                     (response: webClient.WebResponse) => {
                         if (response.statusCode == 200) {
-                            let providerResult: msal.AppTokenProviderResult = {
+                            let providerResult: any /*msal.AppTokenProviderResult*/ = {
                                 accessToken: response.body.access_token,
                                 expiresInSeconds: response.body.expires_in
                             }
@@ -388,7 +400,7 @@ export class ApplicationTokenCredentials {
         return msalInstance;
     }
 
-    private configureMSALWithSP(msalConfig: msal.Configuration): msal.ConfidentialClientApplication {
+    private configureMSALWithSP(msalConfig: any /*msal.Configuration*/): any /*msal.ConfidentialClientApplication*/ {
         switch (this.authType) {
             case constants.AzureServicePrinicipalAuthentications.servicePrincipalKey:
                 tl.debug("MSAL - ServicePrincipal - clientSecret is used.");
@@ -459,7 +471,7 @@ export class ApplicationTokenCredentials {
         return oidc_token;
     }
 
-    private async configureMSALWithOIDC(msalConfig: msal.Configuration): Promise<msal.ConfidentialClientApplication> {
+    private async configureMSALWithOIDC(msalConfig: any /*msal.Configuration*/): Promise<any> /*Promise<msal.ConfidentialClientApplication>*/ {
         tl.debug("MSAL - FederatedAccess - OIDC is used.");
 
         msalConfig.auth.clientAssertion = await this.getFederatedToken();
@@ -470,13 +482,13 @@ export class ApplicationTokenCredentials {
 
     private async getMSALToken(force?: boolean, retryCount: number = 3, retryWaitMS: number = 2000): Promise<string> {
         tl.debug(`MSAL - getMSALToken called. force=${force}`);
-        const msalApp: msal.ConfidentialClientApplication = await this.getMSAL();
+        const msalApp: any /*msal.ConfidentialClientApplication*/ = await this.getMSAL();
         if (force) {
             msalApp.clearCache();
         }
 
         try {
-            const request: msal.ClientCredentialRequest = {
+            const request: any /*msal.ClientCredentialRequest*/ = {
                 scopes: [this.activeDirectoryResourceId + "/.default"]
             };
             const response = await msalApp.acquireTokenByClientCredential(request);

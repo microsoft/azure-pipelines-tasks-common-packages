@@ -49,7 +49,7 @@ if (totalDiffList.length) {
     });
 
     console.log(``);
-    console.log(`Make sure you are using Node 10 and NPM 6.`);
+    console.log(`Make sure you are using Node 16 and NPM 8.`);
     console.log(``);
 
     process.exit(1);
