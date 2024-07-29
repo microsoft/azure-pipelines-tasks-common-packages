@@ -3,14 +3,14 @@ import * as ttm from 'azure-pipelines-task-lib/mock-test';
 import tl = require('azure-pipelines-task-lib');
 import * as path from 'path';
 
-export function ApplicationInsightsTests() {
+export function ApplicationInsightsWebTestsTests() {
     it('azure-arm-appinsights-webtests ApplicationInsightsWebTests', (done: Mocha.Done) => {
         let tp = path.join(__dirname, 'azure-arm-appinsights-webtests-tests.js');
         let tr : ttm.MockTestRunner = new ttm.MockTestRunner(tp);
         let passed: boolean = true;
         try {
             tr.run();
-            assert(tr.succeeded, "azure-arm-appinsights-tests should have passed but failed.");
+            assert(tr.succeeded, "azure-arm-appinsights-webtests should have passed but failed.");
             console.log("\tvalidating list");
             list(tr);
             console.log("\tvalidating create");

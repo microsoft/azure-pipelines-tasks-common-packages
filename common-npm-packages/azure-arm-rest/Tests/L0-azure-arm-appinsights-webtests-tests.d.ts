@@ -1,1 +1,1 @@
-export declare function ApplicationInsightsTests(): void;
+export declare function ApplicationInsightsWebTestsTests(): void;
