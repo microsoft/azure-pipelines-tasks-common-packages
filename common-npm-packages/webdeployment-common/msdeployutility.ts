@@ -286,14 +286,21 @@ export async function getInstalledMSDeployVersion(): Promise<string> {
 }
 
 export async function installedMSDeployVersionSupportsTokenAuth(): Promise<boolean | undefined> {
-    // MSDeploy 9.0.7225 is the first product version to support token auth
-    const minimalMSDeployVersion = "9.0.7225";
-    const msDeployVersion = await getInstalledMSDeployVersion();
-    if (!msDeployVersion) {
+    const msDeployVersionString = await getInstalledMSDeployVersion();
+    if (!msDeployVersionString) {
         tl.debug('Could not determine MSDeploy version. Assuming it is not installed.');
         return undefined;
     }
-    return semver.gte(semver.coerce(msDeployVersion), semver.coerce(minimalMSDeployVersion));
+
+    const msDeployVersion = semver.coerce(msDeployVersionString);
+    // MSDeploy 9.0.7225 is the first product version to support token auth
+    if (semver.gte(msDeployVersion, semver.coerce("9.0.7225"))) {
+        return true;
+    }
+
+    // MDeploy shipped with Web Deploy has different versioning scheme
+    // Versions between 9.0.2000 and 9.0.2999 are considered to be similar to 9.0.7225
+    return semver.gte(msDeployVersion, semver.coerce("9.0.2000")) && semver.lte(msDeployVersion, semver.coerce("9.0.2999"));
 }
 
 function getMSDeployLatestRegKey(): Promise<winreg.Registry> {
