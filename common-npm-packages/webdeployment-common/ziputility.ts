@@ -146,7 +146,10 @@ export async function archiveFolder(folderPath, targetPath, zipName) {
  */
 export async function getArchivedEntries(archivedPackage: string)  {
     var deferred = Q.defer();
-    const zip = new StreamZip.async({file: archivedPackage});
+    const zip = new StreamZip.async({
+        file: archivedPackage,
+        skipEntryNameValidation: true
+    });
     zip.entries().then(entries => {
         var packageConmponent = {
             'entries': Object.keys(entries)
