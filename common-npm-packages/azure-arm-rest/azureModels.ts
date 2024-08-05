@@ -305,6 +305,15 @@ export interface AKSClusterAccessProfile extends AzureBaseObject {
     properties: AKSClusterAccessProfileProperties
 }
 
+export interface AKSCredentialResult {
+    name: string;
+    value: string;
+}
+
+export interface AKSCredentialResults extends AzureBaseObject {
+    kubeconfigs: Array<AKSCredentialResult>
+}
+
 export interface IThresholdRuleConditionDataSource {
 	"odata.type": string;
 	resourceUri: string;
