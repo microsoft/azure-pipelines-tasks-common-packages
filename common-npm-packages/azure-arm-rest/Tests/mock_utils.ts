@@ -702,13 +702,13 @@ export function mockKuduServiceTests() {
     get('/api/deployments/latest?deployer=VSTS_ZIP_DEPLOY').reply(200, {id: "ZIP_DEPLOY_FAILED_ID", status: 3, deployer: "VSTS_ZIP_DEPLOY", author: "VSTS USER"});
 }
 
-export function mockAzureARMResourcesTests() {
+export function mockAzureAksServiceTests() {
     nock('https://management.azure.com', {
         reqheaders: {
             "authorization": "Bearer DUMMY_ACCESS_TOKEN",
             "content-type": "application/json; charset=utf-8"
         }
-    }).get("/subscriptions/MOCK_SUBSCRIPTION_ID/resources?$filter=resourceType%20EQ%20%27Microsoft.Web%2Fsites%27%20AND%20name%20EQ%20%27g%C3%B6m-mig-fr%C3%A5n-omv%C3%A4rlden%27&api-version=2016-07-01")
+    }).get("/subscriptions/MOCK_SUBSCRIPTION_ID/resources?&api-version=2016-07-01")
     .reply(200, {
         value: [{ 
             id: "subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/microsoft.web/sites/göm-mig-från-omvär", 
@@ -718,4 +718,48 @@ export function mockAzureARMResourcesTests() {
             properties: {}
         }]
      }).persist();
+
+     
+}
+
+export function mockAzureARMResourcesTests() {
+    nock('https://management.azure.com', {
+        reqheaders: {
+            "authorization": "Bearer DUMMY_ACCESS_TOKEN",
+            "content-type": "application/json; charset=utf-8"
+        }
+    }).get("/subscriptions/MOCK_SUBSCRIPTION_ID/providers/Microsoft.ContainerService/managedClusters/MOCK_CLUSTER/listClusterUserCredential?api-version=2024-05-01")
+    .reply(200, {
+        kubeconfigs: [{ 
+            name: "clusterUser",
+            value: "base46kubeconfig"
+        }]
+     }).persist();
+
+     nock('https://management.azure.com', {
+        reqheaders: {
+            "authorization": "Bearer DUMMY_ACCESS_TOKEN",
+            "content-type": "application/json; charset=utf-8"
+        }
+    }).get("/subscriptions/MOCK_SUBSCRIPTION_ID/providers/Microsoft.ContainerService/managedClusters/MOCK_CLUSTER/listClusterAdminCredential?api-version=2024-05-01")
+    .reply(200, {
+        kubeconfigs: [{ 
+            name: "clusterAdmin",
+            value: "base46kubeconfig"
+        }]
+     }).persist();
+
+     nock('https://management.azure.com', {
+        reqheaders: {
+            "authorization": "Bearer DUMMY_ACCESS_TOKEN",
+            "content-type": "application/json; charset=utf-8"
+        }
+    }).get("/subscriptions/MOCK_SUBSCRIPTION_ID/providers/Microsoft.ContainerService/managedClusters/MOCK_CLUSTER/listClusterUserCredential?api-version=2024-05-01")
+    .reply(200, {
+        kubeconfigs: [{ 
+            name: "customUser",
+            value: "base46kubeconfig"
+        }]
+     }).persist();
+
 }
