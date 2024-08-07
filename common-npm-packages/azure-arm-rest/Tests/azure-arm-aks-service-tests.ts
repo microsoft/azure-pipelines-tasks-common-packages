@@ -1,7 +1,6 @@
 import { getMockEndpoint, nock, mockAzureAksServiceTests } from './mock_utils';
 import tl = require('azure-pipelines-task-lib');
 import { AzureAksService } from '../azure-arm-aks-service';
-import { assert } from 'console';
 
 var endpoint = getMockEndpoint();
 
@@ -12,7 +11,7 @@ export class AksServiceTests {
     public static async credentialsByClusterAdmin() {
         let aksService: AzureAksService = new AzureAksService(endpoint);
         try {
-            let result = await aksService.getClusterCredential("MOCK_RESOURCE_GROUP", "MOCK_CLUSTER", true);
+            let result = await aksService.getClusterCredential("MOCK_RESOURCE_GROUP_NAME", "MOCK_CLUSTER", true);
             console.log(`Aks Cluster Credential Found: ${result.name}`);
         }
         catch(error) {
@@ -24,7 +23,7 @@ export class AksServiceTests {
     public static async credentialsByClusterUser() {
         let aksService: AzureAksService = new AzureAksService(endpoint);
         try {
-            let result = await aksService.getClusterCredential("MOCK_RESOURCE_GROUP", "MOCK_CLUSTER", false);
+            let result = await aksService.getClusterCredential("MOCK_RESOURCE_GROUP_NAME", "MOCK_CLUSTER", false);
             console.log(`Aks Cluster Credential Found: ${result.name}`);
         }
         catch(error) {
@@ -36,7 +35,7 @@ export class AksServiceTests {
     public static async credentialsByCustomClusterUser() {
         let aksService: AzureAksService = new AzureAksService(endpoint);
         try {
-            let result = await aksService.getClusterCredential("MOCK_RESOURCE_GROUP", "MOCK_CLUSTER", false, 'customUser');
+            let result = await aksService.getClusterCredential("MOCK_RESOURCE_GROUP_NAME", "MOCK_CLUSTER", false, 'customUser');
             console.log(`Aks Cluster Credential Found: ${result.name}`);
         }
         catch(error) {
@@ -46,6 +45,10 @@ export class AksServiceTests {
     }
 }
 
-AksServiceTests.credentialsByClusterAdmin();
-AksServiceTests.credentialsByClusterUser();
-AksServiceTests.credentialsByCustomClusterUser();
+async function RUNTESTS() {
+    await AksServiceTests.credentialsByClusterAdmin();
+    await AksServiceTests.credentialsByClusterUser();
+    await AksServiceTests.credentialsByCustomClusterUser();
+}
+
+RUNTESTS();
