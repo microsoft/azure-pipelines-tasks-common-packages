@@ -8,7 +8,7 @@
   "loc.messages.CredProvider_Error_InvalidServiceConnection_ApiKey": "The service connection for '%s' is not valid. ApiKey service connections are not supported in this task. Instead, use -ApiKey (NuGet) or --api-key (dotnet) when invoking the tool itself. See the task documentation for more details.",
   "loc.messages.CredProvider_InstallingNetCoreTo": "Installing the Azure Artifacts Credential Provider (.NET Core) to '%s'. This credential provider is compatible with dotnet SDK 2.1.400 or later.",
   "loc.messages.CredProvider_InstallingNetFxTo": "Installing the Azure Artifacts Credential Provider (.NET Framework) to '%s'. This credential provider is compatible with nuget.exe 4.8.0.5385 or later, and MSBuild 15.8.166.59604 or later.",
-  "loc.messages.CredProvider_Error_ServiceConnectionExists": "An existing service connection already exists for the endpoint '%s'.",
+  "loc.messages.CredProvider_Error_ServiceConnectionExists": "An existing service connection already exists for the endpoint '%s'. Skipping new configuration.",
   "loc.messages.ErrorInSettingUpSubscription": "Error in setting up subscription",
   "loc.messages.Error_FederatedTokenAquisitionFailed": "Failed to aquire federated token.",
   "loc.messages.Error_GetFeedTenantIdFailed": "Failed to find tenantId for feedUrl. %s",
