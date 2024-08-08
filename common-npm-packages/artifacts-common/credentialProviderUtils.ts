@@ -164,32 +164,42 @@ export async function configureCredProviderForSameOrganizationFeeds(protocol: Pr
 export function configureCredProviderForServiceConnectionFeeds(serviceConnections: ServiceConnection[]) {
     var configuredEndpoints = tl.getVariable(CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR);
     const existingCredentialsArray = configuredEndpoints ? JSON.parse(configuredEndpoints)['endpointCredentials'] : [];
+    var credentialContainer;
 
-    if (serviceConnections && serviceConnections.length) {
-        console.log(tl.loc('CredProvider_SettingUpForServiceConnections'));
-        // Ideally we'd also show the service connection name, but the agent doesn't expose it :-(
-        serviceConnections.map(authInfo => `${authInfo.packageSource.uri}`).forEach(serviceConnectionUri => console.log('  ' + serviceConnectionUri));
-        console.log();
-
-        var credentialContainer;
-        if (existingCredentialsArray.length > 0) {
-            // Verify that any new service connections are not already in the existing credentials
-            for (const serviceConnection of serviceConnections) {
-                const matchedCredential = existingCredentialsArray.find(cred => cred['endpoint'] === serviceConnection.packageSource.uri);
-                if (matchedCredential) {
-                    throw Error(tl.loc('CredProvider_Error_ServiceConnectionExists', matchedCredential['endpoint']));
-                }
-
-                var mergedCredentials = existingCredentialsArray.concat(JSON.parse(buildExternalFeedEndpointsJson(serviceConnections))['endpointCredentials'])
-                credentialContainer = JSON.stringify({'endpointCredentials': mergedCredentials});
-            }
-        }
-        else {
-            credentialContainer = buildExternalFeedEndpointsJson(serviceConnections);
-        }
-
-        tl.setVariable(CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR, credentialContainer, false /* while this contains secrets, we need the environment variable to be set */);
+    // no-op if no service connections are provided 
+    if (!serviceConnections || serviceConnections.length === 0) {
+        return;
     }
+
+    console.log(tl.loc('CredProvider_SettingUpForServiceConnections'));
+    // Ideally we'd also show the service connection name, but the agent doesn't expose it :-(
+    serviceConnections.map(authInfo => `${authInfo.packageSource.uri}`).forEach(serviceConnectionUri => console.log('  ' + serviceConnectionUri));
+    console.log();
+
+    if (existingCredentialsArray.length > 0) {
+        var newCredentials: ServiceConnection[] = [];
+
+        for (const serviceConnection of serviceConnections) {
+            // if this is a repeat, don't add it
+            if (existingCredentialsArray.find(cred => cred['endpoint'] === serviceConnection.packageSource.uri)) {
+                tl.warning(tl.loc('CredProvider_Error_ServiceConnectionExists', serviceConnection.packageSource.uri));
+                continue;
+            }
+            newCredentials.push(serviceConnection);
+        }
+
+        if (newCredentials.length === 0) {
+            return;
+        }
+
+        var mergedCredentials = existingCredentialsArray.concat(JSON.parse(buildExternalFeedEndpointsJson(newCredentials))['endpointCredentials']);
+        credentialContainer = JSON.stringify({'endpointCredentials': mergedCredentials});    
+    }
+    else {
+        credentialContainer = buildExternalFeedEndpointsJson(serviceConnections);
+    }
+
+    tl.setVariable(CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR, credentialContainer, false /* while this contains secrets, we need the environment variable to be set */);
 }
 
 /**
