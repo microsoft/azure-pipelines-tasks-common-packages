@@ -180,8 +180,11 @@ export function configureCredProviderForServiceConnectionFeeds(serviceConnection
         var newCredentials: ServiceConnection[] = [];
 
         for (const serviceConnection of serviceConnections) {
-            // if this is a repeat, don't add it
-            if (existingCredentialsArray.find(cred => cred['endpoint'] === serviceConnection.packageSource.uri)) {
+            // If endpoint is a repeat or has already been added, warn and skip
+            if (
+                existingCredentialsArray.find(cred => cred['endpoint'] == serviceConnection.packageSource.uri) ||
+                newCredentials.find(cred => cred.packageSource.uri == serviceConnection.packageSource.uri)
+            ) {
                 tl.warning(tl.loc('CredProvider_Error_ServiceConnectionExists', serviceConnection.packageSource.uri));
                 continue;
             }
