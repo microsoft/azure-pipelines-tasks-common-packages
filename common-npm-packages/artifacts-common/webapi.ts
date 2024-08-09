@@ -10,7 +10,8 @@ export function getWebApiWithProxy(serviceUri: string, accessToken: string, opti
     const defaultOptions: IRequestOptions = {
         proxy: tl.getHttpProxyConfiguration(serviceUri),
         allowRetries: true,
-        maxRetries: 5
+        maxRetries: 5,
+        keepAlive: true
     };
 
     return new api.WebApi(serviceUri, credentialHandler, {...defaultOptions, ...options});
