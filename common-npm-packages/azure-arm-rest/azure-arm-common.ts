@@ -366,11 +366,16 @@ export class ApplicationTokenCredentials {
                 // same for MSAL
                 let webRequest = new webClient.WebRequest();
                 webRequest.method = "GET";
-                let apiVersion = "2018-02-01";
-                webRequest.uri = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=" + apiVersion + "&resource=" + resourceId;
+                const useMsi2019 = process.env.IDENTITY_ENDPOINT && process.env.IDENTITY_HEADER;
+                const apiVersion = useMsi2019 ? "2019-08-01" : "2018-02-01";
+                const tokenEndpoint = useMsi2019 ? process.env.IDENTITY_ENDPOINT : "http://169.254.169.254/metadata/identity/oauth2/token";
+                webRequest.uri = `${tokenEndpoint}?api-version=${apiVersion}&resource=${resourceId}`;                
                 webRequest.headers = {
                     "Metadata": true
-                };
+                };                
+                if (useMsi2019) {
+                    webRequest.headers["X-Identity-Header"] = process.env.IDENTITY_HEADER;
+                }
 
                 webClient.sendRequest(webRequest).then(
                     (response: webClient.WebResponse) => {
