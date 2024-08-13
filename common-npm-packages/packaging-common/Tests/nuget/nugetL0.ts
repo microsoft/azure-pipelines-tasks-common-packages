@@ -50,6 +50,10 @@ export function nugetcommon() {
             warnOnReplace: false,
             warnOnUnregistered: false
         });
+        let mockTask = {
+            setResourcePath: (path) => {}
+        };
+        mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
     });
 
     afterEach(() => {
