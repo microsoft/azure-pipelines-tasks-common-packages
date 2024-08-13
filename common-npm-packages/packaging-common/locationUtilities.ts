@@ -1,10 +1,11 @@
 import * as vsts from 'azure-devops-node-api';
+import path = require("path");
 import * as interfaces from 'azure-devops-node-api/interfaces/common/VSSInterfaces';
 import * as tl from 'azure-pipelines-task-lib/task';
 import { IRequestOptions } from 'azure-devops-node-api/interfaces/common/VsoBaseInterfaces';
-
 import * as provenance from "./provenance";
-import { logError, LogType } from './util';
+
+tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
 export enum ProtocolType {
     NuGet,
@@ -117,7 +118,7 @@ export function getSystemAccessToken(): string {
     tl.debug('Getting credentials for local feeds');
     const auth = tl.getEndpointAuthorization('SYSTEMVSSCONNECTION', false);
     if (auth.scheme === 'OAuth') {
-        // tl.debug(tl.loc("Info_GotAndMaskAuth")); // commenting it out as loc bug not resolved yet.
+        tl.debug(tl.loc("Info_GotAndMaskAuth"));
         tl.setSecret(auth.parameters['AccessToken']);
         return auth.parameters['AccessToken'];
     } else {
