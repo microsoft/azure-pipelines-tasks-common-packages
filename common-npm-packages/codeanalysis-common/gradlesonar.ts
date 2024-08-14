@@ -41,5 +41,4 @@ function getSonarQubeGradlePluginVersion(): string {
     return sqGradlePluginVersionChoice === 'specify' && sqGradlePluginVersion  
         ? sqGradlePluginVersion  
         : defaultPluginVersion;
-    return pluginVersion;
 }
