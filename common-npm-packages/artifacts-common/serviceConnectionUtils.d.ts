@@ -39,11 +39,19 @@ export declare class PrivateKeyServiceConnection extends ServiceConnection {
     additionalData: IAdditionalData;
     constructor(packageSource: IExternalPackageSource, privateKey: string, passphrase: string, additionalData?: IAdditionalData);
 }
+export declare class EntraServiceConnection extends ServiceConnection {
+    packageSource: IExternalPackageSource;
+    entraConnectionName: string;
+    token: string;
+    additionalData: IAdditionalData;
+    constructor(packageSource: IExternalPackageSource, entraConnectionName: string, additionalData?: IAdditionalData);
+}
 export declare enum ServiceConnectionAuthType {
     Token = 0,
     UsernamePassword = 1,
     ApiKey = 2,
     PrivateKey = 3,
+    Entra = 4
 }
 /**
  * Parses service connections / service endpoints from a task input into strongly typed objects containing the URI and credentials.

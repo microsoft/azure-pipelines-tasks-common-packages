@@ -11,7 +11,7 @@ import * as toollib from "azure-pipelines-tool-lib/tool";
 export function getArtifactToolLocation(dirName: string): string {
     let toolPath: string = path.join(dirName, "ArtifactTool.exe");
     if (tl.osType() !== "Windows_NT"){
-        toolPath = path.join(dirName, "Artifacttool");
+        toolPath = path.join(dirName, "artifacttool");
     }
     return toolPath;
 }
