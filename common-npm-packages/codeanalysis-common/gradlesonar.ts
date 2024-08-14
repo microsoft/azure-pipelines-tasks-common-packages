@@ -34,12 +34,12 @@ export function applyEnabledSonarQubeArguments(gradleRun: trm.ToolRunner | any):
 }
 
 function getSonarQubeGradlePluginVersion(): string {
-    let pluginVersion = '2.6.1';
-    if(tl.getInput('sqGradlePluginVersionChoice') === 'specify') {
-        let userSpecifiedVersion = tl.getInput('sqGradlePluginVersion');
-        if (userSpecifiedVersion) {
-            pluginVersion = userSpecifiedVersion.trim();
-        }
-    }
+    const defaultPluginVersion = '2.6.1';  
+    const sqGradlePluginVersionChoice = tl.getInput('sqGradlePluginVersionChoice');  
+    const sqGradlePluginVersion = tl.getInput('sqGradlePluginVersion').trim();  
+
+    return sqGradlePluginVersionChoice === 'specify' && sqGradlePluginVersion  
+        ? sqGradlePluginVersion  
+        : defaultPluginVersion;
     return pluginVersion;
 }
