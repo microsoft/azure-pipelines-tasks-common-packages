@@ -186,7 +186,6 @@ export function configureCredProviderForServiceConnectionFeeds(serviceConnection
                 newCredentials.find(cred => cred.packageSource.uri == serviceConnection.packageSource.uri)
             ) {
                 tl.warning(tl.loc('CredProvider_Error_ServiceConnectionExists', serviceConnection.packageSource.uri));
-                continue;
             }
             newCredentials.push(serviceConnection);
         }
