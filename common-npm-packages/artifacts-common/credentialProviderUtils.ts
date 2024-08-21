@@ -162,40 +162,27 @@ export async function configureCredProviderForSameOrganizationFeeds(protocol: Pr
  * using VSS_NUGET_EXTERNAL_FEED_ENDPOINTS to do so.
  */
 export function configureCredProviderForServiceConnectionFeeds(serviceConnections: ServiceConnection[]) {
-    var configuredEndpoints = tl.getVariable(CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR);
-    const existingCredentialsArray = configuredEndpoints ? JSON.parse(configuredEndpoints)['endpointCredentials'] : [];
-    var credentialContainer;
-
     // no-op if no service connections are provided 
     if (!serviceConnections || serviceConnections.length === 0) {
         return;
     }
-
+    
     console.log(tl.loc('CredProvider_SettingUpForServiceConnections'));
+    const configuredEndpoints = tl.getVariable(CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR);
+    const existingCredentialsArray = configuredEndpoints ? JSON.parse(configuredEndpoints)['endpointCredentials'] : [];
+    var credentialContainer: string;
+
     // Ideally we'd also show the service connection name, but the agent doesn't expose it :-(
     serviceConnections.map(authInfo => `${authInfo.packageSource.uri}`).forEach(serviceConnectionUri => console.log('  ' + serviceConnectionUri));
     console.log();
 
+    // remove any existing credentials that will be overwritten by the new service connections
+    existingCredentialsArray.filter((cred: { [x: string]: string; }) => !serviceConnections.some(connection => connection.packageSource.uri === cred['endpoint']));
+
+    // After removing any credentials being overwritten by the new service connections, concat
     if (existingCredentialsArray.length > 0) {
-        var newCredentials: ServiceConnection[] = [];
-
-        for (const serviceConnection of serviceConnections) {
-            // If endpoint is a repeat or has already been added, warn and skip
-            if (
-                existingCredentialsArray.find(cred => cred['endpoint'] == serviceConnection.packageSource.uri) ||
-                newCredentials.find(cred => cred.packageSource.uri == serviceConnection.packageSource.uri)
-            ) {
-                tl.warning(tl.loc('CredProvider_Error_ServiceConnectionExists', serviceConnection.packageSource.uri));
-            }
-            newCredentials.push(serviceConnection);
-        }
-
-        if (newCredentials.length === 0) {
-            return;
-        }
-
-        var mergedCredentials = existingCredentialsArray.concat(JSON.parse(buildExternalFeedEndpointsJson(newCredentials))['endpointCredentials']);
-        credentialContainer = JSON.stringify({'endpointCredentials': mergedCredentials});    
+        var mergedCredentials = existingCredentialsArray.concat(JSON.parse(buildExternalFeedEndpointsJson(serviceConnections))['endpointCredentials']);
+        credentialContainer = JSON.stringify({'endpointCredentials': mergedCredentials});
     }
     else {
         credentialContainer = buildExternalFeedEndpointsJson(serviceConnections);
