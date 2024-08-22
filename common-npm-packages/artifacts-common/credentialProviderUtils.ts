@@ -161,34 +161,34 @@ export async function configureCredProviderForSameOrganizationFeeds(protocol: Pr
  * Configure the credential provider to provide credentials for service connections,
  * using VSS_NUGET_EXTERNAL_FEED_ENDPOINTS to do so.
  */
-export function configureCredProviderForServiceConnectionFeeds(serviceConnections: ServiceConnection[]) {
+export function configureCredProviderForServiceConnectionFeeds(serviceConnections: ServiceConnection[]){
     // no-op if no service connections are provided 
     if (!serviceConnections || serviceConnections.length === 0) {
         return;
     }
     
     console.log(tl.loc('CredProvider_SettingUpForServiceConnections'));
-    const configuredEndpoints = tl.getVariable(CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR);
-    const existingCredentialsArray = configuredEndpoints ? JSON.parse(configuredEndpoints)['endpointCredentials'] : [];
-    var credentialContainer: string;
 
     // Ideally we'd also show the service connection name, but the agent doesn't expose it :-(
     serviceConnections.map(authInfo => `${authInfo.packageSource.uri}`).forEach(serviceConnectionUri => console.log('  ' + serviceConnectionUri));
     console.log();
 
-    // remove any existing credentials that will be overwritten by the new service connections
-    existingCredentialsArray.filter((cred: { [x: string]: string; }) => !serviceConnections.some(connection => connection.packageSource.uri === cred['endpoint']));
+    var newConnections = buildExternalFeedEndpoints(serviceConnections);
+    var map = new Map(newConnections.map(item => [item.endpoint, item]));
+    const configuredEndpoints = tl.getVariable(CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR);
+    
+    const existingCredentialsArray = configuredEndpoints ? JSON.parse(configuredEndpoints)['endpointCredentials'] as EndpointCredentials[] : [];
+    existingCredentialsArray.forEach(cred => {
+        if(!map.has(cred.endpoint)){
+            map.set(cred.endpoint, cred);
+        }
+    });
 
-    // After removing any credentials being overwritten by the new service connections, concat
-    if (existingCredentialsArray.length > 0) {
-        var mergedCredentials = existingCredentialsArray.concat(JSON.parse(buildExternalFeedEndpointsJson(serviceConnections))['endpointCredentials']);
-        credentialContainer = JSON.stringify({'endpointCredentials': mergedCredentials});
-    }
-    else {
-        credentialContainer = buildExternalFeedEndpointsJson(serviceConnections);
-    }
+    const endpointCredentialsContainer: EndpointCredentialsContainer = {
+        endpointCredentials: [...map.values()]
+    };
 
-    tl.setVariable(CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR, credentialContainer, false /* while this contains secrets, we need the environment variable to be set */);
+    tl.setVariable(CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR, JSON.stringify(endpointCredentialsContainer), false /* while this contains secrets, we need the environment variable to be set */);
 }
 
 /**
@@ -198,19 +198,27 @@ export function configureCredProviderForServiceConnectionFeeds(serviceConnection
  *  but fails hard on ApiKey based service connections instead of silently continuing.
  */
 export function buildExternalFeedEndpointsJson(serviceConnections: ServiceConnection[]): string {
-    const endpointCredentialsContainer: EndpointCredentialsContainer = {
-        endpointCredentials: [] as EndpointCredentials[]
-    };
-
+    
     if (!serviceConnections || !serviceConnections.length) {
         return null;
     }
+
+    const endpointCredentialsContainer: EndpointCredentialsContainer = {
+        endpointCredentials: buildExternalFeedEndpoints(serviceConnections)
+    };
+
+    return JSON.stringify(endpointCredentialsContainer);
+}
+
+function buildExternalFeedEndpoints(serviceConnections: ServiceConnection[]) : EndpointCredentials[]
+{
+    var endpointCredentials: EndpointCredentials[] = [];
 
     serviceConnections.forEach((serviceConnection: ServiceConnection) => {
         switch (serviceConnection.authType) {
             case (ServiceConnectionAuthType.UsernamePassword):
                 const usernamePasswordAuthInfo = serviceConnection as UsernamePasswordServiceConnection;
-                endpointCredentialsContainer.endpointCredentials.push({
+                endpointCredentials.push({
                     endpoint: serviceConnection.packageSource.uri,
                     username: usernamePasswordAuthInfo.username,
                     password: usernamePasswordAuthInfo.password     
@@ -219,7 +227,7 @@ export function buildExternalFeedEndpointsJson(serviceConnections: ServiceConnec
                 break;
             case (ServiceConnectionAuthType.Token):
                 const tokenAuthInfo = serviceConnection as TokenServiceConnection;
-                endpointCredentialsContainer.endpointCredentials.push({
+                endpointCredentials.push({
                     endpoint: serviceConnection.packageSource.uri,
                     /* No username provided */
                     password: tokenAuthInfo.token
@@ -228,7 +236,7 @@ export function buildExternalFeedEndpointsJson(serviceConnections: ServiceConnec
                 break;
             case(ServiceConnectionAuthType.Entra):
                 const EntraAuthInfo = serviceConnection as EntraServiceConnection;
-                endpointCredentialsContainer.endpointCredentials.push({
+                endpointCredentials.push({
                     endpoint: serviceConnection.packageSource.uri,
                     password: EntraAuthInfo.token
                 } as EndpointCredentials);
@@ -243,5 +251,5 @@ export function buildExternalFeedEndpointsJson(serviceConnections: ServiceConnec
         }
     });
 
-    return JSON.stringify(endpointCredentialsContainer);
+    return endpointCredentials;
 }
