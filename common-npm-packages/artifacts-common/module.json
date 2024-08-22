@@ -10,6 +10,7 @@
         "CredProvider_InstallingNetCoreTo_NuGetAuthenticateV0": "Installing the Azure Artifacts Credential Provider (.NET Core) to '%s'. This credential provider is compatible with dotnet SDK 2.1 or later.",
         "CredProvider_InstallingNetCoreTo_NuGetAuthenticateV1": "Installing the Azure Artifacts Credential Provider (.NET Core) to '%s'. This credential provider is compatible with .NET SDK 6 or later.",
         "CredProvider_InstallingNetFxTo": "Installing the Azure Artifacts Credential Provider (.NET Framework) to '%s'. This credential provider is compatible with nuget.exe 4.8.0.5385 or later, and MSBuild 15.8.166.59604 or later.",
+        "CredProvider_Error_ServiceConnectionExists": "An existing service connection already exists for the endpoint '%s'. Overwriting existing authentication.",
         "CredProvider_SettingUpForOrgFeeds": "Setting up the credential provider to use the identity '%s' for feeds in your organization/collection starting with:",
         "CredProvider_SettingUpForServiceConnections": "Setting up the credential provider for these service connections:",
         "ErrorInSettingUpSubscription": "Error in setting up subscription",

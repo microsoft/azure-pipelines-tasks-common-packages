@@ -181,6 +181,8 @@ export function configureCredProviderForServiceConnectionFeeds(serviceConnection
     existingCredentialsArray.forEach(cred => {
         if(!map.has(cred.endpoint)){
             map.set(cred.endpoint, cred);
+        } else {
+            tl.warning(tl.loc('CredProvider_Error_ServiceConnectionExists', cred.endpoint));
         }
     });
 
