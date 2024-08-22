@@ -4,7 +4,7 @@ import * as path from 'path';
 
 export function KuduServiceTests() {
     it('azure-arm-app-service-kudu Kudu', (done: Mocha.Done) => {
-        this.timeout(60000);
+        this.timeout(20000);
         let tp = path.join(__dirname, 'azure-arm-app-service-kudu-tests.js');
         let tr : ttm.MockTestRunner = new ttm.MockTestRunner(tp);
         let passed: boolean = true;
