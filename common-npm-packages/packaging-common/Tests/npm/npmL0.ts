@@ -94,7 +94,8 @@ export function npmcommon() {
                 'http://registry.com/npmRegistry/',
                 'http://example.pkgs.visualstudio.com/npmRegistry/',
                 'http://localTFSServer/npmRegistry/'
-            ]
+            ],
+            setResourcePath:(path)=>{}
         };
         mocker.registerMock('./npmrcparser', mockParser);
         let mockTask = {
@@ -108,7 +109,8 @@ export function npmcommon() {
             },
             loc: (key: string) => {
                 // no-op
-            }
+            },
+            setResourcePath:(path)=>{}
         };
         mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
 
@@ -149,7 +151,8 @@ export function npmcommon() {
             },
             setSecret: () => {
                 return;
-            }
+            },
+            setResourcePath: (path) => {}
         };
         mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
 
@@ -203,7 +206,8 @@ export function npmcommon() {
             getHttpProxyConfiguration: (endpoint) => {
                 return null;
             },
-            setSecret : msg => null
+            setSecret : msg => null,
+            setResourcePath: (path) => {}
         };
         mocker.registerMock('azure-pipelines-task-lib/task', mockTask);
 
@@ -250,7 +254,8 @@ export function npmcommon() {
             getEndpointAuthorization: (id, optional) => {
                 return { scheme: 'OAuth', parameters: { 'AccessToken': authToken } };
             },
-            setSecret : msg => null
+            setSecret : msg => null,
+            setResourcePath: (path) => {}
         };
         const mockParser = {
             GetRegistries: (npmrc: string) => [registry]
