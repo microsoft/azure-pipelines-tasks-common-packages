@@ -1,7 +1,7 @@
 import * as assert from "assert";
-import { buildExternalFeedEndpointsJson } from "../credentialProviderUtils";
-import { ServiceConnectionAuthType, TokenServiceConnection, ApiKeyServiceConnection, UsernamePasswordServiceConnection } from "../serviceConnectionUtils";
-
+import { buildExternalFeedEndpointsJson, configureCredProviderForServiceConnectionFeeds } from "../credentialProviderUtils";
+import { ServiceConnectionAuthType, TokenServiceConnection, ApiKeyServiceConnection, UsernamePasswordServiceConnection, ServiceConnection, EntraServiceConnection } from "../serviceConnectionUtils";
+const CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR = "VSS_NUGET_EXTERNAL_FEED_ENDPOINTS";
 export function credentialProviderUtilsTests() {
 
     beforeEach(() => {
@@ -106,6 +106,104 @@ export function credentialProviderUtilsTests() {
             ])
         });
 
+        done();
+    });
+
+
+    it("configureCredProviderForServiceConnectionFeeds single new service connection", (done: Mocha.Done) => {
+        process.env[CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR] = "";
+        var serviceConnections = [
+            new EntraServiceConnection({uri:"https://contoso.com/nuget/v3/index.json"}, "password", "sometoken")
+        ]
+
+        configureCredProviderForServiceConnectionFeeds(serviceConnections);
+        var json = process.env[CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR]
+        
+        assert.equal(json, "{\"endpointCredentials\":[{\"endpoint\":\"https://contoso.com/nuget/v3/index.json\",\"password\":\"sometoken\"}]}");
+        done();
+    });
+
+    it("configureCredProviderForServiceConnectionFeeds multiple unique service connection endpoints", (done: Mocha.Done) => {
+        process.env[CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR] = "";
+        var serviceConnections = [
+            new EntraServiceConnection({uri:"https://contoso.com/nuget/v3/index.json"}, "password", "sometoken"),
+            new EntraServiceConnection({uri:"https://contoso.com/nuget123/v3/index.json"}, "password", "sometoken"),
+        ]
+
+        configureCredProviderForServiceConnectionFeeds(serviceConnections);
+        var json = process.env[CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR]
+        
+        assert.equal(json, "{\"endpointCredentials\":[{\"endpoint\":\"https://contoso.com/nuget/v3/index.json\",\"password\":\"sometoken\"},{\"endpoint\":\"https://contoso.com/nuget123/v3/index.json\",\"password\":\"sometoken\"}]}");
+        done();
+    });
+
+    it("configureCredProviderForServiceConnectionFeeds multiple unique service connection types", (done: Mocha.Done) => {
+        process.env[CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR] = "";
+        var serviceConnections = [
+            new EntraServiceConnection({uri:"https://contoso.com/nuget/v3/index.json"}, "password", "sometoken"),
+            new UsernamePasswordServiceConnection({uri:"https://contoso.com/nuget123/v3/index.json"}, "password", "sometoken"),
+        ]
+
+        configureCredProviderForServiceConnectionFeeds(serviceConnections);
+        var json = process.env[CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR]
+        
+        assert.equal(json, "{\"endpointCredentials\":[{\"endpoint\":\"https://contoso.com/nuget/v3/index.json\",\"password\":\"sometoken\"},{\"endpoint\":\"https://contoso.com/nuget123/v3/index.json\",\"username\":\"password\",\"password\":\"sometoken\"}]}");
+        done();
+    });
+
+    it("configureCredProviderForServiceConnectionFeeds multiple unique service connection types", (done: Mocha.Done) => {
+        process.env[CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR] = "";
+        var serviceConnections = [
+            new EntraServiceConnection({uri:"https://contoso.com/nuget/v3/index.json"}, "password", "sometoken"),
+            new UsernamePasswordServiceConnection({uri:"https://contoso.com/nuget123/v3/index.json"}, "password", "sometoken"),
+        ]
+
+        configureCredProviderForServiceConnectionFeeds(serviceConnections);
+        var json = process.env[CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR]
+        
+        assert.equal(json, "{\"endpointCredentials\":[{\"endpoint\":\"https://contoso.com/nuget/v3/index.json\",\"password\":\"sometoken\"},{\"endpoint\":\"https://contoso.com/nuget123/v3/index.json\",\"username\":\"password\",\"password\":\"sometoken\"}]}");
+        done();
+    });
+
+    it("configureCredProviderForServiceConnectionFeeds with existing credentials, different endpoint", (done: Mocha.Done) => {
+        process.env[CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR] = "{\"endpointCredentials\":[{\"endpoint\":\"https://contoso.com/nuget123/v3/index.json\",\"username\":\"password\",\"password\":\"sometoken\"}]}"
+
+        var serviceConnections = [
+            new EntraServiceConnection({uri:"https://contoso.com/nuget/v3/index.json"}, "password", "sometoken")
+        ]
+
+        configureCredProviderForServiceConnectionFeeds(serviceConnections);
+        var json = process.env[CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR]
+        
+        assert.equal(json, "{\"endpointCredentials\":[{\"endpoint\":\"https://contoso.com/nuget/v3/index.json\",\"password\":\"sometoken\"},{\"endpoint\":\"https://contoso.com/nuget123/v3/index.json\",\"username\":\"password\",\"password\":\"sometoken\"}]}");
+        done();
+    });
+
+    it("configureCredProviderForServiceConnectionFeeds with existing credentials for the same endpoint", (done: Mocha.Done) => {
+        process.env[CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR] = "{\"endpointCredentials\":[{\"endpoint\":\"https://contoso.com/nuget/v3/index.json\",\"password\":\"SomeOtherToken\"}]}"
+
+        var serviceConnections = [
+            new EntraServiceConnection({uri:"https://contoso.com/nuget/v3/index.json"}, "password", "sometoken"),
+        ]
+
+        configureCredProviderForServiceConnectionFeeds(serviceConnections);
+        var json = process.env[CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR]
+        
+        assert.equal(json, "{\"endpointCredentials\":[{\"endpoint\":\"https://contoso.com/nuget/v3/index.json\",\"password\":\"sometoken\"}]}");
+        done();
+    });
+
+    it("configureCredProviderForServiceConnectionFeeds with existing credentials for the same endpoint different types", (done: Mocha.Done) => {
+        process.env[CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR] = "{\"endpointCredentials\":[{\"endpoint\":\"https://contoso.com/nuget/v3/index.json\",\"username\":\"password\",\"password\":\"SomeOtherToken\"}]}"
+
+        var serviceConnections = [
+            new EntraServiceConnection({uri:"https://contoso.com/nuget/v3/index.json"}, "password", "sometoken"),
+        ]
+
+        configureCredProviderForServiceConnectionFeeds(serviceConnections);
+        var json = process.env[CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR]
+        
+        assert.equal(json, "{\"endpointCredentials\":[{\"endpoint\":\"https://contoso.com/nuget/v3/index.json\",\"password\":\"sometoken\"}]}");
         done();
     });
 }
