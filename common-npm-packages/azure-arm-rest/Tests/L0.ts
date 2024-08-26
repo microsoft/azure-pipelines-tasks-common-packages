@@ -5,14 +5,11 @@ import { ApplicationInsightsTests as ApplicationInsightsTestsWebTests } from "./
 import { ResourcesTests } from "./L0-azure-arm-resource-tests";
 const DEFAULT_TIMEOUT = 1000 * 20;
 
-describe("AzureARMRestTests", () => {
-    beforeEach(function () {
-        this.timeout(DEFAULT_TIMEOUT);
-    });
-    describe("KuduService tests", KuduServiceTests)
-    describe("AzureAppServiceMock tests", AzureAppServiceMockTests)
-    describe("ApplicationInsights tests", ApplicationInsightsTests)
-    describe("ApplicationInsightsTests", ApplicationInsightsTests)
-    describe("ApplicationInsightsWeb tests", ApplicationInsightsTestsWebTests )
-    describe("Resources Tests", ResourcesTests)
+describe("AzureARMRestTests", function () {
+    describe("KuduService tests", KuduServiceTests.bind(KuduServiceTests, DEFAULT_TIMEOUT));
+    describe("AzureAppServiceMock tests", AzureAppServiceMockTests.bind(AzureAppServiceMockTests, DEFAULT_TIMEOUT));
+    describe("ApplicationInsights tests", ApplicationInsightsTests.bind(ApplicationInsightsTests, DEFAULT_TIMEOUT))
+    describe("ApplicationInsightsTests", ApplicationInsightsTests.bind(ApplicationInsightsTests, DEFAULT_TIMEOUT))
+    describe("ApplicationInsightsWeb tests", ApplicationInsightsTestsWebTests.bind(ApplicationInsightsTestsWebTests, DEFAULT_TIMEOUT))
+    describe("Resources Tests", ResourcesTests.bind(ResourcesTests, DEFAULT_TIMEOUT));
 });
