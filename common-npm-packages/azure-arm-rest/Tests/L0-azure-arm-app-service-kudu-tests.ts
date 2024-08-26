@@ -2,8 +2,9 @@ import assert = require("assert");
 import * as ttm from 'azure-pipelines-task-lib/mock-test';
 import * as path from 'path';
 
-export function KuduServiceTests() {
-    it('azure-arm-app-service-kudu Kudu', (done: Mocha.Done) => {
+export function KuduServiceTests(defaultTimeout = 2000) {
+    it('azure-arm-app-service-kudu Kudu', function (done: Mocha.Done) {
+        this.timeout(defaultTimeout);
         let tp = path.join(__dirname, 'azure-arm-app-service-kudu-tests.js');
         let tr : ttm.MockTestRunner = new ttm.MockTestRunner(tp);
         let passed: boolean = true;
