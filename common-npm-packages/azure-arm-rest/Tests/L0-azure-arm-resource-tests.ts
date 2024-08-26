@@ -3,8 +3,9 @@ import * as ttm from 'azure-pipelines-task-lib/mock-test';
 import tl = require('azure-pipelines-task-lib');
 import * as path from 'path';
 
-export function ResourcesTests() {
-    it('azure-arm-resource Resources', (done: Mocha.Done) => {
+export function ResourcesTests(defaultTimeout = 2000) {
+    it('azure-arm-resource Resources', function (done: Mocha.Done) {
+        this.timeout(defaultTimeout);
         let tp = path.join(__dirname, 'azure-arm-resource-tests.js');
         let tr : ttm.MockTestRunner = new ttm.MockTestRunner(tp);
         let passed: boolean = true;
