@@ -3,8 +3,9 @@ import * as ttm from 'azure-pipelines-task-lib/mock-test';
 import tl = require('azure-pipelines-task-lib/task');
 import * as path from 'path';
 
-export function AzureAppServiceMockTests() {
-    it('azure-arm-app-service AzureAppService', (done: Mocha.Done) => {
+export function AzureAppServiceMockTests(defaultTimeout = 2000) {
+    it('azure-arm-app-service AzureAppService', function (done: Mocha.Done) {
+        this.timeout(defaultTimeout);
         let tp = path.join(__dirname, 'azure-arm-app-service-tests.js');
         let tr : ttm.MockTestRunner = new ttm.MockTestRunner(tp);
         let passed: boolean = true;
