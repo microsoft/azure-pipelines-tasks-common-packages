@@ -4,6 +4,7 @@ import * as path from 'path';
 
 export function KuduServiceTests(defaultTimeout = 2000) {
     it('azure-arm-app-service-kudu Kudu', function (done: Mocha.Done) {
+        process.env['SYSTEM_DEBUG'] = 'true';
         this.timeout(defaultTimeout);
         let tp = path.join(__dirname, 'azure-arm-app-service-kudu-tests.js');
         let tr : ttm.MockTestRunner = new ttm.MockTestRunner(tp);
