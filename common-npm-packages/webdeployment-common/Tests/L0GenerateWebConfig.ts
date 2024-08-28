@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import * as libMocker from "azure-pipelines-task-lib/lib-mocker";
+import * as mockery from "azure-pipelines-task-lib/lib-mocker";
 
 
 export function runGenerateWebCongigTests() {
