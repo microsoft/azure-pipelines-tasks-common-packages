@@ -13,6 +13,7 @@ export function ResourcesTests(defaultTimeout = 2000) {
         tr.runAsync()
         .then(() => {
             assert(tr.stdOutContained('ResourcesTests - getResources : 1'), "Should have printed: ResourcesTests - getResources : 1");
+            done();
         })
         .catch((error) => {
             passed = false;
@@ -20,9 +21,5 @@ export function ResourcesTests(defaultTimeout = 2000) {
             console.log(tr.stderr);
             done(error);
         });
-
-        if(passed) {
-            done();
-        }
     });
 }

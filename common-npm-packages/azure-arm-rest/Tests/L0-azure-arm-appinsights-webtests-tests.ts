@@ -17,6 +17,7 @@ export function ApplicationInsightsTests(defaultTimeout = 2000) {
             list(tr);
             console.log("\tvalidating create");
             create(tr);
+            done();
         })
         .catch((error) => {
             passed = false;
@@ -24,10 +25,6 @@ export function ApplicationInsightsTests(defaultTimeout = 2000) {
             console.log(tr.stderr);
             done(error);
         });
-
-        if(passed) {
-            done();
-        }
     });
 }
 

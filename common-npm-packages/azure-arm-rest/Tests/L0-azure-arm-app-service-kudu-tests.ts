@@ -47,6 +47,7 @@ export function KuduServiceTests(defaultTimeout = 2000) {
             zipDeploy(tr);
             console.log("\tvalidating deleteFile");
             deleteFile(tr);
+            done();
         })
         .catch((error) => {
             passed = false;
@@ -54,10 +55,6 @@ export function KuduServiceTests(defaultTimeout = 2000) {
             console.log(tr.stderr);
             done(error);
         });
-
-        if(passed) {
-            done();
-        }
     });
 }
 

@@ -47,6 +47,7 @@ export function AzureAppServiceMockTests(defaultTimeout = 2000) {
             getMetadata(tr);
             console.log("\tvalidating updateMetadata");
             updateMetadata(tr);
+            done();
         })
         .catch((error) => {
             passed = false;
@@ -54,10 +55,6 @@ export function AzureAppServiceMockTests(defaultTimeout = 2000) {
             console.log(tr.stderr);
             done(error);
         });
-
-        if(passed) {
-            done();
-        }
     });
 
 }
