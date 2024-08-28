@@ -8,8 +8,8 @@ export function KuduServiceTests(defaultTimeout = 2000) {
         let tp = path.join(__dirname, 'azure-arm-app-service-kudu-tests.js');
         let tr : ttm.MockTestRunner = new ttm.MockTestRunner(tp);
         let passed: boolean = true;
-        try {
-            tr.run();
+        tr.runAsync()
+        .then(() => {
             assert(tr.succeeded, "azure-arm-app-service-kudu-tests should have passed but failed.");
             console.log("\tvalidating updateDeployment");
             updateDeployment(tr);
@@ -47,13 +47,13 @@ export function KuduServiceTests(defaultTimeout = 2000) {
             zipDeploy(tr);
             console.log("\tvalidating deleteFile");
             deleteFile(tr);
-        }
-        catch(error) {
+        })
+        .catch((error) => {
             passed = false;
             console.log(tr.stdout);
             console.log(tr.stderr);
             done(error);
-        }
+        });
 
         if(passed) {
             done();

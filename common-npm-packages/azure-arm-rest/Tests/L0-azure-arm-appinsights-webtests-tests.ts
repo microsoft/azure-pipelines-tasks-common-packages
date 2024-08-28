@@ -9,20 +9,21 @@ export function ApplicationInsightsTests(defaultTimeout = 2000) {
         let tp = path.join(__dirname, 'azure-arm-appinsights-webtests-tests.js');
         let tr : ttm.MockTestRunner = new ttm.MockTestRunner(tp);
         let passed: boolean = true;
-        try {
-            tr.run();
+
+        tr.runAsync()
+        .then(() => {
             assert(tr.succeeded, "azure-arm-appinsights-tests should have passed but failed.");
             console.log("\tvalidating list");
             list(tr);
             console.log("\tvalidating create");
             create(tr);
-        }
-        catch(error) {
+        })
+        .catch((error) => {
             passed = false;
             console.log(tr.stdout);
             console.log(tr.stderr);
             done(error);
-        }
+        });
 
         if(passed) {
             done();
