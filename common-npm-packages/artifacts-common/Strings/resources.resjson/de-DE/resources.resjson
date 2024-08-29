@@ -8,12 +8,18 @@
   "loc.messages.CredProvider_Error_InvalidServiceConnection_ApiKey": "Die Dienstverbindung für „%s“ ist ungültig. ApiKey-Dienstverbindungen werden in diese Aufgabe nicht unterstützt. Verwenden Sie stattdessen -ApiKey (NuGet) oder --api-key (dotnet), wenn Sie das Tool selbst aufrufen. Weitere Informationen finden Sie in der Aufgabendokumentation.",
   "loc.messages.CredProvider_InstallingNetCoreTo": "Der Azure Artifacts-Anmeldeinformationsanbieter (.NET Core) wird in „%s“ installiert. Dieser Anmeldeinformationsanbieter ist mit .NET SDK 2.1.400 oder höher kompatibel.",
   "loc.messages.CredProvider_InstallingNetFxTo": "Der Azure Artifacts-Anmeldeinformationsanbieter (.NET Framework) wird in „%s“ installiert. Dieser Anmeldeinformationsanbieter ist mit nuget.exe 4.8.0.5385 oder höher und MSBuild 15.8.166.59604 oder höher kompatibel.",
+  "loc.messages.CredProvider_Error_ServiceConnectionExists": "An existing service connection already exists for the endpoint '%s'. Overwriting existing authentication.",
   "loc.messages.ErrorInSettingUpSubscription": "Fehler beim Festlegen des Abonnements.",
+  "loc.messages.Error_FederatedTokenAquisitionFailed": "Failed to aquire federated token.",
+  "loc.messages.Error_GetFeedTenantIdFailed": "Failed to find tenantId for feedUrl. %s",
   "loc.messages.LoginFailed": "Fehler bei der Azure-Anmeldung.",
   "loc.messages.MSILoginFailed": "Fehler bei der Azure-Anmeldung mit einer verwalteten Dienstidentität.",
   "loc.messages.CredProvider_SettingUpForOrgFeeds": "Der Anmeldeinformationsanbieter wird zur Verwendung der Identität „%s“ für Feeds in Ihrer Organisation/Sammlung eingerichtet, die mit folgendem Präfix beginnen:",
   "loc.messages.CredProvider_SettingUpForServiceConnections": "Der Anmeldeinformationsanbieter für diese Dienstverbindungen wird eingerichtet:",
   "loc.messages.ServiceConnections_Error_FailedToParseServiceEndpoint_MissingParameter": "Fehler beim Parsen des Dienstendpunkts „%s“, weil der Parameter „%s“ fehlte.",
   "loc.messages.ServiceConnections_Error_FailedToParseServiceEndpoint_BadScheme": "Fehler beim Parsen des Dienstendpunkts „%s“, weil das Authentifizierungsschema „%s“ ungültig war.",
-  "loc.messages.SettingAzureCloud": "Aktive Cloud wird festgelegt auf: %s"
+  "loc.messages.ServiceConnections_Error_FailedToGetServiceConnectionAuth": "Unable to get federated credentials from service connection: %s.",
+  "loc.messages.SettingAzureCloud": "Aktive Cloud wird festgelegt auf: %s",
+  "loc.messages.Info_GotAndMaskAuth": "Got auth token, setting it as secret so it does not print in console log",
+  "loc.messages.Info_UsingTenantId": "Using tenant id: %s"
 }

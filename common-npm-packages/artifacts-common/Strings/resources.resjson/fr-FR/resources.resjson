@@ -8,12 +8,18 @@
   "loc.messages.CredProvider_Error_InvalidServiceConnection_ApiKey": "La connexion de service pour '%s' est non valide. Les connexions de service ApiKey ne sont pas prises en charge dans cette tâche. À la place, utilisez -ApiKey (NuGet) ou --api-key (dotnet) quand vous appelez l'outil lui-même. Pour plus d'informations, consultez la documentation relative à la tâche.",
   "loc.messages.CredProvider_InstallingNetCoreTo": "Installation du fournisseur d'informations d'identification Azure Artifacts (.NET Core) dans '%s'. Ce fournisseur d'informations d'identification est compatible avec le kit dotnet SDK 2.1.400 ou version ultérieure.",
   "loc.messages.CredProvider_InstallingNetFxTo": "Installation du fournisseur d’informations d’identification Azure Artifacts (.NET Framework) dans '%s'. Ce fournisseur d’informations d’identification est compatible avec nuget.exe 4.8.0.5385 ou version ultérieure, et MSBuild 15.8.166.59604 ou version ultérieure.",
+  "loc.messages.CredProvider_Error_ServiceConnectionExists": "An existing service connection already exists for the endpoint '%s'. Overwriting existing authentication.",
   "loc.messages.ErrorInSettingUpSubscription": "Erreur lors de la configuration de l'abonnement",
+  "loc.messages.Error_FederatedTokenAquisitionFailed": "Failed to aquire federated token.",
+  "loc.messages.Error_GetFeedTenantIdFailed": "Failed to find tenantId for feedUrl. %s",
   "loc.messages.LoginFailed": "La connexion Azure a échoué",
   "loc.messages.MSILoginFailed": "Échec de la connexion Azure à l'aide de l'identité du service géré",
   "loc.messages.CredProvider_SettingUpForOrgFeeds": "Configuration du fournisseur d’informations d’identification afin d’utiliser l’identité '%s' pour les flux de votre organisation/collection commençant par :",
   "loc.messages.CredProvider_SettingUpForServiceConnections": "Configuration du fournisseur d'informations d'identification pour les connexions de service suivantes :",
   "loc.messages.ServiceConnections_Error_FailedToParseServiceEndpoint_MissingParameter": "Nous n’avons pas pu analyser le point de terminaison de service ’%s’, car il manque le paramètre '%s'",
   "loc.messages.ServiceConnections_Error_FailedToParseServiceEndpoint_BadScheme": "Nous n’avons pas pu analyser le point de terminaison de service ’%s’, car le schéma d’authentification '%s' est non valide",
-  "loc.messages.SettingAzureCloud": "Définition du cloud actif sur : %s"
+  "loc.messages.ServiceConnections_Error_FailedToGetServiceConnectionAuth": "Unable to get federated credentials from service connection: %s.",
+  "loc.messages.SettingAzureCloud": "Définition du cloud actif sur : %s",
+  "loc.messages.Info_GotAndMaskAuth": "Got auth token, setting it as secret so it does not print in console log",
+  "loc.messages.Info_UsingTenantId": "Using tenant id: %s"
 }
