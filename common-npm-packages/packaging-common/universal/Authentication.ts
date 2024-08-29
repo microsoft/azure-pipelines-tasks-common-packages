@@ -29,6 +29,7 @@ export class TokenExternalAuthInfo extends ExternalAuthInfo
         public token: string)
     {
         super(packageSource, ExternalAuthType.Token);
+        tl.setSecret(token);
     }
 }
 

@@ -90,7 +90,7 @@ function getSystemAccessToken(): string {
     return '';
 }
 
-async function getFederatedToken(connectedServiceName: string): Promise<string> {
+export async function getFederatedToken(connectedServiceName: string): Promise<string> {
     const projectId: string = tl.getVariable("System.TeamProjectId");
     const hub: string = tl.getVariable("System.HostType");
     const planId: string = tl.getVariable('System.PlanId');

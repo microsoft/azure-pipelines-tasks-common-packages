@@ -9,7 +9,7 @@ class MockedTask {
     private _proxyPassword: string;
     private _proxyBypass: string;
 
-    public debug(message: string) {}
+    public debug(message: string) { }
     public loc(message: string): string { return message; }
 
     public setMockedValues(proxyUrl?: string, proxyUsername?: string, proxyPassword?: string, proxyBypass?: string) {
@@ -34,6 +34,10 @@ class MockedTask {
             default:
                 return undefined;
         }
+    }
+
+    public setResourcePath(path) {
+        return;
     }
 }
 
@@ -96,7 +100,7 @@ export function nugetcommon() {
         done();
     });
 
-    it("getSourcesFromTempNuGetConfig sets isInternal", (done: MochaDone) => {    
+    it("getSourcesFromTempNuGetConfig sets isInternal", (done: MochaDone) => {
         let packageSourceBase: IPackageSourceBase[];
         mocker.registerMock("./Utility", {
             getSourcesFromNuGetConfig: () => packageSourceBase
@@ -127,7 +131,7 @@ export function nugetcommon() {
         done();
     });
 
-    it("getSourcesFromNuGetConfig gets sources", (done: MochaDone) => {    
+    it("getSourcesFromNuGetConfig gets sources", (done: MochaDone) => {
         let configFile: string;
         mocker.registerMock("fs", {
             readFileSync: () => configFile
@@ -162,7 +166,7 @@ export function nugetcommon() {
         done();
     });
 
-    it("getSourcesFromNuGetConfig recognises package.config files", (done: MochaDone) => {    
+    it("getSourcesFromNuGetConfig recognises package.config files", (done: MochaDone) => {
         let configFile: string;
         mocker.registerMock("fs", {
             readFileSync: () => configFile
@@ -182,7 +186,7 @@ export function nugetcommon() {
         done();
     });
 
-    it("getSourcesFromNuGetConfig recognises invalid nuget.config files", (done: MochaDone) => {    
+    it("getSourcesFromNuGetConfig recognises invalid nuget.config files", (done: MochaDone) => {
         let configFile: string;
         mocker.registerMock("fs", {
             readFileSync: () => configFile
