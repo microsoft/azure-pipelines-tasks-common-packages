@@ -7,7 +7,6 @@ import { IHeaders, IRequestOptions } from 'typed-rest-client/Interfaces';
 import { NormalizeRegistry } from './npmrcparser';
 import * as util from '../util';
 import * as locationUtil from '../locationUtilities';
-import { reject } from 'q';
 
 export interface INpmRegistry {
     url: string;
@@ -108,15 +107,16 @@ export class NpmRegistry implements INpmRegistry {
         headers['X-TFS-FedAuthRedirect'] = 'Suppress';
 
         const endpointClient = new HttpClient(tl.getVariable('AZURE_HTTP_USER_AGENT'), null, requestOptions);
+
         try {
             endpointClient.get(endpointUri, headers).then((res) => {
                 if (res.message.statusCode) {
                     // node requires the data callback to be defined even if we don't use it, otherwise
                     // we'll get timeouts and disconnect errors in different versions of node.
-                    res.message.on('data', () => { });
                     res.message.on('end', () => { });
+                    res.message.on('data', () => { });
                     res.message.on('error', err => {
-                        reject(new Error('Failed to hit endpoint'))
+                        throw new Error(err);
                     });
 
                     return res.message.rawHeaders !== null && res.message.rawHeaders.some(t => t.toLowerCase().indexOf('x-tfs') >= 0 || t.toLowerCase().indexOf('x-vss') >= 0);
