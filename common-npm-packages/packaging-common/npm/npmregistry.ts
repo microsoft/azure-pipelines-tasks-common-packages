@@ -116,12 +116,12 @@ export class NpmRegistry implements INpmRegistry {
                     res.message.on('end', () => { });
                     res.message.on('data', () => { });
                     res.message.on('error', err => {
-                        throw new Error(err);
+                        throw err;
                     });
 
                     return res.message.rawHeaders !== null && res.message.rawHeaders.some(t => t.toLowerCase().indexOf('x-tfs') >= 0 || t.toLowerCase().indexOf('x-vss') >= 0);
                 } else {
-                    throw new Error('No status code received from the response');
+                    throw new Error('No status code received from the endpoints');
                 }
             });
         } catch (error) {
