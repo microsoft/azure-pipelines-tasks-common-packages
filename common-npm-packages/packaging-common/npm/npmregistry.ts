@@ -107,41 +107,16 @@ export class NpmRegistry implements INpmRegistry {
         headers['X-TFS-FedAuthRedirect'] = 'Suppress';
 
         const endpointClient = new HttpClient(tl.getVariable('AZURE_HTTP_USER_AGENT'), null, requestOptions);
-        
-        return new Promise<boolean>((resolve, reject) => {
-            try {
-                endpointClient.get(endpointUri, headers).then((res) => {
-                    if (res.message.statusCode) {
-                        // Define event listener functions
-                        const onData = () => {};
-                        const onEnd = () => {
-                            cleanup();
-                            resolve (res.message.rawHeaders !== null && res.message.rawHeaders.some(t => t.toLowerCase().indexOf('x-tfs') >= 0 || t.toLowerCase().indexOf('x-vss') >= 0));
-                        };
-                        const onError = (err) => {
-                            cleanup();
-                            throw(err);
-                        };
-
-                        const cleanup = () => {
-                            res.message.removeListener('data', onData);
-                            res.message.removeListener('end', onEnd);
-                            res.message.removeListener('error', onError);
-                        };
-
-                        // Attach event listeners
-                        res.message.on('data', onData);
-                        res.message.once('end', onEnd);
-                        res.message.once('error', onError);
-                    } else {
-                        throw new Error('No status code received from the response');
-                    }
-                });
-            } catch (error) {
-                tl.debug(error);
-                reject(false);
-            }
-        });
+        try {
+            const resp = await endpointClient.get(endpointUri, headers);
+            
+            // Read the body to prevent leaking connections
+            resp.readBody();
+            return resp.message.rawHeaders !== null && resp.message.rawHeaders.some( t => t.toLowerCase().indexOf('x-tfs') >= 0 || t.toLowerCase().indexOf('x-vss') >= 0 );
+        } catch (error) {
+            tl.debug(error);
+            return false;
+        }
     }
 
     public static async FromFeedId(packagingUri: string, feedId: string, project: string, authOnly?: boolean, useSession?: boolean): Promise<NpmRegistry> {
