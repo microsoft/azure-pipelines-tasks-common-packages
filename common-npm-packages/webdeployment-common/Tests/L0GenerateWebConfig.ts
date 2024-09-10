@@ -7,7 +7,7 @@ export function runGenerateWebCongigTests() {
 
     before(() => {
 
-        libMocker.registerMock('azure-pipelines-task-lib/task', {
+        mockery.registerMock('azure-pipelines-task-lib/task', {
             writeFile: function (_file: string, data: string, _options: any): void {
                 console.log("web.config contents: " + data);
                 webConfigContents = data;
@@ -17,15 +17,15 @@ export function runGenerateWebCongigTests() {
             }
         });
 
-        libMocker.registerMock('fs', {
+        mockery.registerMock('fs', {
             readFileSync: function (_path: string, _format: string): string {
                 return "{NodeStartFile};{Handler}"
             }
         });
 
-        libMocker.registerAllowable("../webconfigutil");
+        mockery.registerAllowable("../webconfigutil");
 
-        libMocker.enable({
+        mockery.enable({
             useCleanCache: true,
             warnOnReplace: false,
             warnOnUnregistered: false
@@ -33,7 +33,7 @@ export function runGenerateWebCongigTests() {
     });
 
     after(() => {
-        libMocker.disable();
+        mockery.disable();
     });
 
     beforeEach(() => { 
