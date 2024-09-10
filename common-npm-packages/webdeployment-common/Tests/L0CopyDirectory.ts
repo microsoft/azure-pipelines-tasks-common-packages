@@ -56,12 +56,12 @@ export function runCopyDirectoryTests(): void {
                 console.log(message);
             }
         };
-        libMocker.registerMock('azure-pipelines-task-lib/task', taskLibMock);
-        libMocker.registerMock('./packageUtility', {});
-        libMocker.registerMock('./ziputility', {});
-        libMocker.registerAllowable('../utility');
+        mockery.registerMock('azure-pipelines-task-lib/task', taskLibMock);
+        mockery.registerMock('./packageUtility', {});
+        mockery.registerMock('./ziputility', {});
+        mockery.registerAllowable('../utility');
 
-        libMocker.enable({
+        mockery.enable({
             useCleanCache: true,
             warnOnReplace: false,
             warnOnUnregistered: false
@@ -69,7 +69,7 @@ export function runCopyDirectoryTests(): void {
     });
 
     after(() => {
-        libMocker.disable();
+        mockery.disable();
     });
 
     beforeEach(() => {
