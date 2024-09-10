@@ -301,13 +301,17 @@ function parseHistoryForLayers(input: string) {
 
 function parseHistoryForV1Name(topHistoryLayer: string): string {
     let v1Name = "";
-    const layerIdString = "layerId:sha256:";
-    const indexOfLayerId = topHistoryLayer.indexOf(layerIdString);
+    let layerIdString = "layerId:sha256:";
+    let indexOfLayerId = topHistoryLayer.indexOf(layerIdString);
+    if (indexOfLayerId < 0) {
+        layerIdString = "layerId:"
+        indexOfLayerId = topHistoryLayer.indexOf(layerIdString);
+    }
     if (indexOfLayerId >= 0) {
         v1Name = topHistoryLayer.substring(indexOfLayerId + layerIdString.length);
     }
 
-    return v1Name;
+    return v1Name && v1Name !== "<missing>" ? v1Name : "";
 }
 
 export async function getHistory(connection: ContainerConnection, image: string): Promise<string> {

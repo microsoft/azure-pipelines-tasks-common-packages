@@ -166,6 +166,9 @@ export function npmcommon() {
                                 message: {
                                     statusCode: 401,
                                     rawHeaders: ['x-tfs-foo: abc', 'x-content-type-options: nosniff', 'X-Powered-By: ASP.NET']
+                                },
+                                readBody: function() {
+                                    return Promise.resolve('mocked body content');
                                 }
                             });
                         }
@@ -221,6 +224,9 @@ export function npmcommon() {
                                 message: {
                                     statusCode: 401,
                                     rawHeaders: ['x-content-type-options: nosniff', 'X-Powered-By: ASP.NET']
+                                },
+                                readBody: function() {
+                                    return Promise.resolve('mocked body content');
                                 }
                             });
                         }

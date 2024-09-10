@@ -13,7 +13,7 @@
   "loc.messages.Info_UsingToolPath": "Verwendeter Toolpfad: %s",
   "loc.messages.Info_UsingVersion": "Verwendete Version: %s",
   "loc.messages.Info_BasicCredRestriction": "Mit dieser Aufgabe wird NuGet jetzt so konfiguriert, dass diese Anmeldeinformationen nur\nmithilfe des Standardschemas gesendet werden. Die meisten Benutzer sind von dieser Änderung nicht betroffen. Wenn es sich um eine\nWindows-Domänenanmeldeinformationen handelt und diese seit Kurzem nicht mehr funktionieren, legen Sie die\nBuildvariable \"%s\" auf den Wert \"%s\" (ohne Anführungszeichen) fest.",
-  "loc.messages.Info_GotAndMaskAuth": "Authentifizierungstoken erhalten, setze es als geheim, damit es nicht im Konsolenprotokoll angezeigt wird",
+  "loc.messages.Info_GotAndMaskAuth": "Das Authentifizierungstoken wurde abgerufen. Es wird als Geheimnis festgelegt, sodass es nicht im Konsolenprotokoll gedruckt wird.",
   "loc.messages.NGCommon_AddingSources": "Anmeldeinformationen in der Datei \"NuGet.config\" werden festgelegt.",
   "loc.messages.NGCommon_AreaNotFoundInSps": "Der Bereich \"%s\" [%s] wurde nicht gefunden. Der Dienst, der diesen Bereich enthält, ist ggf. in Ihrer Region nicht verfügbar.",
   "loc.messages.NGCommon_DetectedNuGetExtensionsPath": "Ein Ladeprogrammpfad für NuGet-Extensions (Umgebungsvariable \"NUGET_EXTENSIONS_PATH\") wurde erkannt: %s",
