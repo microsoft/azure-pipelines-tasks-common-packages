@@ -9,6 +9,7 @@ import store = require('artifact-engine/Store');
 import tl = require('azure-pipelines-task-lib/task');
 import { BlobItem, BlobServiceClient, ContainerClient, StorageSharedKeyCredential } from '@azure/storage-blob';
 import abortController = require("@azure/abort-controller");
+import { ClientSecretCredential } from '@azure/identity';
 
 const resourcePath: string = path.join(__dirname, 'module.json');
 tl.setResourcePath(resourcePath);
@@ -24,11 +25,24 @@ export class AzureBlobProvider implements models.IArtifactProvider {
     private _containerClient: ContainerClient;
     private _blobServiceClient: BlobServiceClient;
     private _addPrefixToDownloadedItems: boolean = false;
+    private _clientSecretCredential: ClientSecretCredential;
 
-    constructor(storageAccount: string, containerName: string, accessKey: string, prefixFolderPath?: string, host?: string, addPrefixToDownloadedItems?: boolean) {
+    constructor(storageAccount: string, containerName: string, accessKey: string, prefixFolderPath?: string, host?: string, addPrefixToDownloadedItems?: boolean);
+    constructor(storageAccount: string, containerName: string, clientSecretCredential: ClientSecretCredential, prefixFolderPath?: string, host?: string, addPrefixToDownloadedItems?: boolean);
+
+    // Generic Constructor
+    constructor(storageAccount: string, containerName: string, credential: string | ClientSecretCredential, prefixFolderPath?: string, host?: string, addPrefixToDownloadedItems?: boolean) {
         this._storageAccount = storageAccount;
-        this._accessKey = accessKey;
         this._containerName = containerName;
+
+        if (typeof credential === 'string') {
+            this._accessKey = credential;
+            const sharedKeyCredential = new StorageSharedKeyCredential(this._storageAccount, this._accessKey);
+            this._blobServiceClient = new BlobServiceClient(this.getStorageUrl(storageAccount, host), sharedKeyCredential);
+        } else {
+            this._clientSecretCredential = credential;
+            this._blobServiceClient = new BlobServiceClient(this.getStorageUrl(storageAccount, host), this._clientSecretCredential);
+        }
 
         if (!!prefixFolderPath) {
             this._prefixFolderPath = prefixFolderPath.endsWith("/") ? prefixFolderPath : prefixFolderPath + "/";
@@ -36,13 +50,18 @@ export class AzureBlobProvider implements models.IArtifactProvider {
             this._prefixFolderPath = "";
         }
 
-        const sharedKeyCredential = new StorageSharedKeyCredential(this._storageAccount, this._accessKey);
-
-        this._blobServiceClient = new BlobServiceClient(this.getStorageUrl(this._storageAccount), sharedKeyCredential);
-
         this._containerClient = this._blobServiceClient.getContainerClient(this._containerName);
-
         this._addPrefixToDownloadedItems = !!addPrefixToDownloadedItems;
+    }
+    
+    // Factory method for Storage Access Key
+    public static createWithStorageAccountAccessKey(storageAccount: string, containerName: string, accessKey: string, prefixFolderPath?: string, host?: string, addPrefixToDownloadedItems?: boolean): AzureBlobProvider {
+        return new AzureBlobProvider(storageAccount, containerName, accessKey, prefixFolderPath, host, addPrefixToDownloadedItems);
+    }
+
+    // Factory method for ClientSecretCredential
+    public static createWithClientSecretCredential(storageAccount: string, containerName: string, clientSecretCredential: ClientSecretCredential, prefixFolderPath?: string, host?: string, addPrefixToDownloadedItems?: boolean): AzureBlobProvider {
+        return new AzureBlobProvider(storageAccount, containerName, clientSecretCredential, prefixFolderPath, host, addPrefixToDownloadedItems);
     }
 
     public async putArtifactItem(item: models.ArtifactItem, readStream: Readable): Promise<models.ArtifactItem> {
@@ -164,7 +183,7 @@ export class AzureBlobProvider implements models.IArtifactProvider {
         return artifactItems;
     }
 
-    private getStorageUrl(storageAccount: string): string {
-        return `https://${storageAccount}.blob.core.windows.net`;
+    private getStorageUrl(storageAccount: string, host?: string): string {
+        return host ? `https://${storageAccount}.${host}` : `https://${storageAccount}.blob.core.windows.net`;
     }
 }
