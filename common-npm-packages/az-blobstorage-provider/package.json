@@ -13,7 +13,7 @@
     },
     "homepage": "https://github.com/Microsoft/azure-pipelines-tasks#readme",
     "dependencies": {
-        "@azure/identity": "^3.1.2",
+        "@azure/identity": "^3.4.2",
         "@azure/storage-blob": "12.17.0",
         "artifact-engine": "^1.5.3",
         "azure-pipelines-task-lib": "^4.8.2",
