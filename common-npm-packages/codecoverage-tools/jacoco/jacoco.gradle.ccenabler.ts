@@ -5,6 +5,7 @@ import * as ccc from "../codecoverageconstants";
 import * as cc from "../codecoverageenabler";
 import * as Q from "q";
 import * as path from "path";
+import * as semver from "semver";
 
 tl.setResourcePath(path.join(path.dirname(__dirname), 'module.json'), true);
 
@@ -25,21 +26,14 @@ export class JacocoGradleCodeCoverageEnabler extends cc.JacocoCodeCoverageEnable
         let reportDir = ccProps["reportdirectory"];
         let gradle5xOrHigher = ccProps["gradle5xOrHigher"] && ccProps["gradle5xOrHigher"] === "true";
         let codeCoveragePluginData = null;
-        let useJacocoGradleTemplateV2 = ccProps["useJacocoGradleTemplateV2"] && ccProps["useJacocoGradleTemplateV2"] === "true";
+        let gradleVersion = ccProps["gradleVersion"];
 
         let filter = _this.extractFilters(classFilter);
         let jacocoExclude = _this.applyFilterPattern(filter.excludeFilter);
         let jacocoInclude = _this.applyFilterPattern(filter.includeFilter);
 
-        if (isMultiModule) {
-            codeCoveragePluginData = ccc.jacocoGradleMultiModuleEnable(jacocoExclude.join(","), jacocoInclude.join(","), classFileDirs, reportDir, gradle5xOrHigher);
-        } else {
-            if (useJacocoGradleTemplateV2) {
-                codeCoveragePluginData = ccc.jacocoGradleSingleModuleEnableV2(jacocoExclude.join(","), jacocoInclude.join(","), classFileDirs, reportDir, gradle5xOrHigher);
-            } else {
-                codeCoveragePluginData = ccc.jacocoGradleSingleModuleEnable(jacocoExclude.join(","), jacocoInclude.join(","), classFileDirs, reportDir, gradle5xOrHigher);
-            }
-        }
+        const jacocoGradleEnabler = this.getJacocoGradleEnablerFunction(isMultiModule, gradleVersion);
+        codeCoveragePluginData = jacocoGradleEnabler(jacocoExclude.join(","), jacocoInclude.join(","), classFileDirs, reportDir, gradle5xOrHigher);
 
         try {
             tl.debug("Code Coverage data will be appeneded to build file: " + this.buildFile);
@@ -65,5 +59,33 @@ export class JacocoGradleCodeCoverageEnabler extends cc.JacocoCodeCoverageEnable
 
         tl.debug("Applying the filter pattern: " + filter + " op: " + ccfilter);
         return ccfilter;
+    }
+
+    /*
+    * Returns the appropriate Jacoco Gradle enabler function based on the project's Gradle version and module type.
+    * @param isMultiModule - A boolean indicating whether the project is a multi-module project.
+    * @param gradleVersion - The version of gradle used by the project.
+    * @returns The appropriate Jacoco Gradle enabler function.
+    * @throws An error if the Gradle version or module type is not supported.
+    */
+    private getJacocoGradleEnablerFunction(isMultiModule: boolean, gradleVersion: string) {
+        const modeleType = isMultiModule ? "multi" : "single";
+        const resolvedGradleVersion = semver.valid(semver.coerce(gradleVersion));
+        const templateVersion = resolvedGradleVersion && semver.gte(resolvedGradleVersion, '6.1.0') ? "V2" : "V1";
+
+        tl.debug(`Gradle module type: ${modeleType}, Gradle version: ${gradleVersion}, ResolvedGradleVersion: ${resolvedGradleVersion} Template version: ${templateVersion}`)
+
+        switch (modeleType + "-" + templateVersion) {
+            case "multi-V1":
+                return ccc.jacocoGradleMultiModuleEnable;
+            case "multi-V2":
+                return ccc.jacocoGradleMultiModuleEnableV2;
+            case "single-V1":
+                return ccc.jacocoGradleSingleModuleEnable;
+            case "single-V2":
+                return ccc.jacocoGradleSingleModuleEnableV2;
+            default:
+                throw new Error("Invalid template version or module type.");
+        }
     }
 }
