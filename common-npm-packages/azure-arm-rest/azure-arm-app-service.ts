@@ -890,11 +890,16 @@ export class AzureAppService {
             var httpRequest = new webClient.WebRequest();
             httpRequest.method = 'GET';
             var slotUrl: string = !!this._slot ? `/slots/${this._slot}` : '';
+
+            const isAzureStack = this._client.getCredentials().isAzureStackEnvironment;
+            const apiVersion = isAzureStack ? '2020-12-01' : '2022-03-01';
+
             httpRequest.uri = this._client.getRequestUri(`//subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/${slotUrl}/basicPublishingCredentialsPolicies/scm`,
             {
                 '{resourceGroupName}': this._resourceGroup,
                 '{name}': this._name,
-            }, null, '2022-03-01');
+            }, null, apiVersion);
+
             let requestOptions = new webClient.WebRequestOptions();
             requestOptions.retryCount = 1;
 
