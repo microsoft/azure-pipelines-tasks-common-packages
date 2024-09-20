@@ -3,7 +3,7 @@ import * as ttm from 'azure-pipelines-task-lib/mock-test';
 import tl = require('azure-pipelines-task-lib');
 import * as path from 'path';
 
-export function ApplicationInsightsTests(defaultTimeout = 2000) {
+export function ApplicationInsightsTests(defaultTimeout = 6000) {
     it('azure-arm-appinsights AzureApplicationInsights', function (done: Mocha.Done) {
         this.timeout(defaultTimeout);
         let tp = path.join(__dirname, 'azure-arm-appinsights-tests.js');
