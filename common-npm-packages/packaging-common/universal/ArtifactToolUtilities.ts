@@ -8,10 +8,12 @@ import * as pkgLocationUtils from "../locationUtilities";
 import * as tl from "azure-pipelines-task-lib";
 import * as toollib from "azure-pipelines-tool-lib/tool";
 
+const toolName = "artifacttool";
+
 export function getArtifactToolLocation(dirName: string): string {
     let toolPath: string = path.join(dirName, "ArtifactTool.exe");
     if (tl.osType() !== "Windows_NT"){
-        toolPath = path.join(dirName, "artifacttool");
+        toolPath = path.join(dirName, toolName);
     }
     return toolPath;
 }
@@ -92,7 +94,7 @@ export async function getArtifactToolFromService(serviceUri: string, accessToken
         tl.debug("Downloaded zipped artifact tool to " + zippedToolsDir);
         const unzippedToolsDir = await extractZip(zippedToolsDir);
 
-        artifactToolPath = await toollib.cacheDir(unzippedToolsDir, "ArtifactTool", artifactToolUri.result['version']);
+        artifactToolPath = await toollib.cacheDir(unzippedToolsDir, toolName, artifactToolUri.result['version']);
     } else {
         tl.debug(tl.loc("Info_ResolvedToolFromCache", artifactToolPath));
     }
