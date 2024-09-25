@@ -726,7 +726,7 @@ export function mockAzureAksServiceTests() {
             "authorization": "Bearer DUMMY_ACCESS_TOKEN",
             "content-type": "application/json; charset=utf-8"
         }
-    }).get("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.ContainerService/managedClusters/MOCK_CLUSTER/listClusterUserCredential?api-version=2024-05-01")
+    }).post("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.ContainerService/managedClusters/MOCK_CLUSTER/listClusterUserCredential?api-version=2024-05-01")
     .reply(200, {
         kubeconfigs: [{ 
             name: "clusterUser",
@@ -743,7 +743,7 @@ export function mockAzureAksServiceTests() {
             "authorization": "Bearer DUMMY_ACCESS_TOKEN",
             "content-type": "application/json; charset=utf-8"
         }
-    }).get("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.ContainerService/managedClusters/MOCK_CLUSTER/listClusterAdminCredential?api-version=2024-05-01")
+    }).post("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.ContainerService/managedClusters/MOCK_CLUSTER/listClusterAdminCredential?api-version=2024-05-01")
     .reply(200, {
         kubeconfigs: [{ 
             name: "clusterAdmin",
