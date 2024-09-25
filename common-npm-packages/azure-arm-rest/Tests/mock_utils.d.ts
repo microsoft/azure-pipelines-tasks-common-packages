@@ -6,3 +6,4 @@ export declare function mockAzureApplicationInsightsTests(): void;
 export declare function mockAzureAppServiceTests(): void;
 export declare function mockKuduServiceTests(): void;
 export declare function mockAzureARMResourcesTests(): void;
+export declare function mockAzureAksServiceTests(): void;

@@ -719,3 +719,36 @@ export function mockAzureARMResourcesTests() {
         }]
      }).persist();
 }
+
+export function mockAzureAksServiceTests() {
+    nock('https://management.azure.com', {
+        reqheaders: {
+            "authorization": "Bearer DUMMY_ACCESS_TOKEN",
+            "content-type": "application/json; charset=utf-8"
+        }
+    }).post("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.ContainerService/managedClusters/MOCK_CLUSTER/listClusterUserCredential?api-version=2024-05-01")
+    .reply(200, {
+        kubeconfigs: [{ 
+            name: "clusterUser",
+            value: "base46kubeconfig"
+        },
+        { 
+            name: "customUser",
+            value: "base46kubeconfig"
+        }]
+     }).persist();
+
+     nock('https://management.azure.com', {
+        reqheaders: {
+            "authorization": "Bearer DUMMY_ACCESS_TOKEN",
+            "content-type": "application/json; charset=utf-8"
+        }
+    }).post("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.ContainerService/managedClusters/MOCK_CLUSTER/listClusterAdminCredential?api-version=2024-05-01")
+    .reply(200, {
+        kubeconfigs: [{ 
+            name: "clusterAdmin",
+            value: "base46kubeconfig"
+        }]
+     }).persist();
+
+}
