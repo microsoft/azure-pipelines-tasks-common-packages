@@ -4,23 +4,8 @@ var fs = require('fs');
 import * as tl from "azure-pipelines-task-lib/task";
 
 import httpClient = require("typed-rest-client/HttpClient");
+import restInterfaces = require("typed-rest-client/Interfaces");
 import util = require("util");
-
-
-let proxyUrl: string = tl.getVariable("agent.proxyurl");
-var requestOptions: any = proxyUrl ? {
-    proxy: {
-        proxyUrl: proxyUrl,
-        proxyUsername: tl.getVariable("agent.proxyusername"),
-        proxyPassword: tl.getVariable("agent.proxypassword"),
-        proxyBypassHosts: tl.getVariable("agent.proxybypasslist") ? JSON.parse(tl.getVariable("agent.proxybypasslist")) : null
-    }
-} : {};
-
-let ignoreSslErrors: string = tl.getVariable("VSTS_ARM_REST_IGNORE_SSL_ERRORS");
-requestOptions.ignoreSslError = ignoreSslErrors && ignoreSslErrors.toLowerCase() == "true";
-
-var httpCallbackClient = new httpClient.HttpClient(tl.getVariable("AZURE_HTTP_USER_AGENT"), null, requestOptions);
 
 export class WebRequest {
     public method: string;
@@ -43,6 +28,13 @@ export class WebRequestOptions {
     public retryIntervalInSeconds: number;
     public retriableStatusCodes: number[];
     public retryRequestTimedout: boolean;
+    public httpGlobalAgentOptions?: IHttpGlobalAgentOptions;
+    public socketTimeout?: number;
+}
+
+export interface IHttpGlobalAgentOptions {
+    keepAlive?: boolean;
+    timeout?: number;
 }
 
 export async function sendRequest(request: WebRequest, options?: WebRequestOptions): Promise<WebResponse> {
@@ -52,9 +44,27 @@ export async function sendRequest(request: WebRequest, options?: WebRequestOptio
     let retriableErrorCodes = options && options.retriableErrorCodes ? options.retriableErrorCodes : ["ETIMEDOUT", "ECONNRESET", "ENOTFOUND", "ESOCKETTIMEDOUT", "ECONNREFUSED", "EHOSTUNREACH", "EPIPE", "EA_AGAIN"];
     let retriableStatusCodes = options && options.retriableStatusCodes ? options.retriableStatusCodes : [408, 409, 500, 502, 503, 504];
     let timeToWait: number = retryIntervalInSeconds;
+
+    let proxyUrl: string = tl.getVariable("agent.proxyurl");
+    const requestOptions: restInterfaces.IRequestOptions = proxyUrl ? {
+        proxy: {
+            proxyUrl: proxyUrl,
+            proxyUsername: tl.getVariable("agent.proxyusername"),
+            proxyPassword: tl.getVariable("agent.proxypassword"),
+            proxyBypassHosts: tl.getVariable("agent.proxybypasslist") ? JSON.parse(tl.getVariable("agent.proxybypasslist")) : null
+        }
+    } : {};
+
+    let ignoreSslErrors: string = tl.getVariable("VSTS_ARM_REST_IGNORE_SSL_ERRORS");
+    requestOptions.ignoreSslError = ignoreSslErrors && ignoreSslErrors.toLowerCase() == "true";
+    requestOptions.globalAgentOptions = options.httpGlobalAgentOptions;
+    requestOptions.socketTimeout = options.socketTimeout;
+    
+    const httpCallbackClient = new httpClient.HttpClient(tl.getVariable("AZURE_HTTP_USER_AGENT"), null, requestOptions);
+    
     while (true) {
         try {
-            let response: WebResponse = await sendRequestInternal(request);
+            let response: WebResponse = await sendRequestInternal(request, httpCallbackClient);
             if (retriableStatusCodes.indexOf(response.statusCode) != -1 && ++i < retryCount) {
                 tl.debug(util.format("Encountered a retriable status code: %s. Message: '%s'.", response.statusCode, response.statusMessage));
                 await sleepFor(timeToWait);
@@ -87,7 +97,7 @@ export function sleepFor(sleepDurationInSeconds): Promise<any> {
     });
 }
 
-async function sendRequestInternal(request: WebRequest): Promise<WebResponse> {
+async function sendRequestInternal(request: WebRequest, httpCallbackClient: httpClient.HttpClient): Promise<WebResponse> {
     tl.debug(util.format("[%s]%s", request.method, request.uri));
     var response: httpClient.HttpClientResponse = await httpCallbackClient.request(request.method, request.uri, request.body, request.headers);
     return await toWebResponse(response);
