@@ -4,6 +4,7 @@ import * as interfaces from 'azure-devops-node-api/interfaces/common/VSSInterfac
 import * as tl from 'azure-pipelines-task-lib/task';
 import { IRequestOptions } from 'azure-devops-node-api/interfaces/common/VsoBaseInterfaces';
 import * as provenance from "./provenance";
+import { RequestOptions } from './universal/RequestUtilities';
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
@@ -29,13 +30,17 @@ export interface PackagingLocation {
 }
 
 // Getting service urls from resource areas api
-export async function getServiceUriFromAreaId(serviceUri: string, accessToken: string, areaId: string): Promise<string> {
+export async function getServiceUriFromAreaId(
+    serviceUri: string, 
+    accessToken: string, 
+    areaId: string,
+    webApiOptions?: RequestOptions): Promise<string> {
     const serverType = tl.getVariable('System.ServerType');
     if (!serverType || serverType.toLowerCase() !== 'hosted') {
         return serviceUri;
     }
 
-    const webApi = getWebApiWithProxy(serviceUri, accessToken);
+    const webApi = getWebApiWithProxy(serviceUri, accessToken, webApiOptions);
     const locationApi = await webApi.getLocationsApi();
 
     tl.debug(`Getting URI for area ID ${areaId} from ${serviceUri}`);
@@ -70,7 +75,7 @@ export async function getBlobstoreUriFromBaseServiceUri(serviceUri: string, acce
  *  The second URI, if existent, will be Packaging's default access point
  *  The remaining URI's will be alternate Packaging's access points
  */
-export async function getPackagingUris(protocolType: ProtocolType): Promise<PackagingLocation> {
+export async function getPackagingUris(protocolType: ProtocolType, webApiOptions?: RequestOptions): Promise<PackagingLocation> {
     tl.debug('Getting Packaging service access points');
     const collectionUrl = tl.getVariable('System.TeamFoundationCollectionUri');
 
@@ -90,7 +95,7 @@ export async function getPackagingUris(protocolType: ProtocolType): Promise<Pack
     const serviceUri = await getServiceUriFromAreaId(collectionUrl, accessToken, areaId);
     tl.debug(`Found serviceUri: ${serviceUri}`);
 
-    const webApi = getWebApiWithProxy(serviceUri);
+    const webApi = getWebApiWithProxy(serviceUri, accessToken, webApiOptions);
     const locationApi = await webApi.getLocationsApi();
 
     tl.debug('Acquiring Packaging endpoints...');
@@ -140,7 +145,7 @@ function getAreaIdForProtocol(protocolType: ProtocolType): string {
     }
 }
 
-export function getWebApiWithProxy(serviceUri: string, accessToken?: string): vsts.WebApi {
+export function getWebApiWithProxy(serviceUri: string, accessToken?: string, webApiOptions?: RequestOptions): vsts.WebApi {
     if (!accessToken) {
         accessToken = getSystemAccessToken();
     }
@@ -149,7 +154,9 @@ export function getWebApiWithProxy(serviceUri: string, accessToken?: string): vs
     const options: IRequestOptions = {
         proxy: tl.getHttpProxyConfiguration(serviceUri),
         allowRetries: true,
-        maxRetries: 5
+        maxRetries: 5,
+        socketTimeout: webApiOptions.socketTimeout,
+        globalAgentOptions: webApiOptions.globalAgentOptions
     };
     const webApi = new vsts.WebApi(serviceUri, credentialHandler, options);
     tl.debug(`Created webApi client for ${serviceUri}; options: ${JSON.stringify(options)}`);
@@ -210,7 +217,8 @@ export async function getFeedRegistryUrl(
     feedId: string,
     project: string,
     accessToken?: string,
-    useSession?: boolean): Promise<string> {
+    useSession?: boolean,
+    webApiOptions?: RequestOptions): Promise<string> {
     let loc : RegistryLocation;
     switch (registryType) {
         case RegistryType.npm:
@@ -253,7 +261,7 @@ export async function getFeedRegistryUrl(
 
     tl.debug("Getting registry url from " + packagingUrl);
 
-    const vssConnection = getWebApiWithProxy(packagingUrl, accessToken);
+    const vssConnection = getWebApiWithProxy(packagingUrl, accessToken, webApiOptions);
 
     let sessionId = feedId;
     if (useSession) {

@@ -5,7 +5,7 @@ import * as path from "path";
 import * as tl from "azure-pipelines-task-lib";
 import * as toollib from "azure-pipelines-tool-lib/tool";
 import { IRequestOptions } from 'azure-devops-node-api/interfaces/common/VsoBaseInterfaces';
-
+import { RequestOptions } from './RequestUtilities';
 
 export function getClientToolLocation(dirName: string, toolName: string): string {
     let toolPath: string = path.join(dirName, toolName);
@@ -107,7 +107,11 @@ export async function extractZip(file: string, toolName: string): Promise<string
     return dest;
 }
 
-export async function getClientToolFromService(serviceUri: string, accessToken: string, toolName: string) {
+export async function getClientToolFromService(
+    serviceUri: string, 
+    accessToken: string, 
+    toolName: string, 
+    webApiOptions?: RequestOptions) {
 
     let osName = getSupportedOSType();
     let arch = getSupportedArchitecture();
@@ -121,7 +125,7 @@ export async function getClientToolFromService(serviceUri: string, accessToken: 
     const blobstoreAreaId = "187ec90d-dd1e-4ec6-8c57-937d979261e5";
     const ApiVersion = "5.0-preview";
 
-    const blobstoreConnection = getWebApiWithProxy(serviceUri, accessToken);
+    const blobstoreConnection = getWebApiWithProxy(serviceUri, accessToken, webApiOptions);
 
     const clientToolGetUrl = await blobstoreConnection.vsoClient.getVersioningData(ApiVersion, blobstoreAreaName, blobstoreAreaId, { toolName }, { osName, arch });
 
@@ -162,7 +166,7 @@ export function trimEnd(data: string, trimChar: string) {
     }
 }
 
-export function getWebApiWithProxy(serviceUri: string, accessToken?: string): vsts.WebApi {
+export function getWebApiWithProxy(serviceUri: string, accessToken?: string, webApiOptions?: RequestOptions): vsts.WebApi {
     if (!accessToken) {
         accessToken = getSystemAccessToken();
     }
@@ -171,27 +175,33 @@ export function getWebApiWithProxy(serviceUri: string, accessToken?: string): vs
     const options: IRequestOptions = {
         proxy: tl.getHttpProxyConfiguration(serviceUri),
         allowRetries: true,
-        maxRetries: 5
+        maxRetries: 5,
+        socketTimeout: webApiOptions.socketTimeout,
+        globalAgentOptions: webApiOptions.globalAgentOptions
     };
     const webApi = new vsts.WebApi(serviceUri, credentialHandler, options);
     tl.debug(`Created webApi client for ${serviceUri}; options: ${JSON.stringify(options)}`);
     return webApi;
 }
 
-export async function getBlobstoreUriFromBaseServiceUri(serviceUri: string, accesstoken: string): Promise<string> {
+export async function getBlobstoreUriFromBaseServiceUri(serviceUri: string, accesstoken: string, webApiOptions?: RequestOptions): Promise<string> {
     const blobAreaId = '5294ef93-12a1-4d13-8671-9d9d014072c8';
 
-    return getServiceUriFromAreaId(serviceUri, accesstoken, blobAreaId);
+    return getServiceUriFromAreaId(serviceUri, accesstoken, blobAreaId, webApiOptions);
 }
 
 // Getting service urls from resource areas api
-export async function getServiceUriFromAreaId(serviceUri: string, accessToken: string, areaId: string): Promise<string> {
+export async function getServiceUriFromAreaId(
+    serviceUri: string, 
+    accessToken: string, 
+    areaId: string, 
+    webApiOptions?: RequestOptions): Promise<string> {
     const serverType = tl.getVariable('System.ServerType');
     if (!serverType || serverType.toLowerCase() !== 'hosted') {
         return serviceUri;
     }
 
-    const webApi = getWebApiWithProxy(serviceUri, accessToken);
+    const webApi = getWebApiWithProxy(serviceUri, accessToken, webApiOptions);
     const locationApi = await webApi.getLocationsApi();
 
     tl.debug(`Getting URI for area ID ${areaId} from ${serviceUri}`);
