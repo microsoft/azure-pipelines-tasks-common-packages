@@ -20,13 +20,13 @@ export class BlobService {
 
     public async uploadBlobs(source: string, container: string, prefixFolderPath?: string, itemPattern?: string): Promise<string[]> {
         var fileProvider = new artifactProviders.FilesystemProvider(source);
-        var azureProvider = new azureBlobProvider.AzureBlobProvider(this._storageAccountName, container, this._storageAccessKey, prefixFolderPath, this._host,false,this._useCredential,this._endpoint);
+        var azureProvider = new azureBlobProvider.AzureBlobProvider(this._storageAccountName, container, this._storageAccessKey, prefixFolderPath, this._host, false, this._useCredential, this._endpoint);
         var processor = new artifactProcessor.ArtifactEngine();
         var processorOptions = new artifactProcessor.ArtifactEngineOptions();
         if (itemPattern) {
             processorOptions.itemPattern = itemPattern;
         }
-        
+
         var uploadedItemTickets = await processor.processItems(fileProvider, azureProvider);
         var uploadedUrls: string[] = [];
         uploadedItemTickets.forEach((ticket: models.ArtifactDownloadTicket) => {
@@ -40,7 +40,7 @@ export class BlobService {
 
     public async downloadBlobs(destination: string, container: string, prefixFolderPath?: string, itemPattern?: string, addPrefixToDownloadedItems?: boolean): Promise<void> {
         var fileProvider = new artifactProviders.FilesystemProvider(destination);
-        var azureProvider = new azureBlobProvider.AzureBlobProvider(this._storageAccountName, container, this._storageAccessKey, prefixFolderPath, this._host, !!addPrefixToDownloadedItems,this._useCredential);
+        var azureProvider = new azureBlobProvider.AzureBlobProvider(this._storageAccountName, container, this._storageAccessKey, prefixFolderPath, this._host, !!addPrefixToDownloadedItems, this._useCredential, this._endpoint);
         var processor = new artifactProcessor.ArtifactEngine();
         var processorOptions = new artifactProcessor.ArtifactEngineOptions();
         if (itemPattern) {
