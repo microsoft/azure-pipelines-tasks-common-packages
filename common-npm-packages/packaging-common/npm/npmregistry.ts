@@ -100,14 +100,14 @@ export class NpmRegistry implements INpmRegistry {
             const proxy = tl.getHttpProxyConfiguration();
             options = proxy ? { 
                 proxy,
-                socketTimeout: requestOptions.socketTimeout,
-                globalAgentOptions: requestOptions.globalAgentOptions
+                socketTimeout: requestOptions && requestOptions.socketTimeout,
+                globalAgentOptions: requestOptions && requestOptions.globalAgentOptions
             } : {};
         } catch (error) {
             tl.debug('unable to determine proxy configuration: ' + error);
             options = { 
-                socketTimeout: requestOptions.socketTimeout,
-                globalAgentOptions: requestOptions.globalAgentOptions 
+                socketTimeout: requestOptions && requestOptions.socketTimeout,
+                globalAgentOptions: requestOptions && requestOptions.globalAgentOptions
             };
         }
 

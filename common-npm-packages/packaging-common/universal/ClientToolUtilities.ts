@@ -176,8 +176,8 @@ export function getWebApiWithProxy(serviceUri: string, accessToken?: string, web
         proxy: tl.getHttpProxyConfiguration(serviceUri),
         allowRetries: true,
         maxRetries: 5,
-        socketTimeout: webApiOptions.socketTimeout,
-        globalAgentOptions: webApiOptions.globalAgentOptions
+        socketTimeout: webApiOptions && webApiOptions.socketTimeout,
+        globalAgentOptions: webApiOptions && webApiOptions.globalAgentOptions
     };
     const webApi = new vsts.WebApi(serviceUri, credentialHandler, options);
     tl.debug(`Created webApi client for ${serviceUri}; options: ${JSON.stringify(options)}`);

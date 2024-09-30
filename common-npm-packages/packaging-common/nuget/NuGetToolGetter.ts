@@ -245,8 +245,8 @@ async function getLatestMatchVersionInfo(versionSpec: string, requestOptions?: R
     let versionsUrl = 'https://dist.nuget.org/tools.json';
     let proxyRequestOptions = {
         proxy: taskLib.getHttpProxyConfiguration(versionsUrl),
-        socketTimeout: requestOptions.socketTimeout,
-        globalAgentOptions: requestOptions.globalAgentOptions
+        socketTimeout: requestOptions && requestOptions.socketTimeout,
+        globalAgentOptions: requestOptions && requestOptions.globalAgentOptions
     };
     let rest: restm.RestClient = new restm.RestClient('vsts-tasks/NuGetToolInstaller', undefined, undefined, proxyRequestOptions);
 
