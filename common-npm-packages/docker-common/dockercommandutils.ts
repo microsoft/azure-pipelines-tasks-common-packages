@@ -13,6 +13,7 @@ const buildString = "build";
 const hostType = tl.getVariable("System.HostType");
 const isBuild = hostType && hostType.toLowerCase() === buildString;
 const matchPatternForDigest = new RegExp(/sha256\:(.+)/);
+const matchPatternForLayerId = new RegExp(/layerId:(?:(?<algorithm>[^:]+):)?(?<layerId>[^\s]+)/);
 
 export function build(connection: ContainerConnection, dockerFile: string, commandArguments: string, labelArguments: string[], tagArguments: string[], onCommandOut: (output) => any): any {
     var command = connection.createCommand();
@@ -222,9 +223,9 @@ export function getImageFingerPrintV1Name(history: string): string {
         return null;
     }
 
-    const lines = history.split(/[\r?\n]/);
-    if (lines && lines.length > 0) {
-        v1Name = parseHistoryForV1Name(lines[0]);
+    const match = matchPatternForLayerId.exec(history);
+    if (match) {
+        v1Name = match.groups.layerId;
     }
 
     return v1Name;
@@ -297,21 +298,6 @@ function parseHistoryForLayers(input: string) {
     }
 
     return { "directive": directive, "arguments": argument, "createdOn": createdAt, "size": layerSize };
-}
-
-function parseHistoryForV1Name(topHistoryLayer: string): string {
-    let v1Name = "";
-    let layerIdString = "layerId:sha256:";
-    let indexOfLayerId = topHistoryLayer.indexOf(layerIdString);
-    if (indexOfLayerId < 0) {
-        layerIdString = "layerId:"
-        indexOfLayerId = topHistoryLayer.indexOf(layerIdString);
-    }
-    if (indexOfLayerId >= 0) {
-        v1Name = topHistoryLayer.substring(indexOfLayerId + layerIdString.length);
-    }
-
-    return v1Name && v1Name !== "<missing>" ? v1Name : "";
 }
 
 export async function getHistory(connection: ContainerConnection, image: string): Promise<string> {
