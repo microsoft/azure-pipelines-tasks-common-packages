@@ -13,7 +13,7 @@ const buildString = "build";
 const hostType = tl.getVariable("System.HostType");
 const isBuild = hostType && hostType.toLowerCase() === buildString;
 const matchPatternForDigest = new RegExp(/sha256\:(.+)/);
-const matchPatternForLayerId = new RegExp(/layerId:(?:(?<algorithm>[^:]+):)?(?<layerId>[^\s]+)/);
+const matchPatternForLayerId = new RegExp(/layerId:(?:([^:]+):)?([^\s]+)/);
 
 export function build(connection: ContainerConnection, dockerFile: string, commandArguments: string, labelArguments: string[], tagArguments: string[], onCommandOut: (output) => any): any {
     var command = connection.createCommand();
@@ -225,7 +225,7 @@ export function getImageFingerPrintV1Name(history: string): string {
 
     const match = matchPatternForLayerId.exec(history);
     if (match) {
-        v1Name = match.groups.layerId;
+        v1Name = match[2];
     }
 
     return v1Name;
