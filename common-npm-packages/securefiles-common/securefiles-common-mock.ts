@@ -13,15 +13,15 @@ export class SecureFileHelpers {
         }
     }
 
-    async downloadSecureFile(secureFileId: string) {
-        tl.debug('Mock downloadSecureFile with id = ' + secureFileId);
-        const fileName: string = `${secureFileId}${SecureFileHelpers.fileExtension}`;
+    async downloadSecureFile(secureFileName: string) {
+        tl.debug('Mock downloadSecureFile with name = ' + secureFileName);
+        const fileName: string = `${secureFileName}${SecureFileHelpers.fileExtension}`;
         const tempDownloadPath: string = `/build/temp/${fileName}`;
         return tempDownloadPath;
     }
 
-    deleteSecureFile(secureFileId: string) {
-        tl.debug('Mock deleteSecureFile with id = ' + secureFileId);
+    deleteSecureFile(secureFileName: string) {
+        tl.debug('Mock deleteSecureFile with name = ' + secureFileName);
     }
 
     static setFileExtension(extension: string): void {
