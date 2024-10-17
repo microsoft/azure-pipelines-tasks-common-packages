@@ -7,6 +7,7 @@ import { IHeaders, IRequestOptions } from 'typed-rest-client/Interfaces';
 import { NormalizeRegistry } from './npmrcparser';
 import * as util from '../util';
 import * as locationUtil from '../locationUtilities';
+import { RequestOptions } from '../universal/RequestUtilities';
 
 export interface INpmRegistry {
     url: string;
@@ -26,7 +27,7 @@ export class NpmRegistry implements INpmRegistry {
     }
 
     /** Return NpmRegistry with masked auth from Service Endpoint. */
-    public static async FromServiceEndpoint(endpointId: string, authOnly?: boolean): Promise<NpmRegistry> {
+    public static async FromServiceEndpoint(endpointId: string, authOnly?: boolean, requestOptions?: RequestOptions): Promise<NpmRegistry> {
         const lineEnd = os.EOL;
         let endpointAuth: tl.EndpointAuthorization;
         let url: string;
@@ -48,7 +49,7 @@ export class NpmRegistry implements INpmRegistry {
 
             // To the reader, this could be optimized here but it is broken out for readability
             if (endpointAuth.scheme === 'Token') {
-                isVstsTokenAuth = await NpmRegistry.isEndpointInternal(url);
+                isVstsTokenAuth = await NpmRegistry.isEndpointInternal(url, requestOptions);
             }
             nerfed = util.toNerfDart(url);
         } catch (exception) {
@@ -93,20 +94,27 @@ export class NpmRegistry implements INpmRegistry {
 
     // make a request to the endpoint uri, and take a look at the response header to
     // determine whether this is our service, or an external service.
-    private static async isEndpointInternal(endpointUri: string): Promise<boolean> {
-        let requestOptions: IRequestOptions;
+    private static async isEndpointInternal(endpointUri: string, requestOptions?: RequestOptions): Promise<boolean> {
+        let options: IRequestOptions;
         try {
             const proxy = tl.getHttpProxyConfiguration();
-            requestOptions = proxy ? { proxy } : {};
+            options = proxy ? { 
+                proxy,
+                socketTimeout: requestOptions && requestOptions.socketTimeout,
+                globalAgentOptions: requestOptions && requestOptions.globalAgentOptions
+            } : {};
         } catch (error) {
             tl.debug('unable to determine proxy configuration: ' + error);
-            requestOptions = {};
+            options = { 
+                socketTimeout: requestOptions && requestOptions.socketTimeout,
+                globalAgentOptions: requestOptions && requestOptions.globalAgentOptions
+            };
         }
 
         const headers: IHeaders = {};
         headers['X-TFS-FedAuthRedirect'] = 'Suppress';
 
-        const endpointClient = new HttpClient(tl.getVariable('AZURE_HTTP_USER_AGENT'), null, requestOptions);
+        const endpointClient = new HttpClient(tl.getVariable('AZURE_HTTP_USER_AGENT'), null, options);
         try {
             const resp = await endpointClient.get(endpointUri, headers);
             
