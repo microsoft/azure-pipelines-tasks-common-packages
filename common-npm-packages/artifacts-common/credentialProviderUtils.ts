@@ -122,7 +122,7 @@ export async function configureCredProvider(protocol: ProtocolType, serviceConne
  * Configure credentials for the given feed using the provided 'Azure Devops' service connection.
  * Only external feeds are supported, will throw if the feed provided is internal.
  */
-export async function configureEntraCredProvider(protocol: ProtocolType, entraWifServiceConnectionName: string, feedUrl: string | undefined) : Promise<boolean> {
+export async function configureEntraCredProvider(protocol: ProtocolType, entraWifServiceConnectionName: string, feedUrl: string | undefined) {
     const connectionData = await getConnectionDataForProtocol(protocol);
     const packagingAccessMappings = getPackagingAccessMappings(connectionData.locationServiceData)
     const allPrefixes: string[] = [...new Set(packagingAccessMappings.map(prefix => prefix.uri))];
@@ -136,7 +136,6 @@ export async function configureEntraCredProvider(protocol: ProtocolType, entraWi
     let token = await getFederatedWorkloadIdentityCredentials(entraWifServiceConnectionName, feedTenant);
     if (token) {
         configureCredProviderForServiceConnectionFeeds([new EntraServiceConnection({uri:feedUrl}, entraWifServiceConnectionName, token)]);
-        return true;
     } else {
         throw new Error(tl.loc("FailedToGetServiceConnectionAuth", entraWifServiceConnectionName)); 
     }
