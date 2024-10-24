@@ -140,7 +140,7 @@ export function enhancedFileTransformations(isFolderBasedDeployment: boolean, xm
                 console.log(tl.loc("XDTTransformationsappliedsuccessfully"));
             }
             else {
-                tl.error(tl.loc('FailedToApplySpecialTransformationReason1'));
+                tl.warning(tl.loc('FailedToApplySpecialTransformationReason1'));
             }
         }
     }
@@ -168,7 +168,7 @@ export function enhancedFileTransformations(isFolderBasedDeployment: boolean, xm
             console.log(tl.loc('JSONvariablesubstitutionappliedsuccessfully'));
         }
         else {
-            tl.error(tl.loc('FailedToApplyJSONvariablesubstitutionReason1'));
+            throw Error(tl.loc('FailedToApplyJSONvariablesubstitutionReason1'));
         }
     }
 }
