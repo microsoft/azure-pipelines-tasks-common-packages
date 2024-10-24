@@ -16,6 +16,7 @@
         "ErrorInSettingUpSubscription": "Error in setting up subscription",
         "Error_FederatedTokenAquisitionFailed": "Failed to aquire federated token.",
         "Error_GetFeedTenantIdFailed": "Failed to find tenantId for feedUrl. %s",
+        "Error_InternalFeedsNotSupported": "Internal feeds are not supported for use with 'Azure Devops' Service Connections. To use an Azure Devops Service Connection, feedUrl must belong to an external organization.",
         "LoginFailed": "Azure login failed",
         "MSILoginFailed": "Azure login failed using Managed Service Identity",
         "ServiceConnections_Error_FailedToParseServiceEndpoint_MissingParameter": "Failed to parse the service endpoint '%s' because it was missing the parameter '%s'",

@@ -119,18 +119,25 @@ export async function configureCredProvider(protocol: ProtocolType, serviceConne
 }
 
 /**
- * Configure the credential provider to provide credentials for feeds within the pipeline's organization,
- * as well as for a single Entra backed service connection.
+ * Configure credentials for the given feed using the provided 'Azure Devops' service connection.
+ * Only external feeds are supported, will throw if the feed provided is internal.
  */
-export async function configureEntraCredProvider(protocol: ProtocolType, feedUrl: string, entraWifServiceConnectionName: string) {
-    await configureCredProviderForSameOrganizationFeeds(protocol);
+export async function configureEntraCredProvider(protocol: ProtocolType, entraWifServiceConnectionName: string, feedUrl: string | undefined) : Promise<boolean> {
+    const connectionData = await getConnectionDataForProtocol(protocol);
+    const packagingAccessMappings = getPackagingAccessMappings(connectionData.locationServiceData)
+    const allPrefixes: string[] = [...new Set(packagingAccessMappings.map(prefix => prefix.uri))];
+    const isFeedInternal = allPrefixes.some(prefix => feedUrl.startsWith(prefix));
+
+    if (isFeedInternal) {
+        throw new Error(tl.loc("Error_InternalFeedsNotSupported"));
+    }
 
     const feedTenant = await getFeedTenantId(feedUrl);
     let token = await getFederatedWorkloadIdentityCredentials(entraWifServiceConnectionName, feedTenant);
     if (token) {
         configureCredProviderForServiceConnectionFeeds([new EntraServiceConnection({uri:feedUrl}, entraWifServiceConnectionName, token)]);
-    }
-    else {
+        return true;
+    } else {
         throw new Error(tl.loc("FailedToGetServiceConnectionAuth", entraWifServiceConnectionName)); 
     }
 }
@@ -138,17 +145,28 @@ export async function configureEntraCredProvider(protocol: ProtocolType, feedUrl
 /**
  * Configure the credential provider to provide credentials for feeds within the pipeline's organization,
  * using VSS_NUGET_URI_PREFIXES and VSS_NUGET_ACCESSTOKEN variables to do so.
+ * If an AzureDevops Service Connection is provided, it will be used to aquire an access token.
+ * Otherwise, the system access token will be used.
  */
-export async function configureCredProviderForSameOrganizationFeeds(protocol: ProtocolType) {
+export async function configureCredProviderForSameOrganizationFeeds(protocol: ProtocolType, entraWifServiceConnectionName?: string) {
+    var accessToken;
+    if (entraWifServiceConnectionName) {
+        accessToken = await getFederatedWorkloadIdentityCredentials(entraWifServiceConnectionName);
+        if (!accessToken) {
+            throw new Error(tl.loc("FailedToGetServiceConnectionAuth", entraWifServiceConnectionName));
+        }
+    } else {
+        accessToken = getSystemAccessToken();
+    }
+
     const connectionData = await getConnectionDataForProtocol(protocol);
     const packagingAccessMappings = getPackagingAccessMappings(connectionData.locationServiceData);
-    const accessToken = getSystemAccessToken();
 
     // To avoid confusion, only log the public access mapping URIs rather than all of them (e.g. host guid access mapping)
     // which we might as well support just in case, yet users are extremely unlikely to ever use.
     const allPrefixes: string[] = [...new Set(packagingAccessMappings.map(prefix => prefix.uri))];
     const publicPrefixes: string[] = [...new Set(packagingAccessMappings.filter(prefix => prefix.isPublic).map(prefix => prefix.uri))];
-    const identityDisplayName = connectionData.authenticatedUser.customDisplayName || connectionData.authenticatedUser.providerDisplayName;
+    const identityDisplayName = entraWifServiceConnectionName ?? (connectionData.authenticatedUser.customDisplayName || connectionData.authenticatedUser.providerDisplayName);
     console.log(tl.loc('CredProvider_SettingUpForOrgFeeds', identityDisplayName));
     publicPrefixes.forEach(publicPrefix => console.log('  ' + publicPrefix));
     console.log();
