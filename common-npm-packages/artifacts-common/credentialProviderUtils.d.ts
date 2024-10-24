@@ -15,13 +15,15 @@ export declare function getUserProfileNuGetPluginsDir(): string;
  */
 export declare function configureCredProvider(protocol: ProtocolType, serviceConnections: ServiceConnection[]): Promise<void>;
 /**
- * Configure the credential provider to provide credentials for feeds within the pipeline's organization,
- * as well as for a single Entra backed service connection.
+ * Configure credentials for the given feed using the provided 'Azure Devops' service connection.
+ * Only external feeds are supported, will throw if the feed provided is internal.
  */
-export declare function configureEntraCredProvider(protocol: ProtocolType, serviceConnections: ServiceConnection[]): Promise<void>;
+export declare function configureEntraCredProvider(protocol: ProtocolType, entraWifServiceConnectionName: string, feedUrl: string | undefined): Promise<void>;
 /**
  * Configure the credential provider to provide credentials for feeds within the pipeline's organization,
  * using VSS_NUGET_URI_PREFIXES and VSS_NUGET_ACCESSTOKEN variables to do so.
+ * If an AzureDevops Service Connection is provided, it will be used to aquire an access token.
+ * Otherwise, the system access token will be used.
  */
 export declare function configureCredProviderForSameOrganizationFeeds(protocol: ProtocolType): Promise<void>;
 /**
