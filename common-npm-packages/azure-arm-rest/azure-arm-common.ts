@@ -301,6 +301,7 @@ export class ApplicationTokenCredentials {
     private async buildMSAL(): Promise<any> /*Promise<msal.ConfidentialClientApplication>*/ {
         // default configuration
         const authorityURL = (new URL(this.tenantId, this.authorityUrl)).toString();
+        const isDebug = tl.getVariable("system.debug") && tl.getVariable("system.debug").toLowerCase() === "true";
 
         const msalConfig: any /*msal.Configuration*/ = {
             auth: {
@@ -312,8 +313,8 @@ export class ApplicationTokenCredentials {
                     loggerCallback(loglevel, message, containsPii) {
                         loglevel == msal.LogLevel.Error ? tl.error(message) : tl.debug(message);
                     },
-                    piiLoggingEnabled: false,
-                    logLevel: msal.LogLevel.Info,
+                    piiLoggingEnabled: isDebug,
+                    logLevel: isDebug ? msal.LogLevel.Verbose : msal.LogLevel.Info,
                 }
             }
         };
