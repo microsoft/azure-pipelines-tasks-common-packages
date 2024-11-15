@@ -310,11 +310,11 @@ export class ApplicationTokenCredentials {
             },
             system: {
                 loggerOptions: {
-                    loggerCallback(loglevel, message, containsPii) {
-                        loglevel == msal.LogLevel.Error ? tl.error(message) : tl.debug(message);
+                    loggerCallback(loglevel, message, _) {
+                        loglevel === msal.LogLevel.Error ? tl.error(message) : tl.debug(message);
                     },
                     piiLoggingEnabled: isDebug,
-                    logLevel: isDebug ? msal.LogLevel.Verbose : msal.LogLevel.Info,
+                    logLevel: isDebug ? msal.LogLevel.Trace : msal.LogLevel.Info,
                 }
             }
         };
