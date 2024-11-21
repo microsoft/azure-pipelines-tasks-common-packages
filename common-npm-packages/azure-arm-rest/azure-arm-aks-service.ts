@@ -65,7 +65,7 @@ export class AzureAksService {
         }, '2024-05-01', "POST").then((response) => {
             return  response.body;
         }, (reason) => {
-            throw Error(tl.loc('CantDownloadClusterCredentials',clusterName,  this._client.getFormattedError(reason)));
+            throw Error(tl.loc('CantDownloadClusterCredentials', clusterName,  this._client.getFormattedError(reason)));
         });
     }
 
