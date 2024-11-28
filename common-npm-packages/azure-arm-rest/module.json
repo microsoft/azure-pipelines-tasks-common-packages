@@ -187,6 +187,7 @@
         "UpdatingAppServiceConfigurationSettings": "Trying to update App Service Configuration settings. Data: %s",
         "VirtualApplicationDoesNotExist": "Virtual application doesn't exists : %s",
         "CantDownloadClusterCredentials": "Failed to fetch credentials for the cluster %s. Reason %s. Please Check 'https://aka.ms/azdo-rm-aks-access' for more information.",
-        "KubernetesClusterResourceGroup": "Kubernetes cluster %s, resource group %s."
+        "KubernetesClusterResourceGroup": "Kubernetes cluster %s, resource group %s.",
+        "SettingAzureCloud": "Setting active cloud to: %s"
     }
 }
