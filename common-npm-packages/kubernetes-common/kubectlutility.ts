@@ -11,12 +11,11 @@ import * as  osutil from './osutility';
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
 const kubectlToolName = 'kubectl';
-export const stableKubectlVersion = 'v1.14.0';
+export const stableKubectlVersion = 'v1.32.0';
 
-// get a stable version from the url https://storage.googleapis.com/kubernetes-release/release/stable.txt
 export async function getStableKubectlVersion(): Promise<string> {
     let version;
-    const stableVersionUrl = 'https://storage.googleapis.com/kubernetes-release/release/stable.txt';
+    const stableVersionUrl = 'https://dl.k8s.io/release/stable.txt';
     return toolLib.downloadTool(stableVersionUrl).then((downloadPath) => {
         version = fs.readFileSync(downloadPath, 'utf8').toString().trim();
         if (!version) {
@@ -77,14 +76,14 @@ function getkubectlDownloadURL(version: string): string {
     switch (os.type()) {
         case 'Linux':
             const architecture = osutil.getSupportedLinuxArchitecture();
-            return util.format('https://storage.googleapis.com/kubernetes-release/release/%s/bin/linux/%s/kubectl', version, architecture);
+            return util.format('https://dl.k8s.io/release/%s/bin/linux/%s/kubectl', version, architecture);
 
         case 'Darwin':
-            return util.format('https://storage.googleapis.com/kubernetes-release/release/%s/bin/darwin/amd64/kubectl', version);
+            return util.format('https://dl.k8s.io/release/%s/bin/darwin/amd64/kubectl', version);
 
         case 'Windows_NT':
         default:
-            return util.format('https://storage.googleapis.com/kubernetes-release/release/%s/bin/windows/amd64/kubectl.exe', version);
+            return util.format('https://dl.k8s.io/release/%s/bin/windows/amd64/kubectl.exe', version);
 
     }
 }
