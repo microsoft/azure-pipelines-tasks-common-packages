@@ -7,15 +7,14 @@ import * as util from "util";
 import * as yaml from "js-yaml";
 const uuidV4 = require('uuid/v4');
 const kubectlToolName = "kubectl";
-export const stableKubectlVersion = "v1.14.0";
+export const stableKubectlVersion = "v1.32.0";
 import { WebRequest, sendRequest } from "./restutilities";
 
 var fs = require('fs');
 
-// get a stable version from the url https://storage.googleapis.com/kubernetes-release/release/stable.txt
 export async function getStableKubectlVersion() : Promise<string> {
     var version;
-    var stableVersionUrl = "https://storage.googleapis.com/kubernetes-release/release/stable.txt";
+    var stableVersionUrl = "https://dl.k8s.io/release/stable.txt";
     var downloadPath = path.join(getTempDirectory(), uuidV4() +".txt");
     return downloadutility.download(stableVersionUrl, downloadPath, false, true).then((resolve) => {
         version = fs.readFileSync(downloadPath, "utf8").toString().trim();
@@ -71,14 +70,14 @@ function getkubectlDownloadURL(version: string) : string {
     switch(os.type())
     {
         case 'Linux':
-            return util.format("https://storage.googleapis.com/kubernetes-release/release/%s/bin/linux/amd64/kubectl", version);
+            return util.format("https://dl.k8s.io/release/%s/bin/linux/amd64/kubectl", version);
 
         case 'Darwin':
-            return util.format("https://storage.googleapis.com/kubernetes-release/release/%s/bin/darwin/amd64/kubectl", version);
+            return util.format("https://dl.k8s.io/release/%s/bin/darwin/amd64/kubectl", version);
 
         default:
         case 'Windows_NT':
-            return util.format("https://storage.googleapis.com/kubernetes-release/release/%s/bin/windows/amd64/kubectl.exe", version);   
+            return util.format("https://dl.k8s.io/release/%s/bin/windows/amd64/kubectl.exe", version);   
 
     }
 }
