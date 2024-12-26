@@ -32,7 +32,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Microsoft/azure-pipelines-tasks.git"
+    "url": "git+https://github.com/microsoft/azure-pipelines-tasks-common-packages.git"
   },
-  "homepage": "https://github.com/Microsoft/azure-pipelines-tasks#readme"
+  "homepage": "https://github.com/microsoft/azure-pipelines-tasks-common-packages#readme"
 }
