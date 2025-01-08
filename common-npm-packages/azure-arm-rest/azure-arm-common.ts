@@ -415,7 +415,7 @@ export class ApplicationTokenCredentials {
                     // thumbprint
                     const certEncoded = certFile.match(/-----BEGIN CERTIFICATE-----\s*([\s\S]+?)\s*-----END CERTIFICATE-----/i)[1];
                     const certDecoded = Buffer.from(certEncoded, "base64");
-                    const thumbprint = crypto.createHash("sha1").update(certDecoded).digest("hex").toUpperCase();
+                    const thumbprint = crypto.createHash("sha256").update(certDecoded).digest("hex").toUpperCase();
 
                     if (!thumbprint) {
                         throw new Error("MSAL - certificate - thumbprint couldn't be generated!");
