@@ -38,7 +38,7 @@ function Get-MSBuildPath {
 
                 [object]$archValue = $null
                 if ($Architecture -eq 'x86') {
-                    $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild\Current\Bin\msbuild.exe")
+                    $msBuildPath = Join-Path $specifiedStudio.installationPath MSBuild Current Bin MSBuild.exe
                     # DotNetFrameworkArchitecture.Bitness32
                 } elseif ($Architecture -eq 'x64') {
                     $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild\Current\Bin\amd64\msbuild.exe")
