@@ -1,5 +1,5 @@
 
-ci/  @microsoft/azure-pipelines-tasks-and-agent  @microsoft/akvelon-build-task-team
+ci/  @microsoft/azure-pipelines-tasks-and-agent @tarunramsinghani
 
 common-npm-packages/artifacts-common/            @microsoft/azure-artifacts-packages
 
@@ -9,19 +9,19 @@ common-npm-packages/azure-arm-rest/              @microsoft/release-management-t
 
 common-npm-packages/azurermdeploycommon/         @vincentdass  @microsoft/release-management-task-team @manolerazvan
 
-common-npm-packages/codeanalysis-common/         @microsoft/azure-pipelines-tasks-and-agent  @microsoft/akvelon-build-task-team
+common-npm-packages/codeanalysis-common/         @microsoft/azure-pipelines-tasks-and-agent  @tarunramsinghani
 
 common-npm-packages/codecoverage-tools/          @rasunkar  @microsoft/adoautotest
 
 common-npm-packages/docker-common/               @microsoft/release-management-task-team @manolerazvan
 
-common-npm-packages/ios-signing-common/          @microsoft/azure-pipelines-tasks-and-agent  @microsoft/akvelon-build-task-team  @hashtagchris
+common-npm-packages/ios-signing-common/          @microsoft/azure-pipelines-tasks-and-agent  @tarunramsinghani @hashtagchris
 
-common-npm-packages/java-common/                 @microsoft/azure-pipelines-tasks-and-agent  @microsoft/akvelon-build-task-team  @kelliejos
+common-npm-packages/java-common/                 @microsoft/azure-pipelines-tasks-and-agent  @tarunramsinghani @kelliejos
 
 common-npm-packages/kubernetes-common/           @nishubansal  @ds-ms
 
-common-npm-packages/msbuildhelpers/              @microsoft/azure-pipelines-tasks-and-agent  @microsoft/akvelon-build-task-team
+common-npm-packages/msbuildhelpers/              @microsoft/azure-pipelines-tasks-and-agent  @tarunramsinghani
 
 common-npm-packages/packaging-common/            @microsoft/azure-artifacts-packages
 
