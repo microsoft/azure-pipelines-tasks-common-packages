@@ -23,36 +23,36 @@ function Get-MSBuildPath {
         [System.Reflection.Assembly]$msUtilities = $null
 
 
-		# We do not need Microsoft.Build.Utilities.Core.dll - if we have located this .dll file, we also have the location of msbuild.exe
-		# for the Bitness32 variant since it resides in the same folder.
-		# and for the Bitness64 variant since it resides in the /amd64 folders.
-		# These paths are fixed due to the way VS is installed.
-		$VersionNumber = [int]($Version.Remove(2))
+        # We do not need Microsoft.Build.Utilities.Core.dll - if we have located this .dll file, we also have the location of msbuild.exe
+        # for the Bitness32 variant since it resides in the same folder.
+        # and for the Bitness64 variant since it resides in the /amd64 folders.
+        # These paths are fixed due to the way VS is installed.
+        $VersionNumber = [int]($Version.Remove(2))
 
-		Write-Output "version: $VersionNumber"
-		$specifiedStudio = Get-VisualStudio $VersionNumber
-		Write-Output $specifiedStudio
+        Write-Output "version: $VersionNumber"
+        $specifiedStudio = Get-VisualStudio $VersionNumber
+        Write-Output $specifiedStudio
         if (($VersionNumber -ge 16 -or !$Version) -and # !$Version indicates "latest"
             ($specifiedStudio = Get-VisualStudio $VersionNumber) -and
             $specifiedStudio.installationPath) {
 
-				[object]$archValue = $null
-				if ($Architecture -eq 'x86') {
-					$msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild\Current\Bin\msbuild.exe")
-					# DotNetFrameworkArchitecture.Bitness32
-				} elseif ($Architecture -eq 'x64') {
-					$msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild\Current\Bin\amd64\msbuild.exe")
-					# DotNetFrameworkArchitecture.Bitness64
-				} else {
-					$msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild\Current\Bin\msbuild.exe")
-					# DotNetFrameworkArchitecture.Bitness32
-				}
+                [object]$archValue = $null
+                if ($Architecture -eq 'x86') {
+                    $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild\Current\Bin\msbuild.exe")
+                    # DotNetFrameworkArchitecture.Bitness32
+                } elseif ($Architecture -eq 'x64') {
+                    $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild\Current\Bin\amd64\msbuild.exe")
+                    # DotNetFrameworkArchitecture.Bitness64
+                } else {
+                    $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild\Current\Bin\msbuild.exe")
+                    # DotNetFrameworkArchitecture.Bitness32
+                }
 
-				if ($msBuildPath -and (Test-Path -LiteralPath $msBuildPath -PathType Leaf)) {
-					Write-Verbose "MSBuild: $msBuildPath"
-					return $msBuildPath
-			}
-		}
+                if ($msBuildPath -and (Test-Path -LiteralPath $msBuildPath -PathType Leaf)) {
+                    Write-Verbose "MSBuild: $msBuildPath"
+                    return $msBuildPath
+            }
+        }
 
 
         elseif (($Version -eq "15.0" -or !$Version) -and # !$Version indicates "latest"
