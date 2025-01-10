@@ -29,40 +29,31 @@ function Get-MSBuildPath {
         # These paths are fixed due to the way VS is installed.
         $VersionNumber = [int]($Version.Remove(2))
 
-        Write-Output "version: $VersionNumber"
         $specifiedStudio = Get-VisualStudio $VersionNumber
-        Write-Output $specifiedStudio
-        if (($VersionNumber -ge 16 -or !$Version) -and # !$Version indicates "latest"
+
+        if (($VersionNumber -ge 15 -or !$Version) -and # !$Version indicates "latest"
             ($specifiedStudio = Get-VisualStudio $VersionNumber) -and
             $specifiedStudio.installationPath) {
 
-                [object]$archValue = $null
+                $MsBuildDirectory = "Current"
+                if ($VersionNumber -eq 15) {
+                    $MsBuildDirectory = "15.0"
+                }
+                Write-Output $MsBuildDirectory
                 if ($Architecture -eq 'x86') {
-                    $msBuildPath = Join-Path $specifiedStudio.installationPath MSBuild Current Bin MSBuild.exe
+                    $msBuildPath = Join-Path $specifiedStudio.installationPath MSBuild $MsBuildDirectory Bin MSBuild.exe
                     # DotNetFrameworkArchitecture.Bitness32
                 } elseif ($Architecture -eq 'x64') {
-                    $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild\Current\Bin\amd64\msbuild.exe")
+                    $msBuildPath = Join-Path $specifiedStudio.installationPath MSBuild $MsBuildDirectory Bin amd64 MSBuild.exe
                     # DotNetFrameworkArchitecture.Bitness64
                 } else {
-                    $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild\Current\Bin\msbuild.exe")
+                    $msBuildPath = Join-Path $specifiedStudio.installationPath MSBuild $MsBuildDirectory Bin MSBuild.exe
                     # DotNetFrameworkArchitecture.Bitness32
                 }
 
                 if ($msBuildPath -and (Test-Path -LiteralPath $msBuildPath -PathType Leaf)) {
                     Write-Verbose "MSBuild: $msBuildPath"
                     return $msBuildPath
-            }
-        }
-
-
-        elseif (($Version -eq "15.0" -or !$Version) -and # !$Version indicates "latest"
-            ($visualStudio15 = Get-VisualStudio 15) -and
-            $visualStudio15.installationPath) {
-
-            $msbuildUtilitiesPath = [System.IO.Path]::Combine($visualStudio15.installationPath, "MSBuild\15.0\Bin\Microsoft.Build.Utilities.Core.dll")
-            if (Test-Path -LiteralPath $msbuildUtilitiesPath -PathType Leaf) {
-                Write-Verbose "Loading $msbuildUtilitiesPath"
-                $msUtilities = [System.Reflection.Assembly]::LoadFrom($msbuildUtilitiesPath)
             }
         }
 
@@ -213,6 +204,7 @@ function Get-VisualStudio {
         [int]$MajorVersion)
 
     Trace-VstsEnteringInvocation $MyInvocation
+    return @{ installationPath = "C:\Program Files\Microsoft Visual Studio\2022\Preview" }
     try {
         if (!$script:visualStudioCache.ContainsKey("$MajorVersion.0")) {
             try {
@@ -222,7 +214,7 @@ function Get-VisualStudio {
                 # may be something like 16.2.
                 Write-Verbose "Getting latest Visual Studio $MajorVersion setup instance."
                 $output = New-Object System.Text.StringBuilder
-                Invoke-VstsTool -FileName "$PSScriptRoot\tools\vswhere.exe" -Arguments "-version [$MajorVersion.0,$($MajorVersion+1).0) -latest -format json" -RequireExitCodeZero 2>&1 |
+                Invoke-VstsTool -FileName "$PSScriptRoot    ools\vswhere.exe" -Arguments "-version [$MajorVersion.0,$($MajorVersion+1).0) -latest -format json" -RequireExitCodeZero 2>&1 |
                     ForEach-Object {
                         if ($_ -is [System.Management.Automation.ErrorRecord]) {
                             Write-Verbose "STDERR: $($_.Exception.Message)"
@@ -241,7 +233,7 @@ function Get-VisualStudio {
                     # the same scheme. It appears to follow the 16.<UPDATE_NUMBER>.* versioning scheme.
                     Write-Verbose "Getting latest BuildTools 16 setup instance."
                     $output = New-Object System.Text.StringBuilder
-                    Invoke-VstsTool -FileName "$PSScriptRoot\tools\vswhere.exe" -Arguments "-version [$MajorVersion.0,$($MajorVersion+1).0) -products Microsoft.VisualStudio.Product.BuildTools -latest -format json" -RequireExitCodeZero 2>&1 |
+                    Invoke-VstsTool -FileName "$PSScriptRoot    ools\vswhere.exe" -Arguments "-version [$MajorVersion.0,$($MajorVersion+1).0) -products Microsoft.VisualStudio.Product.BuildTools -latest -format json" -RequireExitCodeZero 2>&1 |
                         ForEach-Object {
                             if ($_ -is [System.Management.Automation.ErrorRecord]) {
                                 Write-Verbose "STDERR: $($_.Exception.Message)"
