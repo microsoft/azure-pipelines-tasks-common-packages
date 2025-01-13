@@ -6,6 +6,7 @@ import Q = require('q');
 import { WebJob, SiteExtension } from './azureModels';
 import { KUDU_DEPLOYMENT_CONSTANTS } from './constants';
 import path = require('path');
+import crypto = require("crypto");
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
@@ -456,14 +457,25 @@ export class Kudu {
         }
     }
 
-    public async zipDeploy(webPackage: string, queryParameters?: Array<string>): Promise<any> {
+    public async zipDeploy(webPackage: string, queryParameters?: Array<string>, addChecksumHeader?: boolean): Promise<any> {
         let httpRequest = new webClient.WebRequest();
         httpRequest.method = 'POST';
         httpRequest.uri = this.client.getRequestUri(`/api/zipdeploy`, queryParameters);
-        httpRequest.body = fs.createReadStream(webPackage);
+
+        var rs = fs.createReadStream(webPackage);
+        var checksum: string = undefined;
+
+        httpRequest.body = rs;
         httpRequest.headers = {
             'Content-Type': 'application/octet-stream'
         };
+
+        if (addChecksumHeader !== undefined && addChecksumHeader) {
+            checksum = await this._computeFileChecksum(rs);
+            if (checksum !== undefined){
+                httpRequest.headers["x-ms-artifact-checksum"] = checksum;
+            }
+        }
 
         try {
             let response = await this.client.beginRequest(httpRequest);
@@ -528,11 +540,24 @@ export class Kudu {
         }
     }
 
-    public async oneDeploy(webPackage: string, queryParameters?: Array<string>): Promise<any> {
+    public async oneDeploy(webPackage: string, queryParameters?: Array<string>, addChecksumHeader?: boolean): Promise<any> {
         let httpRequest = new webClient.WebRequest();
         httpRequest.method = 'POST';
         httpRequest.uri = this.client.getRequestUri(`/api/publish`, queryParameters);
-        httpRequest.body = fs.createReadStream(webPackage);
+
+        var rs = fs.createReadStream(webPackage);
+        var checksum: string = undefined;
+
+        httpRequest.body = rs;
+        httpRequest.headers = httpRequest.headers || {};
+
+        if (addChecksumHeader !== undefined && addChecksumHeader) {
+            checksum = await this._computeFileChecksum(rs);
+            if (checksum !== undefined){
+                httpRequest.headers["x-ms-artifact-checksum"] = checksum;
+            }
+        }
+
         let requestOptions = new webClient.WebRequestOptions();
         //Bydefault webclient.sendRequest retries for  [500, 502, 503, 504]
         requestOptions.retriableStatusCodes = [500, 502, 503, 504];
@@ -689,5 +714,23 @@ export class Kudu {
         }
 
         return error;
+    }
+
+    private _computeFileChecksum(stream: fs.ReadStream) :Promise<string> {
+        return new Promise((resolve, reject) => {
+            const hash = crypto.createHash('sha256');
+            stream.on('data', (data) => {
+                hash.update(data);
+            });
+        
+            stream.on('end', () => {
+                const result = hash.digest('hex');
+                resolve(result);
+            });
+        
+            stream.on('error', (error) => {
+                resolve(undefined);
+            });
+        });
     }
 }
