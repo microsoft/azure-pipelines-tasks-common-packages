@@ -30,7 +30,6 @@ function Get-MSBuildPath {
         $VersionNumber = [int]($Version.Remove(2))
 
         $specifiedStudio = Get-VisualStudio $VersionNumber
-
         if (($VersionNumber -ge 15 -or !$Version) -and # !$Version indicates "latest"
             ($specifiedStudio = Get-VisualStudio $VersionNumber) -and
             $specifiedStudio.installationPath) {
@@ -39,15 +38,15 @@ function Get-MSBuildPath {
                 if ($VersionNumber -eq 15) {
                     $MsBuildDirectory = "15.0"
                 }
-                Write-Output $MsBuildDirectory
+
                 if ($Architecture -eq 'x86') {
-                    $msBuildPath = Join-Path $specifiedStudio.installationPath MSBuild $MsBuildDirectory Bin MSBuild.exe
+                    $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild", $MsBuildDirectory, "Bin\MSBuild.exe");
                     # DotNetFrameworkArchitecture.Bitness32
                 } elseif ($Architecture -eq 'x64') {
-                    $msBuildPath = Join-Path $specifiedStudio.installationPath MSBuild $MsBuildDirectory Bin amd64 MSBuild.exe
+                    $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild", $MsBuildDirectory, "Bin\amd64\MSBuild.exe");
                     # DotNetFrameworkArchitecture.Bitness64
                 } else {
-                    $msBuildPath = Join-Path $specifiedStudio.installationPath MSBuild $MsBuildDirectory Bin MSBuild.exe
+                    $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild", $MsBuildDirectory, "Bin\MSBuild.exe");
                     # DotNetFrameworkArchitecture.Bitness32
                 }
 
