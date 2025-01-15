@@ -1,3 +1,5 @@
+. $PSScriptRoot\TelemetryHelper
+
 ########################################
 # Public functions.
 ########################################
@@ -243,6 +245,7 @@ function Get-VisualStudio {
         Trace-VstsLeavingInvocation $MyInvocation
     }
 }
+
 function Select-MSBuildPath {
     [CmdletBinding()]
     param(
@@ -252,6 +255,22 @@ function Select-MSBuildPath {
         [string]$Architecture)
 
     Trace-VstsEnteringInvocation $MyInvocation
+
+    $featureFlags = @{
+        enableTelemetry  = [System.Convert]::ToBoolean($env:ENABLE_GETMSBUILDPATH_TELEMETRY)
+        useGetMSBuildPathModified = [System.Convert]::ToBoolean($env:USE_GETMSBUILDPATHMODIFIED_METHOD)
+    }
+
+    $selectMSBuildPathTelemetry = [PSCustomObject]@{
+        PreferredVersion = $PreferredVersion
+        Architecture = $Architecture
+        PathFromGetMSBuildPathFunction = ""
+        PathFromGetMSBuildPathFunctionModified = ""
+        PathFromBothMethodsMatches = ""
+        CaughtAnException = ""
+        ExceptionMessage = ""
+    }
+
     try {
         # Default the msbuildLocationMethod if not specified. The input msbuildLocationMethod
         # was added to the definition after the input msbuildLocation.
@@ -282,6 +301,22 @@ function Select-MSBuildPath {
         # Look for a specific version of MSBuild.
         if ($specificVersion) {
             if (($path = Get-MSBuildPath -Version $PreferredVersion -Architecture $Architecture)) {
+                if($featureFlags.ENABLE_GETMSBUILDPATH_TELEMETRY) {
+                    try {
+                        $pathFromGetMSBuildPathModified = Get-MSBuildPath -Version $PreferredVersion -Architecture $Architecture
+                        $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunction = $path
+                        $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunctionModified = $pathFromGetMSBuildPathModified
+                        $selectMSBuildPathTelemetry.PathFromBothMethodsMatches = ($path -eq $pathFromGetMSBuildPathModified)
+                    } catch {
+                        $selectMSBuildPathTelemetry.CaughtAnException = $true
+                        $selectMSBuildPathTelemetry.ExceptionMessage = $_.Exception.Message
+                    }
+                    EmitTelemetry -TelemetryPayload $selectMSBuildPathTelemetry -TaskName "MSBuildHelpers"
+                    if($featureFlags.USE_GETMSBUILDPATHMODIFIED_METHOD) {
+                        return $pathFromGetMSBuildPathModified
+                    }
+                }
+                
                 return $path
             }
 
@@ -292,11 +327,29 @@ function Select-MSBuildPath {
         # Look for the latest version of MSBuild.
         foreach ($version in $versions) {
             if (($path = Get-MSBuildPath -Version $version -Architecture $Architecture)) {
-                # Warn falling back.
-                if ($specificVersion) {
-                    Write-Warning (Get-VstsLocString -Key 'MSB_UnableToFindMSBuildVersion0Architecture1FallbackVersion2' -ArgumentList $PreferredVersion, $Architecture, $version)
-                }
+                if($featureFlags.ENABLE_GETMSBUILDPATH_TELEMETRY) {
+                    try {
+                        $pathFromGetMSBuildPathModified = Get-MSBuildPath -Version $PreferredVersion -Architecture $Architecture
+                        $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunction = $path
+                        $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunctionModified = $pathFromGetMSBuildPathModified
+                        $selectMSBuildPathTelemetry.PathFromBothMethodsMatches = ($path -eq $pathFromGetMSBuildPathModified)
+                    } catch {
+                        $selectMSBuildPathTelemetry.CaughtAnException = $true
+                        $selectMSBuildPathTelemetry.ExceptionMessage = $_.Exception.Message
+                    }
 
+                    EmitTelemetry -TelemetryPayload $selectMSBuildPathTelemetry -TaskName "MSBuildHelpers"
+                    
+                    # Warn falling back.
+                    if ($specificVersion) {
+                        Write-Warning (Get-VstsLocString -Key 'MSB_UnableToFindMSBuildVersion0Architecture1FallbackVersion2' -ArgumentList $PreferredVersion, $Architecture, $version)
+                    }
+                    
+                    if($featureFlags.USE_GETMSBUILDPATHMODIFIED_METHOD) {
+                        return $pathFromGetMSBuildPathModified
+                    }
+                }
+               
                 return $path
             }
         }
@@ -311,3 +364,170 @@ function Select-MSBuildPath {
         Trace-VstsLeavingInvocation $MyInvocation
     }
 }
+
+function Get-MSBuildPathModified {
+    [CmdletBinding()]
+    param(
+        [string]$Version,
+        [string]$Architecture)
+
+    $VersionNumber = [int]($Version.Remove(2))
+
+    Trace-VstsEnteringInvocation $MyInvocation
+    try {
+        # Only attempt to find Microsoft.Build.Utilities.Core.dll from a VS 15 Willow install
+        # when "15.0" or latest is specified. In 15.0, the method GetPathToBuildToolsFile(...)
+        # has regressed. When it is called for a version that is not found, the latest version
+        # found is returned instead. Same for "16.0" and "17.0"
+        [System.Reflection.Assembly]$msUtilities = $null
+
+
+        # We do not need Microsoft.Build.Utilities.Core.dll - if we have located this .dll file, we also have the location of msbuild.exe
+        # for the Bitness32 variant since it resides in the same folder.
+        # and for the Bitness64 variant since it resides in the /amd64 folders.
+        # These paths are fixed due to the way VS is installed.
+        $VersionNumber = [int]($Version.Remove(2))
+
+        $specifiedStudio = Get-VisualStudio $VersionNumber
+        if (($VersionNumber -ge 15 -or !$Version) -and # !$Version indicates "latest"
+            ($specifiedStudio = Get-VisualStudio $VersionNumber) -and
+            $specifiedStudio.installationPath) {
+
+                $MsBuildDirectory = "Current"
+            if ($VersionNumber -eq 15) {
+                $MsBuildDirectory = "15.0"
+            }
+
+            if ($Architecture -eq 'x86') {
+                $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild", $MsBuildDirectory, "Bin\MSBuild.exe");
+                # DotNetFrameworkArchitecture.Bitness32
+            } elseif ($Architecture -eq 'x64') {
+                $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild", $MsBuildDirectory, "Bin\amd64\MSBuild.exe");
+                # DotNetFrameworkArchitecture.Bitness64
+            } else {
+                $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild", $MsBuildDirectory, "Bin\MSBuild.exe");
+                # DotNetFrameworkArchitecture.Bitness32
+            }
+
+            if ($msBuildPath -and (Test-Path -LiteralPath $msBuildPath -PathType Leaf)) {
+                Write-Verbose "MSBuild: $msBuildPath"
+                return $msBuildPath
+            }
+        }
+
+        # Fallback to searching the GAC.
+        if (!$msUtilities) {
+            $msbuildUtilitiesAssemblies = @(
+                "Microsoft.Build.Utilities.Core, Version=15.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL"
+                "Microsoft.Build.Utilities.Core, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL"
+                "Microsoft.Build.Utilities.v12.0, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL"
+                "Microsoft.Build.Utilities.v4.0, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL"
+            )
+
+            # Attempt to load a Microsoft build utilities DLL.
+            $index = 0
+            [System.Reflection.Assembly]$msUtilities = $null
+            while (!$msUtilities -and $index -lt $msbuildUtilitiesAssemblies.Length) {
+                Write-Verbose "Loading $($msbuildUtilitiesAssemblies[$index])"
+                try {
+                    $msUtilities = [System.Reflection.Assembly]::Load((New-Object System.Reflection.AssemblyName($msbuildUtilitiesAssemblies[$index])))
+                } catch [System.IO.FileNotFoundException] {
+                    Write-Verbose "Not found."
+                }
+
+                $index++
+            }
+        }
+
+        [string]$msBuildPath = $null
+
+        # Default to x86 architecture if not specified.
+        if (!$Architecture) {
+            $Architecture = "x86"
+        }
+
+        if ($msUtilities -ne $null) {
+            [type]$t = $msUtilities.GetType('Microsoft.Build.Utilities.ToolLocationHelper')
+            if ($t -ne $null) {
+                # Attempt to load the method info for GetPathToBuildToolsFile. This method
+                # is available in the 16.0, 15.0, 14.0, and 12.0 utilities DLL. It is not available
+                # in the 4.0 utilities DLL.
+                [System.Reflection.MethodInfo]$mi = $t.GetMethod(
+                    "GetPathToBuildToolsFile",
+                    [type[]]@( [string], [string], $msUtilities.GetType("Microsoft.Build.Utilities.DotNetFrameworkArchitecture") ))
+                if ($mi -ne $null -and $mi.GetParameters().Length -eq 3) {
+                    $versions = "16.0", "15.0", "14.0", "12.0", "4.0"
+                    if ($Version) {
+                        $versions = @( $Version )
+                    }
+
+                    # Translate the architecture parameter into the corresponding value of the
+                    # DotNetFrameworkArchitecture enum. Parameter three of the target method info
+                    # takes this enum. Leverage parameter three to get to the enum's type info.
+                    $param3 = $mi.GetParameters()[2]
+                    $archValues = [System.Enum]::GetValues($param3.ParameterType)
+                    [object]$archValue = $null
+                    if ($Architecture -eq 'x86') {
+                        $archValue = $archValues.GetValue(1) # DotNetFrameworkArchitecture.Bitness32
+                    } elseif ($Architecture -eq 'x64') {
+                        $archValue = $archValues.GetValue(2) # DotNetFrameworkArchitecture.Bitness64
+                    } else {
+                        $archValue = $archValues.GetValue(1) # DotNetFrameworkArchitecture.Bitness32
+                    }
+
+                    # Attempt to resolve the path for each version.
+                    $versionIndex = 0
+                    while (!$msBuildPath -and $versionIndex -lt $versions.Length) {
+                        $msBuildPath = $mi.Invoke(
+                            $null,
+                            @( 'msbuild.exe' # string fileName
+                                $versions[$versionIndex] # string toolsVersion
+                                $archValue ))
+                        $versionIndex++
+                    }
+                } elseif (!$Version -or $Version -eq "4.0") {
+                    # Attempt to load the method info GetPathToDotNetFrameworkFile. This method
+                    # is available in the 4.0 utilities DLL.
+                    $mi = $t.GetMethod(
+                        "GetPathToDotNetFrameworkFile",
+                        [type[]]@( [string], $msUtilities.GetType("Microsoft.Build.Utilities.TargetDotNetFrameworkVersion"), $msUtilities.GetType("Microsoft.Build.Utilities.DotNetFrameworkArchitecture") ))
+                    if ($mi -ne $null -and $mi.GetParameters().Length -eq 3) {
+                        # Parameter two of the target method info takes the TargetDotNetFrameworkVersion
+                        # enum. Leverage parameter two to get the enum's type info.
+                        $param2 = $mi.GetParameters()[1];
+                        $frameworkVersionValues = [System.Enum]::GetValues($param2.ParameterType);
+
+                        # Translate the architecture parameter into the corresponding value of the
+                        # DotNetFrameworkArchitecture enum. Parameter three of the target method info
+                        # takes this enum. Leverage parameter three to get to the enum's type info.
+                        $param3 = $mi.GetParameters()[2];
+                        $archValues = [System.Enum]::GetValues($param3.ParameterType);
+                        [object]$archValue = $null
+                        if ($Architecture -eq "x86") {
+                            $archValue = $archValues.GetValue(1) # DotNetFrameworkArchitecture.Bitness32
+                        } elseif ($Architecture -eq "x64") {
+                            $archValue = $archValues.GetValue(2) # DotNetFrameworkArchitecture.Bitness64
+                        } else {
+                            $archValue = $archValues.GetValue(1) # DotNetFrameworkArchitecture.Bitness32
+                        }
+
+                        # Attempt to resolve the path.
+                        $msBuildPath = $mi.Invoke(
+                            $null,
+                            @( "msbuild.exe" # string fileName
+                                $frameworkVersionValues.GetValue($frameworkVersionValues.Length - 1) # enum TargetDotNetFrameworkVersion.VersionLatest
+                                $archValue ))
+                    }
+                }
+            }
+        }
+
+        if ($msBuildPath -and (Test-Path -LiteralPath $msBuildPath -PathType Leaf)) {
+            Write-Verbose "MSBuild: $msBuildPath"
+            $msBuildPath
+        }
+    } finally {
+        Trace-VstsLeavingInvocation $MyInvocation
+    }
+}
+
