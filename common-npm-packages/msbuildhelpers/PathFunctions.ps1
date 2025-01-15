@@ -257,8 +257,8 @@ function Select-MSBuildPath {
     Trace-VstsEnteringInvocation $MyInvocation
 
     $featureFlags = @{
-        enableTelemetry  = [System.Convert]::ToBoolean($env:ENABLE_GETMSBUILDPATH_TELEMETRY)
-        useGetMSBuildPathModified = [System.Convert]::ToBoolean($env:USE_GETMSBUILDPATHMODIFIED_METHOD)
+        enableTelemetry  = [System.Convert]::ToBoolean($env:MSBUILDHELPERS_PATHFUCTIONS_ENABLE_TELEMETRY)
+        useGetMSBuildPathModified = [System.Convert]::ToBoolean($env:MSBUILDHELPERS_PATHFUNCTIONS_ENABLE_GETMSBUILDPATHMODIFIED)
     }
 
     $selectMSBuildPathTelemetry = [PSCustomObject]@{
