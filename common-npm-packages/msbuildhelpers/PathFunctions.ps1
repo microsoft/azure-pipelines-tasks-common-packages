@@ -258,18 +258,15 @@ function Select-MSBuildPath {
 
     $featureFlags = @{
         enableTelemetry  = [System.Convert]::ToBoolean($env:MSBUILDHELPERS_PATHFUNCTIONS_ENABLE_TELEMETRY)
-        useGetMSBuildPathModified = [System.Convert]::ToBoolean($env:MSBUILDHELPERS_PATHFUNCTIONS_ENABLE_GETMSBUILDPATHMODIFIED)
+        useGetMSBuildPathV2 = [System.Convert]::ToBoolean($env:MSBUILDHELPERS_PATHFUNCTIONS_ENABLE_GETMSBUILDPATHV2)
     }
-
-    Write-Host $featureFlags
 
     $selectMSBuildPathTelemetry = [PSCustomObject]@{
         PreferredVersion = $PreferredVersion
         Architecture = $Architecture
         PathFromGetMSBuildPathFunction = ""
-        PathFromGetMSBuildPathFunctionModified = ""
+        PathFromGetMSBuildPathFunctionV2 = ""
         PathMatches = ""
-        CaughtAnException = ""
         ExceptionMessage = ""
     }
 
@@ -305,17 +302,16 @@ function Select-MSBuildPath {
             if (($path = Get-MSBuildPath -Version $PreferredVersion -Architecture $Architecture)) {
                 if($featureFlags.enableTelemetry) {
                     try {
-                        $pathFromGetMSBuildPathModified = Get-MSBuildPathModified -Version $PreferredVersion -Architecture $Architecture
+                        $pathFromGetMSBuildPathV2 = Get-MSBuildPathV2 -Version $PreferredVersion -Architecture $Architecture
                         $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunction = $path
-                        $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunctionModified = $pathFromGetMSBuildPathModified
-                        $selectMSBuildPathTelemetry.PathMatches = ($path -eq $pathFromGetMSBuildPathModified)
+                        $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunctionV2 = $pathFromGetMSBuildPathV2
+                        $selectMSBuildPathTelemetry.PathMatches = ($path -eq $pathFromGetMSBuildPathV2)
                     } catch {
-                        $selectMSBuildPathTelemetry.CaughtAnException = $true
                         $selectMSBuildPathTelemetry.ExceptionMessage = $_.Exception.Message
                     }
                     EmitTelemetry -TelemetryPayload $selectMSBuildPathTelemetry -TaskName "MSBuildHelpers"
-                    if($featureFlags.useGetMSBuildPathModified) {
-                        return $pathFromGetMSBuildPathModified
+                    if($featureFlags.useGetMSBuildPathV2) {
+                        return $pathFromGetMSBuildPathV2
                     }
                 }
                 
@@ -331,25 +327,24 @@ function Select-MSBuildPath {
             if (($path = Get-MSBuildPath -Version $version -Architecture $Architecture)) {
                 if($featureFlags.enableTelemetry) {
                     try {
-                        $pathFromGetMSBuildPathModified = Get-MSBuildPathModified -Version $version -Architecture $Architecture
+                        $pathFromGetMSBuildPathV2 = Get-MSBuildPathV2 -Version $version -Architecture $Architecture
                         $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunction = $path
-                        $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunctionModified = $pathFromGetMSBuildPathModified
-                        $selectMSBuildPathTelemetry.PathMatches = ($path -eq $pathFromGetMSBuildPathModified)
+                        $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunctionV2 = $pathFromGetMSBuildPathV2
+                        $selectMSBuildPathTelemetry.PathMatches = ($path -eq $pathFromGetMSBuildPathV2)
                     } catch {
-                        $selectMSBuildPathTelemetry.CaughtAnException = $true
                         $selectMSBuildPathTelemetry.ExceptionMessage = $_.Exception.Message
                     }
 
                     EmitTelemetry -TelemetryPayload $selectMSBuildPathTelemetry -TaskName "MSBuildHelpers"
                     
-                    if($featureFlags.useGetMSBuildPathModified) {
+                    if($featureFlags.useGetMSBuildPathV2) {
                         
                         # Warn falling back.
                         if ($specificVersion) {
                             Write-Warning (Get-VstsLocString -Key 'MSB_UnableToFindMSBuildVersion0Architecture1FallbackVersion2' -ArgumentList $PreferredVersion, $Architecture, $version)
                         }
 
-                        return $pathFromGetMSBuildPathModified
+                        return $pathFromGetMSBuildPathV2
                     }
                 }
 
@@ -373,7 +368,12 @@ function Select-MSBuildPath {
     }
 }
 
-function Get-MSBuildPathModified {
+# This is an updated version of Get-MsBuildPath for VS version greater than equal to 15.0.
+# Get-MsBuildPath function script first locates Microsoft.Build.Utilities.Core.dll and then uses it to locate the msbuild.exe. 
+# Under the current preview version of VS 17.3.2 this fails due to an assembly conflict.
+# the reflection usage here is redundant, since the msbuild exe lives either in the same folder as this .dll file or in its direct subfolder.
+# [TODO] : Once we have enough telemetry records to be confident of the correctness of this method, replace Get-MSBuildPath with Get-MSBuildPathV2 and remove feature flags.
+function Get-MSBuildPathV2 {
     [CmdletBinding()]
     param(
         [string]$Version,
