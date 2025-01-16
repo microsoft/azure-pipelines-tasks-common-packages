@@ -263,6 +263,7 @@ function Select-MSBuildPath {
 
     $selectMSBuildPathTelemetry = [PSCustomObject]@{
         PreferredVersion = $PreferredVersion
+        LookedUpVersion = ""
         Architecture = $Architecture
         PathFromGetMSBuildPathFunction = ""
         PathFromGetMSBuildPathFunctionV2 = ""
@@ -302,8 +303,10 @@ function Select-MSBuildPath {
             if (($path = Get-MSBuildPath -Version $PreferredVersion -Architecture $Architecture)) {
                 if($featureFlags.enableTelemetry) {
                     try {
-                        $pathFromGetMSBuildPathV2 = Get-MSBuildPathV2 -Version $PreferredVersion -Architecture $Architecture
+                        $selectMSBuildPathTelemetry.LookedUpVersion = $PreferredVersion
                         $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunction = $path
+
+                        $pathFromGetMSBuildPathV2 = Get-MSBuildPathV2 -Version $PreferredVersion -Architecture $Architecture
                         $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunctionV2 = $pathFromGetMSBuildPathV2
                         $selectMSBuildPathTelemetry.PathMatches = ($path -eq $pathFromGetMSBuildPathV2)
                     } catch {
@@ -327,8 +330,10 @@ function Select-MSBuildPath {
             if (($path = Get-MSBuildPath -Version $version -Architecture $Architecture)) {
                 if($featureFlags.enableTelemetry) {
                     try {
-                        $pathFromGetMSBuildPathV2 = Get-MSBuildPathV2 -Version $version -Architecture $Architecture
+                        $selectMSBuildPathTelemetry.LookedUpVersion = $version
                         $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunction = $path
+
+                        $pathFromGetMSBuildPathV2 = Get-MSBuildPathV2 -Version $version -Architecture $Architecture
                         $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunctionV2 = $pathFromGetMSBuildPathV2
                         $selectMSBuildPathTelemetry.PathMatches = ($path -eq $pathFromGetMSBuildPathV2)
                     } catch {
@@ -338,12 +343,10 @@ function Select-MSBuildPath {
                     EmitTelemetry -TelemetryPayload $selectMSBuildPathTelemetry -TaskName "MSBuildHelpers"
                     
                     if($featureFlags.useGetMSBuildPathV2) {
-                        
                         # Warn falling back.
                         if ($specificVersion) {
                             Write-Warning (Get-VstsLocString -Key 'MSB_UnableToFindMSBuildVersion0Architecture1FallbackVersion2' -ArgumentList $PreferredVersion, $Architecture, $version)
                         }
-
                         return $pathFromGetMSBuildPathV2
                     }
                 }
@@ -352,7 +355,6 @@ function Select-MSBuildPath {
                 if ($specificVersion) {
                     Write-Warning (Get-VstsLocString -Key 'MSB_UnableToFindMSBuildVersion0Architecture1FallbackVersion2' -ArgumentList $PreferredVersion, $Architecture, $version)
                 }
-               
                 return $path
             }
         }
@@ -538,4 +540,3 @@ function Get-MSBuildPathV2 {
         Trace-VstsLeavingInvocation $MyInvocation
     }
 }
-
