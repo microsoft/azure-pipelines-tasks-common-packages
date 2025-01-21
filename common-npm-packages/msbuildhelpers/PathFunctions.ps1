@@ -471,57 +471,65 @@ function Select-MSBuildPath {
 
         # Look for a specific version of MSBuild.
         if ($specificVersion) {
-            if (($path = Get-MSBuildPath -Version $PreferredVersion -Architecture $Architecture)) {
-                if($featureFlags.enableTelemetry) {
-                    try {
-                        $selectMSBuildPathTelemetry.LookedUpVersion = $PreferredVersion
-                        $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunction = $path
+            $path = Get-MSBuildPath -Version $PreferredVersion -Architecture $Architecture
+            $pathFromGetMSBuildPathV2 = $null
 
-                        $pathFromGetMSBuildPathV2 = Get-MSBuildPathV2 -Version $PreferredVersion -Architecture $Architecture
-                        $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunctionV2 = $pathFromGetMSBuildPathV2
-                        $selectMSBuildPathTelemetry.PathMatches = ($path -eq $pathFromGetMSBuildPathV2)
-                    } catch {
-                        $selectMSBuildPathTelemetry.ExceptionMessage = $_.Exception.Message
-                    }
-                    EmitTelemetry -TelemetryPayload $selectMSBuildPathTelemetry -TaskName "MSBuildHelpers"
-                    if($featureFlags.useGetMSBuildPathV2) {
-                        return $pathFromGetMSBuildPathV2
-                    }
+            if($featureFlags.enableTelemetry) {
+                try {
+                    $selectMSBuildPathTelemetry.LookedUpVersion = $PreferredVersion
+                    $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunction = $path
+                    $pathFromGetMSBuildPathV2 = Get-MSBuildPathV2 -Version $PreferredVersion -Architecture $Architecture
+                    $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunctionV2 = $pathFromGetMSBuildPathV2
+                    $selectMSBuildPathTelemetry.PathMatches = ($path -eq $pathFromGetMSBuildPathV2)
+                } catch {
+                    $selectMSBuildPathTelemetry.ExceptionMessage = $_.Exception.Message
                 }
-                
+
+                EmitTelemetry -TelemetryPayload $selectMSBuildPathTelemetry -TaskName "MSBuildHelpers"
+
+                if($featureFlags.useGetMSBuildPathV2 -and $pathFromGetMSBuildPathV2) {
+                    Write-Debug "Returning path from GetMSBuildPathV2"
+                    return $pathFromGetMSBuildPathV2
+                }
+            }
+            
+            if($path) {
                 return $path
             }
-
+            
             # Attempt to fallback.
             Write-Verbose "Specified version '$PreferredVersion' and architecture '$Architecture' not found. Attempting to fallback."
         }
 
         # Look for the latest version of MSBuild.
         foreach ($version in $versions) {
-            if (($path = Get-MSBuildPath -Version $version -Architecture $Architecture)) {
-                if($featureFlags.enableTelemetry) {
-                    try {
-                        $selectMSBuildPathTelemetry.LookedUpVersion = $version
-                        $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunction = $path
-
-                        $pathFromGetMSBuildPathV2 = Get-MSBuildPathV2 -Version $version -Architecture $Architecture
-                        $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunctionV2 = $pathFromGetMSBuildPathV2
-                        $selectMSBuildPathTelemetry.PathMatches = ($path -eq $pathFromGetMSBuildPathV2)
-                    } catch {
-                        $selectMSBuildPathTelemetry.ExceptionMessage = $_.Exception.Message
-                    }
-
-                    EmitTelemetry -TelemetryPayload $selectMSBuildPathTelemetry -TaskName "MSBuildHelpers"
-                    
-                    if($featureFlags.useGetMSBuildPathV2) {
-                        # Warn falling back.
-                        if ($specificVersion) {
-                            Write-Warning (Get-VstsLocString -Key 'MSB_UnableToFindMSBuildVersion0Architecture1FallbackVersion2' -ArgumentList $PreferredVersion, $Architecture, $version)
-                        }
-                        return $pathFromGetMSBuildPathV2
-                    }
+            $path = Get-MSBuildPath -Version $version -Architecture $Architecture
+            $pathFromGetMSBuildPathV2 = $null
+            
+            if($featureFlags.enableTelemetry) {
+                try {
+                    $selectMSBuildPathTelemetry.LookedUpVersion = $version
+                    $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunction = $path
+                    $pathFromGetMSBuildPathV2 = Get-MSBuildPathV2 -Version $version -Architecture $Architecture
+                    $selectMSBuildPathTelemetry.PathFromGetMSBuildPathFunctionV2 = $pathFromGetMSBuildPathV2
+                    $selectMSBuildPathTelemetry.PathMatches = ($path -eq $pathFromGetMSBuildPathV2)
+                } catch {
+                    $selectMSBuildPathTelemetry.ExceptionMessage = $_.Exception.Message
                 }
 
+                EmitTelemetry -TelemetryPayload $selectMSBuildPathTelemetry -TaskName "MSBuildHelpers"
+                
+                if($featureFlags.useGetMSBuildPathV2 -and $pathFromGetMSBuildPathV2) {
+                    # Warn falling back.
+                    if ($specificVersion) {
+                        Write-Warning (Get-VstsLocString -Key 'MSB_UnableToFindMSBuildVersion0Architecture1FallbackVersion2' -ArgumentList $PreferredVersion, $Architecture, $version)
+                    }
+                    Write-Debug "Returning path from GetMSBuildPathV2"
+                    return $pathFromGetMSBuildPathV2
+                }
+            }
+
+            if($path) {
                 # Warn falling back.
                 if ($specificVersion) {
                     Write-Warning (Get-VstsLocString -Key 'MSB_UnableToFindMSBuildVersion0Architecture1FallbackVersion2' -ArgumentList $PreferredVersion, $Architecture, $version)
