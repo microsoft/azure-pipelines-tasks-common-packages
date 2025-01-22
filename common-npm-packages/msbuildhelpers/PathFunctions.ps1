@@ -173,20 +173,19 @@ function Get-MSBuildPathV2 {
         [string]$Version,
         [string]$Architecture)
 
-    $VersionNumber = 0
-    try {
-        $VersionNumber = [int]($Version.Remove(2))
-    } catch {
-        Write-Debug "Exception caught while parsing VersionNumber : $_"
-    }
-
     Trace-VstsEnteringInvocation $MyInvocation
     try {
         # We do not need Microsoft.Build.Utilities.Core.dll - if we have located this .dll file, we also have the location of msbuild.exe
         # for the Bitness32 variant since it resides in the same folder.
         # and for the Bitness64 variant since it resides in the /amd64 folders.
         # These paths are fixed due to the way VS is installed.
-        $VersionNumber = [int]($Version.Remove(2))
+        
+        $VersionNumber = 0
+        try {
+            $VersionNumber = [int]($Version.Remove(2))
+        } catch {
+            Write-Debug "Exception caught while parsing VersionNumber : $_"
+        }
 
         $specifiedStudio = Get-VisualStudio $VersionNumber
         if (($VersionNumber -ge 15 -or !$Version) -and # !$Version indicates "latest"
