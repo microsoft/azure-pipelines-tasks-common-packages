@@ -36,16 +36,18 @@ export async function loginAzureRM(connectedService: string): Promise<void> {
         var servicePrincipalId: string = tl.getEndpointAuthorizationParameter(connectedService, "serviceprincipalid", false);
         var tenantId: string = tl.getEndpointAuthorizationParameter(connectedService, "tenantid", false);
         let cliPassword: string = null;
-        let isSupportCertificateParameter: boolean = false;
+        let isCertificateParameterSupported: boolean = false;
         let authParam: string = "--password";
 
         const azVersionResult: IExecSyncResult = tl.execSync("az", "--version");
-            throwIfError(azVersionResult);
-            isSupportCertificateParameter = isAzVersionGreaterOrEqual(azVersionResult.stdout, "2.66.0");
-
+        throwIfError(azVersionResult);
+        if(tl.getPipelineFeature('USE_CERTIFICATE_PARAMETER')){
+            isCertificateParameterSupported = isAzVersionGreaterOrEqual(azVersionResult.stdout, "2.66.0");
+        }
+        
         if (authType == "spnCertificate") {
             tl.debug('certificate based endpoint');
-            if(isSupportCertificateParameter) {
+            if(isCertificateParameterSupported) {
                 authParam = "--certificate";
             }
             let certificateContent: string = tl.getEndpointAuthorizationParameter(connectedService, "servicePrincipalCertificate", false);
