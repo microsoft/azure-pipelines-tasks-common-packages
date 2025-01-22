@@ -164,7 +164,6 @@ function initOIDCToken(connection: WebApi, projectId: string, hub: string, planI
 
 function isAzVersionGreaterOrEqual(azVersionResultOutput: string, versionToCompare: string): boolean {
     try {
-        const result = tl.execSync("az", "--version");
         const versionMatch = azVersionResultOutput.match(/azure-cli\s+(\d+\.\d+\.\d+)/);
 
         if (!versionMatch || versionMatch.length < 2) {
