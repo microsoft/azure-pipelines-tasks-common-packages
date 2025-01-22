@@ -182,13 +182,6 @@ function Get-MSBuildPathV2 {
 
     Trace-VstsEnteringInvocation $MyInvocation
     try {
-        # Only attempt to find Microsoft.Build.Utilities.Core.dll from a VS 15 Willow install
-        # when "15.0" or latest is specified. In 15.0, the method GetPathToBuildToolsFile(...)
-        # has regressed. When it is called for a version that is not found, the latest version
-        # found is returned instead. Same for "16.0" and "17.0"
-        [System.Reflection.Assembly]$msUtilities = $null
-
-
         # We do not need Microsoft.Build.Utilities.Core.dll - if we have located this .dll file, we also have the location of msbuild.exe
         # for the Bitness32 variant since it resides in the same folder.
         # and for the Bitness64 variant since it resides in the /amd64 folders.
@@ -223,27 +216,25 @@ function Get-MSBuildPathV2 {
         }
 
         # Fallback to searching the GAC.
-        if (!$msUtilities) {
-            $msbuildUtilitiesAssemblies = @(
-                "Microsoft.Build.Utilities.Core, Version=15.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL"
-                "Microsoft.Build.Utilities.Core, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL"
-                "Microsoft.Build.Utilities.v12.0, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL"
-                "Microsoft.Build.Utilities.v4.0, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL"
-            )
+        $msbuildUtilitiesAssemblies = @(
+            "Microsoft.Build.Utilities.Core, Version=15.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL"
+            "Microsoft.Build.Utilities.Core, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL"
+            "Microsoft.Build.Utilities.v12.0, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL"
+            "Microsoft.Build.Utilities.v4.0, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL"
+        )
 
-            # Attempt to load a Microsoft build utilities DLL.
-            $index = 0
-            [System.Reflection.Assembly]$msUtilities = $null
-            while (!$msUtilities -and $index -lt $msbuildUtilitiesAssemblies.Length) {
-                Write-Verbose "Loading $($msbuildUtilitiesAssemblies[$index])"
-                try {
-                    $msUtilities = [System.Reflection.Assembly]::Load((New-Object System.Reflection.AssemblyName($msbuildUtilitiesAssemblies[$index])))
-                } catch [System.IO.FileNotFoundException] {
-                    Write-Verbose "Not found."
-                }
-
-                $index++
+        # Attempt to load a Microsoft build utilities DLL.
+        $index = 0
+        [System.Reflection.Assembly]$msUtilities = $null
+        while (!$msUtilities -and $index -lt $msbuildUtilitiesAssemblies.Length) {
+            Write-Verbose "Loading $($msbuildUtilitiesAssemblies[$index])"
+            try {
+                $msUtilities = [System.Reflection.Assembly]::Load((New-Object System.Reflection.AssemblyName($msbuildUtilitiesAssemblies[$index])))
+            } catch [System.IO.FileNotFoundException] {
+                Write-Verbose "Not found."
             }
+
+            $index++
         }
 
         [string]$msBuildPath = $null
@@ -492,7 +483,7 @@ function Select-MSBuildPath {
             if (($path = Get-MSBuildPath -Version $PreferredVersion -Architecture $Architecture)) {
                 return $path
             }
-            
+
             # Attempt to fallback.
             Write-Verbose "Specified version '$PreferredVersion' and architecture '$Architecture' not found. Attempting to fallback."
         }
@@ -527,6 +518,7 @@ function Select-MSBuildPath {
                 if ($specificVersion) {
                     Write-Warning (Get-VstsLocString -Key 'MSB_UnableToFindMSBuildVersion0Architecture1FallbackVersion2' -ArgumentList $PreferredVersion, $Architecture, $version)
                 }
+
                 return $path
             }
         }
