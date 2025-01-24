@@ -154,7 +154,7 @@ export function registerNuGetUbuntuNewVersionMock(tmr: tmrm.TaskMockRunner) {
     tmr.registerMock('os', os);
 
     const lbsContents = `DISTRIB_ID=Ubuntu
-                         DISTRIB_RELEASE=22.04`;
+                         DISTRIB_RELEASE=24.04`;
 
     tmr.registerMock('fs', {
         existsSync: (filepath: string) => true,
