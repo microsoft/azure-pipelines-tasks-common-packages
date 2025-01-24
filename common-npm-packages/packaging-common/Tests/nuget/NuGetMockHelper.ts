@@ -1,6 +1,9 @@
 import tmrm = require('azure-pipelines-task-lib/mock-run');
+import os = require('os');
 
 import {VersionInfo} from '../../pe-parser/VersionResource'
+import exp = require('constants');
+import { existsSync, readFileSync } from 'fs';
 	
 export function registerNugetToolGetterMock(tmr: tmrm.TaskMockRunner) {
     tmr.registerMock('azure-pipelines-tasks-packaging-common/nuget/NuGetToolGetter', {
@@ -112,5 +115,49 @@ export function registerNugetUtilityMockUnix(tmr: tmrm.TaskMockRunner, projectFi
         resolveToolPath: function(path) {
             return path;
         }
+    });
+}
+
+export function registerNuGetWindowsOsMock(tmr: tmrm.TaskMockRunner) {
+    os.platform = () => {
+        return 'win32' as NodeJS.Platform;
+    }
+    tmr.registerMock('os', os);
+}
+
+export function registerNuGetMacOsMock(tmr: tmrm.TaskMockRunner) {
+    os.platform = () => {
+        return 'darwin' as NodeJS.Platform;
+    }
+    tmr.registerMock('os', os);
+}
+
+export function registerNuGetUbuntuOldVersionMock(tmr: tmrm.TaskMockRunner) {
+    os.platform = () => {
+        return 'linux' as NodeJS.Platform;
+    }
+    tmr.registerMock('os', os);
+
+    const lbsContents = `DISTRIB_ID=Ubuntu
+                         DISTRIB_RELEASE=22.04`;
+
+    tmr.registerMock('fs', {
+        existsSync: (filepath: string) => true,
+        readFileSync: (filepath: string) => lbsContents
+    });
+}
+
+export function registerNuGetUbuntuNewVersionMock(tmr: tmrm.TaskMockRunner) {
+    os.platform = () => {
+        return 'linux' as NodeJS.Platform;
+    }
+    tmr.registerMock('os', os);
+
+    const lbsContents = `DISTRIB_ID=Ubuntu
+                         DISTRIB_RELEASE=22.04`;
+
+    tmr.registerMock('fs', {
+        existsSync: (filepath: string) => true,
+        readFileSync: (filepath: string) => lbsContents
     });
 }
