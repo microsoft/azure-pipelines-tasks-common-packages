@@ -11,7 +11,7 @@ import * as  osutil from './osutility';
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
 const kubectlToolName = 'kubectl';
-export const stableKubectlVersion = 'v1.14.0';
+export const stableKubectlVersion = 'v1.32.0';
 
 // get a stable version from the url https://dl.k8s.io/release/stable.txt
 export async function getStableKubectlVersion(): Promise<string> {
