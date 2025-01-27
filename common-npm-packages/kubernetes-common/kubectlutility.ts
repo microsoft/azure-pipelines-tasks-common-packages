@@ -13,6 +13,7 @@ tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 const kubectlToolName = 'kubectl';
 export const stableKubectlVersion = 'v1.32.0';
 
+// get a stable version from the url https://dl.k8s.io/release/stable.txt
 export async function getStableKubectlVersion(): Promise<string> {
     let version;
     const stableVersionUrl = 'https://dl.k8s.io/release/stable.txt';
@@ -77,10 +78,8 @@ function getkubectlDownloadURL(version: string): string {
         case 'Linux':
             const architecture = osutil.getSupportedLinuxArchitecture();
             return util.format('https://dl.k8s.io/release/%s/bin/linux/%s/kubectl', version, architecture);
-
         case 'Darwin':
             return util.format('https://dl.k8s.io/release/%s/bin/darwin/amd64/kubectl', version);
-
         case 'Windows_NT':
         default:
             return util.format('https://dl.k8s.io/release/%s/bin/windows/amd64/kubectl.exe', version);
