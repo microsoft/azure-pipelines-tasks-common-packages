@@ -415,6 +415,7 @@ export class ApplicationTokenCredentials {
                     // thumbprint
                     const certEncoded = certFile.match(/-----BEGIN CERTIFICATE-----\s*([\s\S]+?)\s*-----END CERTIFICATE-----/i)[1];
                     const certDecoded = Buffer.from(certEncoded, "base64");
+                    // CodeQL [SM01510] External Dependency: Azure CLI generated certificates support only sha1 // CodeQL [SM04514] External Dependency: Azure CLI generated certificates support only sha1
                     const thumbprint = crypto.createHash("sha1").update(certDecoded).digest("hex").toUpperCase();
 
                     if (!thumbprint) {
