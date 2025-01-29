@@ -41,9 +41,7 @@ export async function loginAzureRM(connectedService: string): Promise<void> {
 
         const azVersionResult: IExecSyncResult = tl.execSync("az", "--version");
         throwIfError(azVersionResult);
-        if(tl.getPipelineFeature('USE_CERTIFICATE_PARAMETER')){
-            isCertificateParameterSupported = isAzVersionGreaterOrEqual(azVersionResult.stdout, "2.66.0");
-        }
+        isCertificateParameterSupported = isAzVersionGreaterOrEqual(azVersionResult.stdout, "2.66.0");
         
         if (authType == "spnCertificate") {
             tl.debug('certificate based endpoint');
