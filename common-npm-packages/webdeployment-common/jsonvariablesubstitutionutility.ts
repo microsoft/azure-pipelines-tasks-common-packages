@@ -185,6 +185,7 @@ export function jsonVariableSubstitution(absolutePath, jsonSubFiles, substituteA
         }
         for(let file of matchFiles) {
             var fileBuffer: Buffer = fs.readFileSync(file);
+            if (fileBuffer.length > 4){
             var fileEncodeType = fileEncoding.detectFileEncoding(file, fileBuffer);
             var fileContent: string = fileBuffer.toString(fileEncodeType[0]);
             if(fileEncodeType[1]) {
@@ -206,7 +207,9 @@ export function jsonVariableSubstitution(absolutePath, jsonSubFiles, substituteA
             }
             
             tl.writeFile(file, (fileEncodeType[1] ? '\uFEFF' : '') + JSON.stringify(jsonObject, null, 4), fileEncodeType[0]);
+            }
         }
+
     }
     
     return isSubstitutionApplied;
