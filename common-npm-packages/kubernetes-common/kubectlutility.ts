@@ -80,7 +80,6 @@ function getkubectlDownloadURL(version: string): string {
             return util.format('https://dl.k8s.io/release/%s/bin/linux/%s/kubectl', version, architecture);
         case 'Darwin':
             return util.format('https://dl.k8s.io/release/%s/bin/darwin/amd64/kubectl', version);
-
         case 'Windows_NT':
         default:
             return util.format('https://dl.k8s.io/release/%s/bin/windows/amd64/kubectl.exe', version);
