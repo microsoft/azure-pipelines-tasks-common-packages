@@ -217,6 +217,12 @@ export class NuGetToolRunner2 extends ToolRunner {
         options.env = prepareNuGetExeEnvironment(options.env || process.env, this.settings, this.authInfo);
         return super.exec(options);
     }
+
+    public execAsync(options?: IExecOptions): Promise<number> {
+        options = options || <IExecOptions>{};
+        options.env = prepareNuGetExeEnvironment(options.env || process.env, this.settings, this.authInfo);
+        return super.execAsync(options);
+    }
 }
 
 export function createNuGetToolRunner(nuGetExePath: string, settings: NuGetEnvironmentSettings, authInfo: auth.NuGetExtendedAuthInfo): NuGetToolRunner2 {
