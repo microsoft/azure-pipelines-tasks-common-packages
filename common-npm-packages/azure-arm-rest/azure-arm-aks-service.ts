@@ -55,53 +55,45 @@ export class AzureAksService {
         });
     }
 
-    public getClusterCredentials(resourceGroup : string , clusterName : string, useClusterAdmin?: boolean): Promise<Model.AKSCredentialResults> {
-        var credentialAction = !!useClusterAdmin ? 'listClusterAdminCredential' : 'listClusterUserCredential';
-        return this.beginRequest(`//subscriptions/{subscriptionId}/resourceGroups/{ResourceGroupName}/providers/Microsoft.ContainerService/managedClusters/{ClusterName}/{CredentialAction}`,
-        {
+    public getCredentials(resourceGroup: string, name: string, isFleet: boolean, useClusterAdmin?: boolean): Promise<Model.AKSCredentialResults> {
+    let uri: string;
+    let parameters: any;
+    let apiVersion: string;
+
+    if (isFleet) {
+        uri = `//subscriptions/{subscriptionId}/resourceGroups/{ResourceGroupName}/providers/Microsoft.ContainerService/fleets/{FleetName}/listCredentials`;
+        parameters = {
             '{ResourceGroupName}': resourceGroup,
-            '{ClusterName}': clusterName,
-            '{CredentialAction}': credentialAction
-        }, '2024-05-01', "POST").then((response) => {
-            return  response.body;
-        }, (reason) => {
-            throw Error(tl.loc('CantDownloadClusterCredentials', clusterName,  this._client.getFormattedError(reason)));
-        });
-    }
-
-    public getFleetCredentials(resourceGroup : string , fleetName : string): Promise<Model.AKSCredentialResults> {
-        return this.beginRequest(`//subscriptions/{subscriptionId}/resourceGroups/{ResourceGroupName}/providers/Microsoft.ContainerService/fleets/{FleetName}/listCredentials`,
-        {
+            '{FleetName}': name,
+        };
+        apiVersion = '2024-04-01';
+    } else {
+        const credentialAction = !!useClusterAdmin ? 'listClusterAdminCredential' : 'listClusterUserCredential';
+        uri = `//subscriptions/{subscriptionId}/resourceGroups/{ResourceGroupName}/providers/Microsoft.ContainerService/managedClusters/{ClusterName}/{CredentialAction}`;
+        parameters = {
             '{ResourceGroupName}': resourceGroup,
-            '{FleetName}': fleetName,
-        }, '2024-04-01', "POST").then((response) => {
-            return  response.body;
-        }, (reason) => {
-            throw Error(tl.loc('CantDownloadClusterCredentials', fleetName,  this._client.getFormattedError(reason)));
-        });
+            '{ClusterName}': name,
+            '{CredentialAction}': credentialAction,
+        };
+        apiVersion = '2024-05-01';
     }
 
-    public getClusterCredential(resourceGroup : string , clusterName : string, useClusterAdmin?: boolean, credentialName?: string): Promise<Model.AKSCredentialResult> {
-        var credentialName = !!credentialName ? credentialName : !!useClusterAdmin ? 'clusterAdmin' : 'clusterUser';
-        var clusterCredentials = this.getClusterCredentials(resourceGroup, clusterName, useClusterAdmin)
-        return clusterCredentials.then((credentials) => {
-           var credential = credentials.kubeconfigs.find(credential => credential.name == credentialName)
-            if (credential === undefined) {
-                throw Error(tl.loc('CantDownloadClusterCredentials', clusterName, `${credentialName} not found in the list of cluster credentials.`));
-            }
-            return credential;
-        })
-    }
+    return this.beginRequest(uri, parameters, apiVersion, "POST").then((response) => {
+        return response.body;
+    }, (reason) => {
+        throw Error(tl.loc('CantDownloadClusterCredentials', name, this._client.getFormattedError(reason)));
+    });
+}
 
-    public getFleetCredential(resourceGroup: string, fleetName: string): Promise<Model.AKSCredentialResult> {
-        var fleetCredentials = this.getFleetCredentials(resourceGroup, fleetName);
-        return fleetCredentials.then((credentials) => {
-            var credential = credentials.kubeconfigs[0];
-            if (credential === undefined) {
-                throw Error(tl.loc('CantDownloadClusterCredentials', fleetName, `No credentials found in the list of fleet credentials.`));
-            }
-            return credential;
-        });
+public getClusterCredential(resourceGroup: string, name: string, isFleet: boolean, useClusterAdmin?: boolean, credentialName?: string): Promise<Model.AKSCredentialResult> {
+    const credentialsPromise = this.getCredentials(resourceGroup, name, isFleet, useClusterAdmin);
+    return credentialsPromise.then((credentials) => {
+        const credential = isFleet ? credentials.kubeconfigs[0] : credentials.kubeconfigs.find(cred => cred.name === (credentialName || (!!useClusterAdmin ? 'clusterAdmin' : 'clusterUser')));
+        if (credential === undefined) {
+            throw Error(tl.loc('CantDownloadClusterCredentials', name, `${credentialName || 'default'} not found in the list of credentials.`));
+        }
+        return credential;
+    });
 }
 
 }
