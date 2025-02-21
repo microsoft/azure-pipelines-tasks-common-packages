@@ -35,7 +35,7 @@ export class AksServiceTests {
     public static async credentialsByCustomClusterUser() {
         let aksService: AzureAksService = new AzureAksService(endpoint);
         try {
-            let result = await aksService.getClusterCredential("MOCK_RESOURCE_GROUP_NAME", "MOCK_CLUSTER", false, 'customUser');
+            let result = await aksService.getClusterCredential("MOCK_RESOURCE_GROUP_NAME", "MOCK_CLUSTER", false, false, 'customUser');
             console.log(`Aks Cluster Credential Found: ${result.name}`);
         }
         catch(error) {
@@ -47,7 +47,7 @@ export class AksServiceTests {
     public static async credentialsFleetUser() {
     let aksService: AzureAksService = new AzureAksService(endpoint);
     try {
-        let result = await aksService.getFleetCredential("MOCK_RESOURCE_GROUP_NAME", "MOCK_FLEET");
+        let result = await aksService.getClusterCredential("MOCK_RESOURCE_GROUP_NAME", "MOCK_FLEET", true);
         console.log(`Fleet Credential Found: ${result.name}`);
     }
     catch(error) {
