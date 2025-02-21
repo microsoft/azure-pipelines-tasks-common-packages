@@ -11,12 +11,12 @@ async function getKubeConfigFromAKS(azureSubscriptionEndpoint: string, resourceG
     tl.debug(tl.loc("KubernetesClusterResourceGroup", name, resourceGroup));
     let base64Kubeconfig;
     if (isFleet) {
-        let clusterInfo: AKSCredentialResult = await aks.getFleetCredential(resourceGroup, name);
+        let clusterInfo: AKSCredentialResult = await aks.getClusterCredential(resourceGroup, name, isFleet);
         base64Kubeconfig = Buffer.from(clusterInfo.value, 'base64');
     } else {
         const USE_AKS_CREDENTIAL_API = tl.getBoolFeatureFlag('USE_AKS_CREDENTIAL_API');
         if (USE_AKS_CREDENTIAL_API) {
-            let clusterInfo: AKSCredentialResult = await aks.getClusterCredential(resourceGroup, name, useClusterAdmin);
+            let clusterInfo: AKSCredentialResult = await aks.getClusterCredential(resourceGroup, name, isFleet, useClusterAdmin);
             base64Kubeconfig = Buffer.from(clusterInfo.value, 'base64');
         } else {
             let clusterInfo: AKSClusterAccessProfile = await aks.getAccessProfile(resourceGroup, name, useClusterAdmin);
