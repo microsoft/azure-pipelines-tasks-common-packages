@@ -69,6 +69,18 @@ export class AzureAksService {
         });
     }
 
+    public getFleetCredentials(resourceGroup : string , fleetName : string): Promise<Model.AKSCredentialResults> {
+        return this.beginRequest(`//subscriptions/{subscriptionId}/resourceGroups/{ResourceGroupName}/providers/Microsoft.ContainerService/fleets/{FleetName}/listCredentials`,
+        {
+            '{ResourceGroupName}': resourceGroup,
+            '{FleetName}': fleetName,
+        }, '2024-04-01', "POST").then((response) => {
+            return  response.body;
+        }, (reason) => {
+            throw Error(tl.loc('CantDownloadClusterCredentials', fleetName,  this._client.getFormattedError(reason)));
+        });
+    }
+
     public getClusterCredential(resourceGroup : string , clusterName : string, useClusterAdmin?: boolean, credentialName?: string): Promise<Model.AKSCredentialResult> {
         var credentialName = !!credentialName ? credentialName : !!useClusterAdmin ? 'clusterAdmin' : 'clusterUser';
         var clusterCredentials = this.getClusterCredentials(resourceGroup, clusterName, useClusterAdmin)
@@ -80,4 +92,16 @@ export class AzureAksService {
             return credential;
         })
     }
+
+    public getFleetCredential(resourceGroup: string, fleetName: string): Promise<Model.AKSCredentialResult> {
+        var fleetCredentials = this.getFleetCredentials(resourceGroup, fleetName);
+        return fleetCredentials.then((credentials) => {
+            var credential = credentials.kubeconfigs[0];
+            if (credential === undefined) {
+                throw Error(tl.loc('CantDownloadClusterCredentials', fleetName, `No credentials found in the list of fleet credentials.`));
+            }
+            return credential;
+        });
+}
+
 }
