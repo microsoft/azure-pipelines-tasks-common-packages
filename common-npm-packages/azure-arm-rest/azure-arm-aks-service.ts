@@ -39,7 +39,7 @@ export class AzureAksService {
                 throw ToError(response);
             }
         });
-    } 
+    }
 
     public getAccessProfile(resourceGroup : string , clusterName : string, useClusterAdmin?: boolean): Promise<Model.AKSClusterAccessProfile> {
         var accessProfileName = !!useClusterAdmin ? 'clusterAdmin' : 'clusterUser';
@@ -54,41 +54,54 @@ export class AzureAksService {
             throw Error(tl.loc('CantDownloadAccessProfile',clusterName,  this._client.getFormattedError(reason)));
         });
     }
-
-    public getCredentials(resourceGroup: string, name: string, isFleet: boolean, useClusterAdmin?: boolean): Promise<Model.AKSCredentialResults> {
-    let uri: string;
-    let parameters: any;
-    let apiVersion: string;
-
-    if (isFleet) {
-        uri = `//subscriptions/{subscriptionId}/resourceGroups/{ResourceGroupName}/providers/Microsoft.ContainerService/fleets/{FleetName}/listCredentials`;
-        parameters = {
+    private createFleetParameters(resourceGroup: string, name: string): { uri: string, parameters: any, apiVersion: string } {
+        const uri = `//subscriptions/{subscriptionId}/resourceGroups/{ResourceGroupName}/providers/Microsoft.ContainerService/fleets/{FleetName}/listCredentials`;
+        const parameters = {
             '{ResourceGroupName}': resourceGroup,
             '{FleetName}': name,
         };
-        apiVersion = '2024-04-01';
-    } else {
+        const apiVersion = '2024-04-01';
+        return { uri, parameters, apiVersion };
+    }
+
+    private createManagedClusterParameters(resourceGroup: string, name: string, useClusterAdmin?: boolean): { uri: string, parameters: any, apiVersion: string } {
         const credentialAction = !!useClusterAdmin ? 'listClusterAdminCredential' : 'listClusterUserCredential';
-        uri = `//subscriptions/{subscriptionId}/resourceGroups/{ResourceGroupName}/providers/Microsoft.ContainerService/managedClusters/{ClusterName}/{CredentialAction}`;
-        parameters = {
+        const uri = `//subscriptions/{subscriptionId}/resourceGroups/{ResourceGroupName}/providers/Microsoft.ContainerService/managedClusters/{ClusterName}/{CredentialAction}`;
+        const parameters = {
             '{ResourceGroupName}': resourceGroup,
             '{ClusterName}': name,
             '{CredentialAction}': credentialAction,
         };
-        apiVersion = '2024-05-01';
+        const apiVersion = '2024-05-01';
+        return { uri, parameters, apiVersion };
     }
 
-    return this.beginRequest(uri, parameters, apiVersion, "POST").then((response) => {
-        return response.body;
-    }, (reason) => {
-        throw Error(tl.loc('CantDownloadClusterCredentials', name, this._client.getFormattedError(reason)));
+    public getCredentials(resourceGroup: string, name: string, uri: string, parameters: any, apiVersion: string, isFleet: boolean, useClusterAdmin?: boolean): Promise<Model.AKSCredentialResults> {
+        return this.beginRequest(uri, parameters, apiVersion, "POST").then((response) => {
+            return response.body;
+        }, (reason) => {
+            throw Error(tl.loc('CantDownloadClusterCredentials', name, this._client.getFormattedError(reason)));
+        });
+}
+
+public getClusterCredential(resourceGroup: string, name: string, useClusterAdmin?: boolean, credentialName?: string): Promise<Model.AKSCredentialResult> {
+    const { uri, parameters, apiVersion } = this.createManagedClusterParameters(resourceGroup, name, useClusterAdmin);
+    const credentialsPromise = this.getCredentials(resourceGroup, name, uri, parameters, apiVersion, useClusterAdmin);
+    return credentialsPromise.then((credentials) => {
+        const credential = credentials.kubeconfigs.find(cred => cred.name === (credentialName || (!!useClusterAdmin ? 'clusterAdmin' : 'clusterUser')));
+        if (credential === undefined) {
+            throw Error(tl.loc('CantDownloadClusterCredentials', name, `${credentialName || 'default'} not found in the list of credentials.`));
+        }
+        return credential;
     });
 }
 
-public getClusterCredential(resourceGroup: string, name: string, isFleet: boolean, useClusterAdmin?: boolean, credentialName?: string): Promise<Model.AKSCredentialResult> {
-    const credentialsPromise = this.getCredentials(resourceGroup, name, isFleet, useClusterAdmin);
+public getFleetCredential(resourceGroup: string, name: string, useClusterAdmin?: boolean, credentialName?: string): Promise<Model.AKSCredentialResult> {
+
+    const { uri, parameters, apiVersion } = this.createFleetParameters(resourceGroup, name);
+    const credentialsPromise = this.getCredentials(resourceGroup, name, uri, parameters, apiVersion, useClusterAdmin);
     return credentialsPromise.then((credentials) => {
-        const credential = isFleet ? credentials.kubeconfigs[0] : credentials.kubeconfigs.find(cred => cred.name === (credentialName || (!!useClusterAdmin ? 'clusterAdmin' : 'clusterUser')));
+        const credential = credentials.kubeconfigs[0];
         if (credential === undefined) {
             throw Error(tl.loc('CantDownloadClusterCredentials', name, `${credentialName || 'default'} not found in the list of credentials.`));
         }
