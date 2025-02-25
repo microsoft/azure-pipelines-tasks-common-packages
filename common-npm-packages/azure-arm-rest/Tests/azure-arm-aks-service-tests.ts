@@ -11,7 +11,7 @@ export class AksServiceTests {
     public static async credentialsByClusterAdmin() {
         let aksService: AzureAksService = new AzureAksService(endpoint);
         try {
-            let result = await aksService.getClusterCredential("MOCK_RESOURCE_GROUP_NAME", "MOCK_CLUSTER", false, true);
+            let result = await aksService.getClusterCredential("MOCK_RESOURCE_GROUP_NAME", "MOCK_CLUSTER", true);
             console.log(`Aks Cluster Credential Found: ${result.name}`);
         }
         catch(error) {
@@ -23,7 +23,7 @@ export class AksServiceTests {
     public static async credentialsByClusterUser() {
         let aksService: AzureAksService = new AzureAksService(endpoint);
         try {
-            let result = await aksService.getClusterCredential("MOCK_RESOURCE_GROUP_NAME", "MOCK_CLUSTER", false, false);
+            let result = await aksService.getClusterCredential("MOCK_RESOURCE_GROUP_NAME", "MOCK_CLUSTER", false);
             console.log(`Aks Cluster Credential Found: ${result.name}`);
         }
         catch(error) {
@@ -35,7 +35,7 @@ export class AksServiceTests {
     public static async credentialsByCustomClusterUser() {
         let aksService: AzureAksService = new AzureAksService(endpoint);
         try {
-            let result = await aksService.getClusterCredential("MOCK_RESOURCE_GROUP_NAME", "MOCK_CLUSTER", false, false, 'customUser');
+            let result = await aksService.getClusterCredential("MOCK_RESOURCE_GROUP_NAME", "MOCK_CLUSTER", false, 'customUser');
             console.log(`Aks Cluster Credential Found: ${result.name}`);
         }
         catch(error) {
@@ -47,7 +47,7 @@ export class AksServiceTests {
     public static async credentialsFleetUser() {
     let aksService: AzureAksService = new AzureAksService(endpoint);
     try {
-        let result = await aksService.getClusterCredential("MOCK_RESOURCE_GROUP_NAME", "MOCK_FLEET", true);
+        let result = await aksService.getFleetCredential("MOCK_RESOURCE_GROUP_NAME", "MOCK_FLEET");
         console.log(`Fleet Credential Found: ${result.name}`);
     }
     catch(error) {
