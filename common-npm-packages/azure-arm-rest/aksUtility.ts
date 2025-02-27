@@ -23,11 +23,11 @@ async function getKubeConfigFromAKS(azureSubscriptionEndpoint: string, resourceG
     return base64Kubeconfig.toString();
 }
 
-export async function getFleetKubeConfig(azureSubscriptionEndpoint, resourceGroup, fleetName): Promise<string> {
+export async function getKubeConfigFromFleet(azureSubscriptionEndpoint, resourceGroup, fleetName): Promise<string> {
   tl.debug(tl.loc("KubernetesClusterResourceGroup", name, resourceGroup));
   const azureEndpoint: AzureEndpoint = await (new AzureRMEndpoint(azureSubscriptionEndpoint)).getEndpoint();
   const aks = new AzureAksService(azureEndpoint);
-  let clusterInfo: AKSCredentialResult = await aks.getFleetCredential(resourceGroup, fleetName, true);
+  let clusterInfo: AKSCredentialResult = await aks.getFleetCredential(resourceGroup, fleetName);
   let base64Kubeconfig = Buffer.from(clusterInfo.value, 'base64');
   return base64Kubeconfig.toString();
 }
@@ -38,5 +38,5 @@ export async function getKubeConfig(azureSubscriptionEndpoint, resourceGroup, cl
 }
 
 export async function getKubeConfigForFleet(azureSubscriptionEndpoint, resourceGroup, fleetName): Promise<string> {
-    return getFleetKubeConfig(azureSubscriptionEndpoint, resourceGroup, fleetName);
+    return getKubeConfigFromFleet(azureSubscriptionEndpoint, resourceGroup, fleetName);
 }

@@ -76,7 +76,7 @@ export class AzureAksService {
         return { uri, parameters, apiVersion };
     }
 
-    public getCredentials(resourceGroup: string, name: string, uri: string, parameters: any, apiVersion: string, isFleet: boolean, useClusterAdmin?: boolean): Promise<Model.AKSCredentialResults> {
+    public getCredentials(resourceGroup: string, name: string, uri: string, parameters: any, apiVersion: string): Promise<Model.AKSCredentialResults> {
         return this.beginRequest(uri, parameters, apiVersion, "POST").then((response) => {
             return response.body;
         }, (reason) => {
@@ -86,7 +86,7 @@ export class AzureAksService {
 
 public getClusterCredential(resourceGroup: string, name: string, useClusterAdmin?: boolean, credentialName?: string): Promise<Model.AKSCredentialResult> {
     const { uri, parameters, apiVersion } = this.createManagedClusterParameters(resourceGroup, name, useClusterAdmin);
-    const credentialsPromise = this.getCredentials(resourceGroup, name, uri, parameters, apiVersion, useClusterAdmin);
+    const credentialsPromise = this.getCredentials(resourceGroup, name, uri, parameters, apiVersion);
     return credentialsPromise.then((credentials) => {
         const credential = credentials.kubeconfigs.find(cred => cred.name === (credentialName || (!!useClusterAdmin ? 'clusterAdmin' : 'clusterUser')));
         if (credential === undefined) {
@@ -96,14 +96,14 @@ public getClusterCredential(resourceGroup: string, name: string, useClusterAdmin
     });
 }
 
-public getFleetCredential(resourceGroup: string, name: string, useClusterAdmin?: boolean, credentialName?: string): Promise<Model.AKSCredentialResult> {
+public getFleetCredential(resourceGroup: string, name: string): Promise<Model.AKSCredentialResult> {
 
     const { uri, parameters, apiVersion } = this.createFleetParameters(resourceGroup, name);
-    const credentialsPromise = this.getCredentials(resourceGroup, name, uri, parameters, apiVersion, useClusterAdmin);
+    const credentialsPromise = this.getCredentials(resourceGroup, name, uri, parameters, apiVersion);
     return credentialsPromise.then((credentials) => {
         const credential = credentials.kubeconfigs[0];
         if (credential === undefined) {
-            throw Error(tl.loc('CantDownloadClusterCredentials', name, `${credentialName || 'default'} not found in the list of credentials.`));
+            throw Error(tl.loc('CantDownloadClusterCredentials'));
         }
         return credential;
     });
