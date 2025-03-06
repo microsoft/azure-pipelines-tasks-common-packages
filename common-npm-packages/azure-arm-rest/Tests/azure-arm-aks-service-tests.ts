@@ -43,12 +43,25 @@ export class AksServiceTests {
             tl.setResult(tl.TaskResult.Failed, 'AksServiceTests.credentialsByCustomClusterUser() should have passed but failed');
         }
     }
+
+    public static async credentialsFleetUser() {
+    let aksService: AzureAksService = new AzureAksService(endpoint);
+    try {
+        let result = await aksService.getFleetCredential("MOCK_RESOURCE_GROUP_NAME", "MOCK_FLEET");
+        console.log(`Fleet Credential Found: ${result.name}`);
+    }
+    catch(error) {
+        console.log(error);
+        tl.setResult(tl.TaskResult.Failed, 'AksServiceTests.credentialsByCustomFleetUser() should have passed but failed');
+    }
+}
 }
 
 async function RUNTESTS() {
     await AksServiceTests.credentialsByClusterAdmin();
     await AksServiceTests.credentialsByClusterUser();
     await AksServiceTests.credentialsByCustomClusterUser();
+    await AksServiceTests.credentialsFleetUser()
 }
 
 RUNTESTS();
