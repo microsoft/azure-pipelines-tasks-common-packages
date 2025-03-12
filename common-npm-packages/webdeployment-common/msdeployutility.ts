@@ -120,7 +120,7 @@ function escapeQuotes(additionalArguments: string): string {
         for (let i = 0; i < arg.length; i++) {
             const char = arg.charAt(i); 
             let quotedStringCheck =  (char == separator && equalsSignEncountered && ((formattedArg.startsWith("'") && formattedArg.endsWith("'")) || (formattedArg.startsWith('"') && formattedArg.endsWith('"'))));     
-            let CommaSeperatorCheck=CommaSeperatedCSEnabled ? quotedStringCheck : (char == separator && equalsSignEncountered);
+            let CommaSeperatorCheck = CommaSeperatedCSEnabled ? quotedStringCheck : (char == separator && equalsSignEncountered);
             if (CommaSeperatorCheck) {
                 equalsSignEncountered = false;
                 arg = arg.replace(formattedArg, escapeArg(formattedArg));
