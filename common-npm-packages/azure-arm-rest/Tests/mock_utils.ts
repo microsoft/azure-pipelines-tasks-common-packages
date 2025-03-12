@@ -751,4 +751,18 @@ export function mockAzureAksServiceTests() {
         }]
      }).persist();
 
+     nock('https://management.azure.com', {
+        reqheaders: {
+            "authorization": "Bearer DUMMY_ACCESS_TOKEN",
+            "content-type": "application/json; charset=utf-8"
+        }
+    }).post("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.ContainerService/fleets/MOCK_FLEET/listCredentials?api-version=2024-04-01")
+    .reply(200, {
+        kubeconfigs: [{
+            name: "clusterAdmin",
+            value: "base46kubeconfig"
+        }]
+     }).persist();
+
+
 }
