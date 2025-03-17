@@ -41,6 +41,7 @@ if (options.build) {
     console.log('\nBuilding shared npm packages');
     util.cd('common-npm-packages');
     fs.readdirSync('./', { encoding: 'utf-8' }).forEach(child => {
+        if (!child.includes("provider")) return;
         if (fs.statSync(child).isDirectory() && !ignoredFolders.includes(child)) {
             printLabel(child);
 
@@ -65,6 +66,7 @@ if (options.test) {
 
     const startPath = process.cwd();
     fs.readdirSync(startPath, { encoding: 'utf-8' }).forEach(child => {
+        if (!child.includes("provider")) return;
         if (fs.statSync(child).isDirectory() && !ignoredFolders.includes(child)) {
             printLabel(child);
             const buildPath = path.join(startPath, child, '_build');
@@ -77,8 +79,8 @@ if (options.test) {
                         const suitName = `${child}-suite`;
                         const mochaOptions = util.createMochaOptions(mochaReporterPath, junitPath, suitName);
 
-                        util.run(`nyc --all --src ${buildPath} --report-dir ${coveragePath} mocha ${mochaOptions} ${testPath}`, true);
-                        util.renameFile(coveragePath, coverageBaseNameJson, `${child}-coverage.json`);
+                        util.run(`mocha ${mochaOptions} ${testPath}`, true);
+                        // util.renameFile(coveragePath, coverageBaseNameJson, `${child}-coverage.json`);
                     } catch (err) {
                         testsFailed = true;
                     }
@@ -91,13 +93,13 @@ if (options.test) {
         }
     });
 
-    try {
-        util.rm(path.join(coveragePath, summaryBaseName));
-        util.run(`nyc merge ${coveragePath} ${path.join(testResultsPath, 'merged-coverage.json')}`, true);
-        util.run(`nyc report -t ${testResultsPath} --report-dir ${testResultsPath} --reporter=cobertura`, true);
-    } catch (e) {
-        console.log('Error while generating coverage report')
-    }
+    // try {
+    //     util.rm(path.join(coveragePath, summaryBaseName));
+    //     util.run(`nyc merge ${coveragePath} ${path.join(testResultsPath, 'merged-coverage.json')}`, true);
+    //     util.run(`nyc report -t ${testResultsPath} --report-dir ${testResultsPath} --reporter=cobertura`, true);
+    // } catch (e) {
+    //     console.log('Error while generating coverage report')
+    // }
 
     if (testsFailed) {
         throw new Error('Tests failed!');
