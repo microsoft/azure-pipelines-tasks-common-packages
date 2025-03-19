@@ -295,10 +295,12 @@ export function getBaseImageDigestDockerFile(dockerFileContentPath: string): str
                     : prospectImageName;
             }
         }
-        // check below line with array length check
-        if(baseImage.split('@').length > 1){
-            if (baseImage.split('@')[1].split(':').length > 1) {
-                return baseImage.split('@')[1].split(':')[1];
+        
+        let baseImageData = baseImage.split('@');
+        if(baseImageData.length > 1){
+            let digest = baseImageData[1].split(':');
+            if(digest.length > 1){
+                return digest[1];
             }
         }
 
