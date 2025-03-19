@@ -65,11 +65,20 @@ function addBaseImageLabels(connection: ContainerConnection, labels: string[], d
         tl.debug("Image digest couldn't be extracted because no connection was found.");
         return;
     }
+    let digestImageFromFileEnabled = tl.getPipelineFeature('UseDigestImageFromFile');
+    var baseImageDigest = "";
+    if (digestImageFromFileEnabled) {
+        baseImageDigest = containerUtils.getBaseImageDigestDockerFile(dockerFilePath);
+    }
+    //first check if there is digest passed in Dockerfile
+    if (!baseImageDigest) {
+        baseImageDigest = containerUtils.getImageDigest(connection, baseImageName);
+    }
 
-    const baseImageDigest = containerUtils.getImageDigest(connection, baseImageName);
+    //if there is no digest in Dockerfile, get digest using ImageName:tag
     if (baseImageDigest) {
         addLabelWithValue("image.base.digest", baseImageDigest, labels);
-    }
+    }    
 }
 
 function getReverseDNSName(): string {
