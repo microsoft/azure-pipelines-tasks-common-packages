@@ -9,6 +9,7 @@ import * as os from "os";
 import {VersionInfo} from "../pe-parser/VersionResource";
 import * as peParser from "../pe-parser";
 import { getVersionFallback } from './ProductVersionHelper';
+import { RequestOptions } from '../universal/RequestUtilities';
 
 interface INuGetTools {
     nugetexe: INuGetVersionInfo[]
@@ -38,7 +39,11 @@ export const DEFAULT_NUGET_VERSION: string = '4.9.6';
 export const DEFAULT_NUGET_PATH_SUFFIX: string = 'NuGet/4.9.6/';
 export const NUGET_EXE_TOOL_PATH_ENV_VAR: string = 'NuGetExeToolPath';
 
-export async function getNuGet(versionSpec: string, checkLatest?: boolean, addNuGetToPath?: boolean): Promise<string> {
+export async function getNuGet(
+    versionSpec: string, 
+    checkLatest?: boolean, 
+    addNuGetToPath?: boolean,
+    requestOptions?: RequestOptions): Promise<string> {
     if (toolLib.isExplicitVersion(versionSpec)) {
         // Check latest doesn't make sense when explicit version
         checkLatest = false;
@@ -64,7 +69,7 @@ export async function getNuGet(versionSpec: string, checkLatest?: boolean, addNu
         console.log(taskLib.loc("Info_ResolvedToolFromCache", version));
     }
     else {
-        let versionInfo: INuGetVersionInfo = await getLatestMatchVersionInfo(versionSpec);
+        let versionInfo: INuGetVersionInfo = await getLatestMatchVersionInfo(versionSpec, requestOptions);
 
         // There is a local version which matches the spec yet we found one on dist.nuget.org
         // which is different, so we're about to change the version which was used
@@ -234,12 +239,14 @@ function GetRestClientOptions(): restm.IRequestOptions
     return options;
 }
 
-async function getLatestMatchVersionInfo(versionSpec: string): Promise<INuGetVersionInfo> {
+async function getLatestMatchVersionInfo(versionSpec: string, requestOptions?: RequestOptions): Promise<INuGetVersionInfo> {
     taskLib.debug('Querying versions list');
 
     let versionsUrl = 'https://dist.nuget.org/tools.json';
     let proxyRequestOptions = {
-        proxy: taskLib.getHttpProxyConfiguration(versionsUrl)
+        proxy: taskLib.getHttpProxyConfiguration(versionsUrl),
+        socketTimeout: requestOptions && requestOptions.socketTimeout,
+        globalAgentOptions: requestOptions && requestOptions.globalAgentOptions
     };
     let rest: restm.RestClient = new restm.RestClient('vsts-tasks/NuGetToolInstaller', undefined, undefined, proxyRequestOptions);
 

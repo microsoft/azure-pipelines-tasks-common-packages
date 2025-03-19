@@ -36,9 +36,18 @@ export async function loginAzureRM(connectedService: string): Promise<void> {
         var servicePrincipalId: string = tl.getEndpointAuthorizationParameter(connectedService, "serviceprincipalid", false);
         var tenantId: string = tl.getEndpointAuthorizationParameter(connectedService, "tenantid", false);
         let cliPassword: string = null;
+        let isCertificateParameterSupported: boolean = false;
+        let authParam: string = "--password";
 
+        const azVersionResult: IExecSyncResult = tl.execSync("az", "--version");
+        throwIfError(azVersionResult);
+        isCertificateParameterSupported = isAzVersionGreaterOrEqual(azVersionResult.stdout, "2.66.0");
+        
         if (authType == "spnCertificate") {
             tl.debug('certificate based endpoint');
+            if(isCertificateParameterSupported) {
+                authParam = "--certificate";
+            }
             let certificateContent: string = tl.getEndpointAuthorizationParameter(connectedService, "servicePrincipalCertificate", false);
             cliPassword = path.join(tl.getVariable('Agent.TempDirectory') || tl.getVariable('system.DefaultWorkingDirectory'), 'spnCert.pem');
             fs.writeFileSync(cliPassword, certificateContent);
@@ -51,7 +60,7 @@ export async function loginAzureRM(connectedService: string): Promise<void> {
         let escapedCliPassword = cliPassword.replace(/"/g, '\\"');
         tl.setSecret(escapedCliPassword.replace(/\\/g, '\"'));
         //login using svn
-        throwIfError(tl.execSync("az", `login --service-principal -u "${servicePrincipalId}" --password="${escapedCliPassword}" --tenant "${tenantId}" --allow-no-subscriptions`), tl.loc("LoginFailed"));
+        throwIfError(tl.execSync("az", `login --service-principal -u "${servicePrincipalId}" ${authParam}="${escapedCliPassword}" --tenant "${tenantId}" --allow-no-subscriptions`), tl.loc("LoginFailed"));
     }
     else if(authScheme.toLowerCase() == "managedserviceidentity") {
         //login using msi
@@ -149,4 +158,34 @@ function initOIDCToken(connection: WebApi, projectId: string, hub: string, planI
     );
 
     return deferred.promise;
+}
+
+function isAzVersionGreaterOrEqual(azVersionResultOutput: string, versionToCompare: string): boolean {
+    try {
+        const versionMatch = azVersionResultOutput.match(/azure-cli\s+(\d+\.\d+\.\d+)/);
+
+        if (!versionMatch || versionMatch.length < 2) {
+            tl.error(`Can't parse az version from: ${azVersionResultOutput}`);
+            return false;
+        }
+
+        const currentVersion = versionMatch[1];
+        tl.debug(`Current Azure CLI version: ${currentVersion}`);
+
+        // Parse both versions into major, minor, patch components
+        const [currentMajor, currentMinor, currentPatch] = currentVersion.split('.').map(Number);
+        const [compareMajor, compareMinor, comparePatch] = versionToCompare.split('.').map(Number);
+
+        // Compare versions
+        if (currentMajor > compareMajor) return true;
+        if (currentMajor < compareMajor) return false;
+
+        if (currentMinor > compareMinor) return true;
+        if (currentMinor < compareMinor) return false;
+
+        return currentPatch >= comparePatch;
+    } catch (error) {
+        tl.error(`Error checking Azure CLI version: ${error.message}`);
+        return false;
+    }
 }

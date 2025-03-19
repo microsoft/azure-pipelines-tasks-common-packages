@@ -253,3 +253,60 @@ export function getImageIdFromBuildOutput(output: string): string {
 
     return "";
 }
+export function getBaseImageDigestDockerFile(dockerFileContentPath: string): string {
+    // This method checks if there is FROM image@sha256:digest present in Dockerfile
+    // if matched it returns digest
+    // if not, it returns null
+    
+    try {
+        var dockerFileContent=fs.readFileSync(dockerFileContentPath).toString();
+        if (!dockerFileContent || dockerFileContent == "") {
+            return null;
+        }        
+        var lines = dockerFileContent.split(/[\r?\n]/);
+        var aliasToImageNameMapping: Map<string, string> = new Map<string, string>();
+        var baseImage = "";
+    
+        // Added regex pattern to check line starts with FROM IMAGE
+        const matchPatternForDockerImage = new RegExp(/^FROM\s+IMAGE/); 
+
+        for (var i = 0; i < lines.length; i++) {
+            const currentLine = lines[i].trim();
+            
+            if (!currentLine.toUpperCase().match(matchPatternForDockerImage)) {
+                continue;
+            }
+            var nameComponents = currentLine.substring(4).toLowerCase().split(" as ");
+            var prospectImageName = nameComponents[0].trim();
+    
+            if (nameComponents.length > 1) {
+                var alias = nameComponents[1].trim();
+    
+                if (aliasToImageNameMapping.has(prospectImageName)) {
+                    aliasToImageNameMapping.set(alias, aliasToImageNameMapping.get(prospectImageName));
+                } else {
+                    aliasToImageNameMapping.set(alias, prospectImageName);
+                }
+    
+                baseImage = aliasToImageNameMapping.get(alias);
+            } else {
+                baseImage = aliasToImageNameMapping.has(prospectImageName)
+                    ? aliasToImageNameMapping.get(prospectImageName)
+                    : prospectImageName;
+            }
+        }
+        
+        let baseImageData = baseImage.split('@');
+        if (baseImageData.length > 1) {
+            let digest = baseImageData[1].split(':');
+            if (digest.length > 1){
+                return digest[1];
+            }
+        }
+
+        return null;
+    } catch (error) {
+        tl.debug(`An error ocurred getting the base image digest. ${error.message}`);
+        return null;
+    }
+}

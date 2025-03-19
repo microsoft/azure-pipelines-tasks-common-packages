@@ -177,6 +177,7 @@ export function stripJsonComments(content) {
 export function jsonVariableSubstitution(absolutePath, jsonSubFiles, substituteAllTypes?: boolean) {
     var envVarObject = createEnvTree(tl.getVariables());
     let isSubstitutionApplied: boolean = false;
+    let emptyFiles: string[] = [];
     for(let jsonSubFile of jsonSubFiles) {
         console.log(tl.loc('JSONvariableSubstitution' , jsonSubFile));
         var matchFiles = utility.findfiles(path.join(absolutePath, jsonSubFile));
@@ -184,7 +185,9 @@ export function jsonVariableSubstitution(absolutePath, jsonSubFiles, substituteA
             throw new Error(tl.loc('NOJSONfilematchedwithspecificpattern', jsonSubFile));
         }
         for(let file of matchFiles) {
+            console.log("Processing file: " + file);
             var fileBuffer: Buffer = fs.readFileSync(file);
+            if (fileBuffer.length > 4){
             var fileEncodeType = fileEncoding.detectFileEncoding(file, fileBuffer);
             var fileContent: string = fileBuffer.toString(fileEncodeType[0]);
             if(fileEncodeType[1]) {
@@ -206,7 +209,14 @@ export function jsonVariableSubstitution(absolutePath, jsonSubFiles, substituteA
             }
             
             tl.writeFile(file, (fileEncodeType[1] ? '\uFEFF' : '') + JSON.stringify(jsonObject, null, 4), fileEncodeType[0]);
+            }
+            else {
+                emptyFiles.push(file);
+            }
         }
+    }
+    if (emptyFiles.length > 0) {
+        console.log(`The following input files either empty: ${emptyFiles.join(', ')}. No substitution was performed.`);
     }
     
     return isSubstitutionApplied;

@@ -185,6 +185,9 @@
         "UpdatedAppServiceConfigurationSettings": "Updated App Service Configuration settings.",
         "UpdatingAppServiceApplicationSettings": "Updating App Service Application settings. Data: %s",
         "UpdatingAppServiceConfigurationSettings": "Trying to update App Service Configuration settings. Data: %s",
-        "VirtualApplicationDoesNotExist": "Virtual application doesn't exists : %s"
+        "VirtualApplicationDoesNotExist": "Virtual application doesn't exists : %s",
+        "CantDownloadClusterCredentials": "Failed to fetch credentials for the cluster %s. Reason %s. Make sure the service connection is assigned an appropriate Azure RBAC role: https://aka.ms/azdo-aks-rm-access.",
+        "KubernetesClusterResourceGroup": "Kubernetes cluster %s, resource group %s.",
+        "SettingAzureCloud": "Setting active cloud to: %s"
     }
 }

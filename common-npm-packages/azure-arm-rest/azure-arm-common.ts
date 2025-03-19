@@ -301,6 +301,7 @@ export class ApplicationTokenCredentials {
     private async buildMSAL(): Promise<any> /*Promise<msal.ConfidentialClientApplication>*/ {
         // default configuration
         const authorityURL = (new URL(this.tenantId, this.authorityUrl)).toString();
+        const isDebug = tl.getVariable("system.debug") && tl.getVariable("system.debug").toLowerCase() === "true";
 
         const msalConfig: any /*msal.Configuration*/ = {
             auth: {
@@ -309,11 +310,11 @@ export class ApplicationTokenCredentials {
             },
             system: {
                 loggerOptions: {
-                    loggerCallback(loglevel, message, containsPii) {
-                        loglevel == msal.LogLevel.Error ? tl.error(message) : tl.debug(message);
+                    loggerCallback(loglevel, message, _) {
+                        loglevel === msal.LogLevel.Error ? tl.error(message) : tl.debug(message);
                     },
-                    piiLoggingEnabled: false,
-                    logLevel: msal.LogLevel.Info,
+                    piiLoggingEnabled: isDebug,
+                    logLevel: isDebug ? msal.LogLevel.Trace : msal.LogLevel.Info,
                 }
             }
         };
@@ -414,6 +415,7 @@ export class ApplicationTokenCredentials {
                     // thumbprint
                     const certEncoded = certFile.match(/-----BEGIN CERTIFICATE-----\s*([\s\S]+?)\s*-----END CERTIFICATE-----/i)[1];
                     const certDecoded = Buffer.from(certEncoded, "base64");
+                    // CodeQL [SM01510] External Dependency: Azure CLI generated certificates support only sha1 // CodeQL [SM04514] External Dependency: Azure CLI generated certificates support only sha1
                     const thumbprint = crypto.createHash("sha1").update(certDecoded).digest("hex").toUpperCase();
 
                     if (!thumbprint) {

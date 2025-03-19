@@ -221,14 +221,19 @@ export function getImageFingerPrintV1Name(history: string): string {
     if (!history) {
         return null;
     }
-
     const lines = history.split(/[\r?\n]/);
     if (lines && lines.length > 0) {
-        v1Name = parseHistoryForV1Name(lines[0]);
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i].indexOf("layerId") >= 0) {
+                v1Name = parseHistoryForV1Name(lines[i]);
+                break
+            }
+        }
     }
 
     return v1Name;
 }
+
 
 export function getImageSize(layers: { [key: string]: string }[]): string {
     let imageSize = 0;
@@ -346,6 +351,9 @@ export async function getHistory(connection: ContainerConnection, image: string)
 }
 
 export async function getImageRootfsLayers(connection: ContainerConnection, imageDigest: string): Promise<string[]> {
+    if (!imageDigest || imageDigest === "") {
+        return []
+    }
     var command = connection.createCommand();
     command.arg("inspect");
     command.arg(imageDigest);

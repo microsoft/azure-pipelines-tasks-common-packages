@@ -2,7 +2,6 @@ import * as assert from "assert";
 import * as mocker from "azure-pipelines-task-lib/lib-mocker";
 
 import Lazy_NpmRegistry = require('../../npm/npmregistry');
-const EventEmitter = require('events');
 
 const BASIC_AUTH_PAT_PASSWD_REGEX = /\/\/.*\/:_password=.*/g;
 const BEARER_AUTH_REGEX = /\/\/.*\/:_authToken=AUTHTOKEN.*/g;
@@ -161,20 +160,15 @@ export function npmcommon() {
             HttpClient: function() {
                 return {
                     get: function(url, headers) {
-                        const emitter = new EventEmitter();
-                        process.nextTick(() => {
-                            emitter.emit('data', 'somedata');
-                            emitter.emit('end');
-                        });
                         return {
                         then: function(handler) {
                             handler({
                                 message: {
                                     statusCode: 401,
-                                    rawHeaders: ['x-tfs-foo: abc', 'x-content-type-options: nosniff', 'X-Powered-By: ASP.NET'],
-                                    on: emitter.on.bind(emitter),
-                                    once: emitter.once.bind(emitter),
-                                    removeListener: emitter.removeListener.bind(emitter)   
+                                    rawHeaders: ['x-tfs-foo: abc', 'x-content-type-options: nosniff', 'X-Powered-By: ASP.NET']
+                                },
+                                readBody: function() {
+                                    return Promise.resolve('mocked body content');
                                 }
                             });
                         }
@@ -224,20 +218,15 @@ export function npmcommon() {
             HttpClient: function() {
                 return {
                     get: function(url, headers) {
-                        const emitter = new EventEmitter();
-                        process.nextTick(() => {
-                            emitter.emit('data', 'somedata');
-                            emitter.emit('end');
-                        });
                         return {
                         then: function(handler) {
                             handler({
                                 message: {
                                     statusCode: 401,
-                                    rawHeaders: ['x-content-type-options: nosniff', 'X-Powered-By: ASP.NET'],
-                                    on: emitter.on.bind(emitter),
-                                    once: emitter.once.bind(emitter),
-                                    removeListener: emitter.removeListener.bind(emitter)    
+                                    rawHeaders: ['x-content-type-options: nosniff', 'X-Powered-By: ASP.NET']
+                                },
+                                readBody: function() {
+                                    return Promise.resolve('mocked body content');
                                 }
                             });
                         }
