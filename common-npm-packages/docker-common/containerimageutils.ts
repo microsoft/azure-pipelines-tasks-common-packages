@@ -263,15 +263,16 @@ export function getBaseImageDigestDockerFile(dockerFileContentPath: string): str
         if (!dockerFileContent || dockerFileContent == "") {
             return null;
         }        
-        var lines=dockerFileContent.split(/[\r?\n]/);
+        var lines = dockerFileContent.split(/[\r?\n]/);
         var aliasToImageNameMapping: Map<string, string> = new Map<string, string>();
         var baseImage = "";
     
+        // Added regex pattern to check line starts with FROM IMAGE
+        const matchPatternForDockerImage = new RegExp(/^FROM\s+IMAGE/); 
+
         for (var i = 0; i < lines.length; i++) {
             const currentLine = lines[i].trim();
-
-            // Added regex pattern to check line starts with FROM IMAGE
-            const matchPatternForDockerImage = new RegExp(/^FROM\s+IMAGE/); 
+            
             if (!currentLine.toUpperCase().match(matchPatternForDockerImage)) {
                 continue;
             }
@@ -294,8 +295,14 @@ export function getBaseImageDigestDockerFile(dockerFileContentPath: string): str
                     : prospectImageName;
             }
         }
-    
-        return baseImage.split('@')[1].split(':')[1];
+        // check below line with array length check
+        if(baseImage.split('@').length > 1){
+            if (baseImage.split('@')[1].split(':').length > 1) {
+                return baseImage.split('@')[1].split(':')[1];
+            }
+        }
+
+        return null;
     } catch (error) {
         tl.debug(`An error ocurred getting the base image digest. ${error.message}`);
         return null;

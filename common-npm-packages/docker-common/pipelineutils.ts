@@ -66,15 +66,16 @@ function addBaseImageLabels(connection: ContainerConnection, labels: string[], d
         return;
     }
     let digestImageFromFileEnabled = tl.getPipelineFeature('UseDigestImageFromFile');
+    var baseImageDigest = "";
     if (digestImageFromFileEnabled) {
-        var baseImageDigest = containerUtils.getBaseImageDigestDockerFile(dockerFilePath);
+        baseImageDigest = containerUtils.getBaseImageDigestDockerFile(dockerFilePath);
     }
     //first check if there is digest passed in Dockerfile
     if (!baseImageDigest) {
         baseImageDigest = containerUtils.getImageDigest(connection, baseImageName);
     }
 
-    //if not there is no digest in Dockerfile, get digest using ImageName:tag
+    //if there is no digest in Dockerfile, get digest using ImageName:tag
     if (baseImageDigest) {
         addLabelWithValue("image.base.digest", baseImageDigest, labels);
     }    
