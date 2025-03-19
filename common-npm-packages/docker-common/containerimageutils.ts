@@ -297,7 +297,7 @@ export function getBaseImageDigestDockerFile(dockerFileContentPath: string): str
         }
         
         let baseImageData = baseImage.split('@');
-        if(baseImageData.length > 1){
+        if (baseImageData.length > 1) {
             let digest = baseImageData[1].split(':');
             if(digest.length > 1){
                 return digest[1];
