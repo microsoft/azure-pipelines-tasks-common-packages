@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as sinon from 'sinon';
-import * as tl from 'azure-pipelines-task-lib/task';
+import * as tl from 'azure-pipelines-task-lib/task'
 import * as utilities from '../utilities';
 
 import * as expectedResults from './data/expectedResults';
@@ -8,33 +8,33 @@ import * as fakeData from './data/fakeData';
 
 export function utilitiesTests() {
     const sandbox = sinon.createSandbox();
-
+    
     before(() => {
         sandbox.stub(tl, 'debug').callsFake();
-    });
+    })
 
     after(() => {
         sandbox.restore();
     });
 
     it('function sharedSubString should return empty string if there is no common substring', () => {
-        const actual = utilities.sharedSubString(fakeData.sharedSubString1, fakeData.sharedSubString2);
+        const actual = utilities.sharedSubString(fakeData.sharedSubString1, fakeData.sharedSubString2)
         assert.strictEqual(actual, '');
     });
 
     it('function sharedSubString should common substring', () => {
-        const actual = utilities.sharedSubString(fakeData.sharedSubString1, fakeData.sharedSubString3);
+        const actual = utilities.sharedSubString(fakeData.sharedSubString1, fakeData.sharedSubString3)
         assert.strictEqual(actual, 'ab');
     });
 
     it('function sortStringArray should sort string in ascending order', () => {
         const actual = utilities.sortStringArray(fakeData.stringArray);
-        assert.deepStrictEqual(actual, expectedResults.sortedStringArray);
+        assert.deepStrictEqual(actual, expectedResults.sortedStringArray); 
     });
 
     it('function sortStringArray should sort string in ascending order', () => {
         const actual = utilities.sortStringArray(fakeData.stringArray);
-        assert.deepStrictEqual(actual, expectedResults.sortedStringArray);
+        assert.deepStrictEqual(actual, expectedResults.sortedStringArray); 
     });
 
     it('function isNullOrWhitespace should return true if specified string is null', () => {
@@ -86,7 +86,7 @@ export function utilitiesTests() {
         const jsonObj = {
             firstProperty: 'First Value',
             secondProperty: 'Second Value'
-        };
+        }
         utilities.addPropToJson(jsonObj, fakeData.propertyName, fakeData.propertyValue);
         assert.deepStrictEqual(jsonObj, expectedResults.objectWithAddedProperty);
     });
@@ -96,7 +96,7 @@ export function utilitiesTests() {
             firstProperty: 'First Value',
             secondProperty: 'Second Value',
             someProperty: 42
-        };
+        }
         utilities.addPropToJson(jsonObj, fakeData.propertyName, fakeData.propertyValue);
         assert.deepStrictEqual(jsonObj, expectedResults.objectWithAddedPropertyIntoArray);
     });
@@ -106,7 +106,7 @@ export function utilitiesTests() {
             firstProperty: 'First Value',
             secondProperty: 'Second Value',
             someProperty: [42]
-        };
+        }
         utilities.addPropToJson(jsonObj, fakeData.propertyName, fakeData.propertyValue);
         assert.deepStrictEqual(jsonObj, expectedResults.objectWithAddedPropertyIntoArray);
     });
@@ -118,9 +118,9 @@ export function utilitiesTests() {
                 secondProperty: 'Second Value'
             },
             {
-                firstProperty: 'First Value'
+                firstProperty: 'First Value',
             }
-        ];
+        ]
         utilities.addPropToJson(jsonObj, fakeData.propertyName, fakeData.propertyValue);
         assert.deepStrictEqual(jsonObj, expectedResults.arrayWithAddedProperty);
     });
@@ -128,13 +128,13 @@ export function utilitiesTests() {
     it('function addPropToJson should add append specified value to specified property if it\'s in array element', () => {
         const jsonObj = [
             {
-                firstProperty: 'First Value'
+                firstProperty: 'First Value',
             },
             {
                 firstProperty: 'First Value',
                 someProperty: 42
             }
-        ];
+        ]
         utilities.addPropToJson(jsonObj, fakeData.propertyName, fakeData.propertyValue);
         assert.deepStrictEqual(jsonObj, expectedResults.arrayWithAppendedProperty);
     });
