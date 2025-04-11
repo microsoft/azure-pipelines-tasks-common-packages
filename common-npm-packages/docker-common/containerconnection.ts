@@ -43,6 +43,7 @@ export default class ContainerConnection {
     public execCommand(command: tr.ToolRunner, options?: tr.IExecOptions) {
         let errlines = [];
         let dockerHostVar = tl.getVariable("DOCKER_HOST");
+
         if (dockerHostVar) {
             tl.debug(tl.loc('ConnectingToDockerHost', dockerHostVar));
         }
@@ -50,13 +51,16 @@ export default class ContainerConnection {
         command.on("errline", line => {
             errlines.push(line);
         });
+        
+        const hideDockerExecTaskLogIssueErrorOutput = tl.getPipelineFeature("hideDockerExecTaskLogIssueErrorOutput");
+
         return command.exec(options).fail(error => {
             if (dockerHostVar) {
                 tl.warning(tl.loc('DockerHostVariableWarning', dockerHostVar));
             }
 
             errlines.forEach(line => {
-                if (tl.getPipelineFeature("HideDockerExecTaskLogIssueErrorOutput")) {
+                if (hideDockerExecTaskLogIssueErrorOutput) {
                     console.log(`##[error]${line}`);
                 } else {
                     tl.error(line);
