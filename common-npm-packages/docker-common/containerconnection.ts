@@ -50,12 +50,18 @@ export default class ContainerConnection {
         command.on("errline", line => {
             errlines.push(line);
         });
-        return command.exec(options).fail(error => {            
+        return command.exec(options).fail(error => {
             if (dockerHostVar) {
                 tl.warning(tl.loc('DockerHostVariableWarning', dockerHostVar));
             }
 
-            errlines.forEach(line => tl.error(line));
+            errlines.forEach(line => {
+                if (tl.getPipelineFeature("HideDockerExecTaskLogIssueErrorOutput")) {
+                    console.log(`##[error]${line}`);
+                } else {
+                    tl.error(line);
+                }
+            });
             throw error;
         });
     }
