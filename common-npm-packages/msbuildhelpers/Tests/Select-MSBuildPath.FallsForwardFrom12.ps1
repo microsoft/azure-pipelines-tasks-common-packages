@@ -12,5 +12,8 @@ $actual = Select-MSBuildPath -Method 'Version' -Location '' -PreferredVersion '1
 
 # Assert.
 Assert-WasCalled Write-Warning
-Assert-WasCalled Get-MSBuildPath -Times 5
+Assert-WasCalled Get-MSBuildPath -Times 5 -ParametersEvaluator  {
+    $Version -in @('12.0', '17.0', '16.0', '15.0', '14.0') -and
+    $Architecture -eq 'Some architecture'
+}
 Assert-AreEqual -Expected 'Some resolved location' -Actual $actual
