@@ -6,13 +6,14 @@ var psr = null;
 
 describe('Common-MSBuildHelpers Suite', function () {
     this.timeout(parseInt(process.env.TASK_TEST_TIMEOUT) || 30000);
+    const { MSBUILDHELPERS_ENABLE_TELEMETRY } = process.env;
 
     before((done) => {
         if (psm.testSupported()) {
             psr = new psm.PSRunner();
             psr.start();
         }
-
+        process.env.MSBUILDHELPERS_ENABLE_TELEMETRY = "false";
         done();
     });
 
@@ -20,6 +21,7 @@ describe('Common-MSBuildHelpers Suite', function () {
         if (psr) {
             psr.kill();
         }
+        process.env.MSBUILDHELPERS_ENABLE_TELEMETRY = MSBUILDHELPERS_ENABLE_TELEMETRY;
     });
 
     if (psm.testSupported()) {
