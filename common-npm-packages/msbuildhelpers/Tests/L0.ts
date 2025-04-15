@@ -9,11 +9,13 @@ describe('Common-MSBuildHelpers Suite', function () {
     const { MSBUILDHELPERS_ENABLE_TELEMETRY } = process.env;
 
     before((done) => {
+        process.env.MSBUILDHELPERS_ENABLE_TELEMETRY = "false";
+
         if (psm.testSupported()) {
             psr = new psm.PSRunner();
             psr.start();
         }
-        process.env.MSBUILDHELPERS_ENABLE_TELEMETRY = "false";
+
         done();
     });
 
@@ -21,6 +23,7 @@ describe('Common-MSBuildHelpers Suite', function () {
         if (psr) {
             psr.kill();
         }
+
         process.env.MSBUILDHELPERS_ENABLE_TELEMETRY = MSBUILDHELPERS_ENABLE_TELEMETRY;
     });
 
