@@ -4,7 +4,6 @@ param()
 # Arrange.
 . $PSScriptRoot\..\..\..\..\Tests\lib\Initialize-Test.ps1
 Microsoft.PowerShell.Core\Import-Module $PSScriptRoot\..\MSBuildHelpers.psm1
-$env:MSBUILDHELPERS_ENABLE_TELEMETRY = "false"
 Register-Mock Get-MSBuildPath
 
 # Act/Assert.
@@ -14,4 +13,6 @@ Assert-WasCalled Get-MSBuildPath -- -Version '15.0' -Architecture 'Some architec
 Assert-WasCalled Get-MSBuildPath -- -Version '14.0' -Architecture 'Some architecture'
 Assert-WasCalled Get-MSBuildPath -- -Version '12.0' -Architecture 'Some architecture'
 Assert-WasCalled Get-MSBuildPath -- -Version '4.0' -Architecture 'Some architecture'
-Assert-WasCalled Get-MSBuildPath -Times 6
+
+$expectedCallCount = if ($env:MSBUILDHELPERS_ENABLE_TELEMETRY -eq "true") { 12 } else { 6 }
+Assert-WasCalled Get-MSBuildPath -Times $expectedCallCount
