@@ -13,6 +13,8 @@ describe('Common-MSBuildHelpers Suite', function () {
             psr.start();
         }
 
+        process.env.MSBUILDHELPERS_ENABLE_TELEMETRY = "false";
+
         done();
     });
 
