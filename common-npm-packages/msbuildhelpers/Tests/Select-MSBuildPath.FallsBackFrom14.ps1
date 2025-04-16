@@ -4,6 +4,7 @@ param()
 # Arrange.
 . $PSScriptRoot\..\..\..\..\Tests\lib\Initialize-Test.ps1
 Microsoft.PowerShell.Core\Import-Module $PSScriptRoot\..\MSBuildHelpers.psm1
+$env:MSBUILDHELPERS_ENABLE_TELEMETRY = "false"
 Register-Mock Write-Warning
 Register-Mock Get-MSBuildPath { 'Some resolved location' } -- -Version '12.0' -Architecture 'Some architecture'
 
