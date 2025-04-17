@@ -187,7 +187,6 @@ function Get-MSBuildPathV2 {
             Write-Debug "Exception caught while parsing VersionNumber : $_"
         }
 
-        $specifiedStudio = Get-VisualStudio $VersionNumber
         if (($VersionNumber -ge 15 -or !$Version) -and # !$Version indicates "latest"
             ($specifiedStudio = Get-VisualStudio $VersionNumber) -and
             $specifiedStudio.installationPath) {
