@@ -266,14 +266,11 @@ export function getBaseImageDigestDockerFile(dockerFileContentPath: string): str
         var lines = dockerFileContent.split(/[\r?\n]/);
         var aliasToImageNameMapping: Map<string, string> = new Map<string, string>();
         var baseImage = "";
-    
-        // Added regex pattern to check line starts with FROM IMAGE
-        const matchPatternForDockerImage = new RegExp(/^FROM\s+IMAGE/); 
 
         for (var i = 0; i < lines.length; i++) {
             const currentLine = lines[i].trim();
             
-            if (!currentLine.toUpperCase().match(matchPatternForDockerImage)) {
+            if (!currentLine.toUpperCase().startsWith("FROM")) {
                 continue;
             }
             var nameComponents = currentLine.substring(4).toLowerCase().split(" as ");
@@ -304,7 +301,7 @@ export function getBaseImageDigestDockerFile(dockerFileContentPath: string): str
             }
         }
 
-        return null;
+        return baseImageData[0];
     } catch (error) {
         tl.debug(`An error ocurred getting the base image digest. ${error.message}`);
         return null;
