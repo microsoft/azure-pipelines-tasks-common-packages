@@ -253,57 +253,66 @@ export function getImageIdFromBuildOutput(output: string): string {
 
     return "";
 }
-export function getBaseImageDigestDockerFile(dockerFileContentPath: string): string {
+export function getBaseImageDigestDockerFile(dockerFileContentPath: string, connection = {}): any {
     // This method checks if there is FROM image@sha256:digest present in Dockerfile
     // if matched it returns digest
     // if not, it returns null
-    
+
     try {
-        var dockerFileContent=fs.readFileSync(dockerFileContentPath).toString();
+        var dockerFileContent = fs.readFileSync(dockerFileContentPath).toString();
         if (!dockerFileContent || dockerFileContent == "") {
             return null;
-        }        
+        }
         var lines = dockerFileContent.split(/[\r?\n]/);
         var aliasToImageNameMapping: Map<string, string> = new Map<string, string>();
         var baseImage = "";
+        let baseImageandDigest = { baseImageName: '', baseImageDigest: '' };
 
         for (var i = 0; i < lines.length; i++) {
             const currentLine = lines[i].trim();
-            
+
             if (!currentLine.toUpperCase().startsWith("FROM")) {
                 continue;
             }
             var nameComponents = currentLine.substring(4).toLowerCase().split(" as ");
             var prospectImageName = nameComponents[0].trim();
-    
+
             if (nameComponents.length > 1) {
                 var alias = nameComponents[1].trim();
-    
+
                 if (aliasToImageNameMapping.has(prospectImageName)) {
                     aliasToImageNameMapping.set(alias, aliasToImageNameMapping.get(prospectImageName));
                 } else {
                     aliasToImageNameMapping.set(alias, prospectImageName);
                 }
-    
+
                 baseImage = aliasToImageNameMapping.get(alias);
             } else {
                 baseImage = aliasToImageNameMapping.has(prospectImageName)
                     ? aliasToImageNameMapping.get(prospectImageName)
                     : prospectImageName;
             }
+        }        
+        baseImageandDigest.baseImageName = baseImage.includes("$") ? null : sanityzeBaseImage(baseImage);// In this case the base image has an argument and we don't know what its real value is         
+
+        if (!connection) {
+            tl.debug("Image digest couldn't be extracted because no connection was found.");
+            return;
         }
-        
-        let baseImageData = baseImage.split('@');
-        if (baseImageData.length > 1) {
-            let digest = baseImageData[1].split(':');
-            if (digest.length > 1){
-                return digest[1];
+         else {
+            let baseImageData = baseImage.split('@');
+            if (baseImageData.length > 1) {
+                let digest = baseImageData[1].split(':');
+                if (digest.length > 1) {
+                    baseImageandDigest.baseImageDigest = digest[1];
+                }
+            } else {
+                baseImageandDigest.baseImageDigest = null;
             }
         }
-
-        return baseImageData[0];
+        return baseImageandDigest;
     } catch (error) {
-        tl.debug(`An error ocurred getting the base image digest. ${error.message}`);
+        tl.debug(`An error ocurred getting the base image details. ${error.message}`);
         return null;
     }
 }

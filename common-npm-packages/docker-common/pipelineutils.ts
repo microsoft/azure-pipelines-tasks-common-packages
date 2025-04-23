@@ -54,31 +54,49 @@ function addReleaseLabels(hostName: string, labels: string[], addPipelineData?: 
 }
 
 function addBaseImageLabels(connection: ContainerConnection, labels: string[], dockerFilePath: string): void {
-    const baseImageName = containerUtils.getBaseImageNameFromDockerFile(dockerFilePath);
-    if (!baseImageName) {
-        return;
-    }
-
-    addLabelWithValue("image.base.ref.name", baseImageName, labels);
-
-    if (!connection) {
-        tl.debug("Image digest couldn't be extracted because no connection was found.");
-        return;
-    }
+   
+    //Added Dynamic feature flag to fix getting digest image from docker file
     let digestImageFromFileEnabled = tl.getPipelineFeature('UseDigestImageFromFile');
-    var baseImageDigest = "";
-    if (digestImageFromFileEnabled) {
-        baseImageDigest = containerUtils.getBaseImageDigestDockerFile(dockerFilePath);
-    }
-    //first check if there is digest passed in Dockerfile
-    if (!baseImageDigest) {
-        baseImageDigest = containerUtils.getImageDigest(connection, baseImageName);
-    }
 
-    //if there is no digest in Dockerfile, get digest using ImageName:tag
-    if (baseImageDigest) {
-        addLabelWithValue("image.base.digest", baseImageDigest, labels);
-    }    
+    if (digestImageFromFileEnabled) {
+
+        // using getBaseImageDigestDockerFile method to fetch both image and imagedigest
+        let baseImage={baseImageName:'',baseImageDigest:''};
+         baseImage = containerUtils.getBaseImageDigestDockerFile(dockerFilePath,connection);
+        if (!baseImage.baseImageName) {
+            return;
+        }
+
+        addLabelWithValue("image.base.ref.name", baseImage.baseImageName, labels);            
+       
+        if (!baseImage.baseImageDigest) {
+            baseImage.baseImageDigest = containerUtils.getImageDigest(connection, baseImage.baseImageName);
+        }
+        //if there is no digest in Dockerfile, get digest using ImageName:tag
+        if (baseImage.baseImageDigest) {
+            addLabelWithValue("image.base.digest", baseImage.baseImageDigest, labels);
+        }
+
+    }
+    else {
+        const baseImageName = containerUtils.getBaseImageNameFromDockerFile(dockerFilePath);
+        if (!baseImageName) {
+            return;
+        }
+        addLabelWithValue("image.base.ref.name", baseImageName, labels);
+
+        if (!connection) {
+            tl.debug("Image digest couldn't be extracted because no connection was found.");
+            return;
+        }
+        
+        const  baseImageDigest = containerUtils.getImageDigest(connection, baseImageName);        
+
+        //if there is no digest in Dockerfile, get digest using ImageName:tag
+        if (baseImageDigest) {
+            addLabelWithValue("image.base.digest", baseImageDigest, labels);
+        }
+    }
 }
 
 function getReverseDNSName(): string {
