@@ -9,7 +9,7 @@
     "author": "Microsoft Corporation",
     "repository": {
         "type": "git",
-        "url": "https://github.com/microsoft/azure-pipelines-tasks-common-packages/tree/main/common-npm-packages/packaging-common",
+        "url": "git+https://github.com/microsoft/azure-pipelines-tasks-common-packages.git",
         "directory": "common-npm-packages/packaging-common"
     },
     "license": "MIT",
