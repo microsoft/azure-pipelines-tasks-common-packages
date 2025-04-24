@@ -9,9 +9,9 @@
   "author": "Microsoft Corporation",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Microsoft/azure-pipelines-tasks/issues"
+    "url": "https://github.com/microsoft/azure-pipelines-tasks-common-packages/issues"
   },
-  "homepage": "https://github.com/Microsoft/azure-pipelines-tasks#readme",
+  "homepage": "https://github.com/microsoft/azure-pipelines-tasks-common-packages#readme",
   "devDependencies": {
     "nock": "^13.5.5"
   }

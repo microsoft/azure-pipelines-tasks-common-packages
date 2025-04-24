@@ -5,7 +5,7 @@
   "description": "Build with Gradle",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Microsoft/vso-agent-tasks/issues"
+    "url": "https://github.com/microsoft/azure-pipelines-tasks-common-packages/issues"
   },
   "dependencies": {
     "@types/node": "^10.17.0",
@@ -27,7 +27,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Microsoft/azure-pipelines-tasks.git"
+    "url": "git+https://github.com/microsoft/azure-pipelines-tasks-common-packages.git"
   },
-  "homepage": "https://github.com/Microsoft/azure-pipelines-tasks#readme"
+  "homepage": "https://github.com/microsoft/azure-pipelines-tasks-common-packages#readme"
 }
