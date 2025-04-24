@@ -253,7 +253,7 @@ export function getImageIdFromBuildOutput(output: string): string {
 
     return "";
 }
-export function getBaseImageDigestDockerFile(dockerFileContentPath: string, connection = {}): any {
+export function getBaseImageDetialsFromDockerFIle(dockerFileContentPath: string, connection?: ContainerConnection): any {
     // This method checks if there is FROM image@sha256:digest present in Dockerfile
     // if matched it returns digest
     // if not, it returns null
@@ -266,7 +266,7 @@ export function getBaseImageDigestDockerFile(dockerFileContentPath: string, conn
         var lines = dockerFileContent.split(/[\r?\n]/);
         var aliasToImageNameMapping: Map<string, string> = new Map<string, string>();
         var baseImage = "";
-        let baseImageandDigest = { baseImageName: '', baseImageDigest: '' };
+        const baseImageDetails = { name: "", digest: "" };
 
         for (var i = 0; i < lines.length; i++) {
             const currentLine = lines[i].trim();
@@ -292,25 +292,25 @@ export function getBaseImageDigestDockerFile(dockerFileContentPath: string, conn
                     ? aliasToImageNameMapping.get(prospectImageName)
                     : prospectImageName;
             }
-        }        
-        baseImageandDigest.baseImageName = baseImage.includes("$") ? null : sanityzeBaseImage(baseImage);// In this case the base image has an argument and we don't know what its real value is         
+        }
+        baseImageDetails.name = baseImage.includes("$") ? null : sanityzeBaseImage(baseImage);// In this case the base image has an argument and we don't know what its real value is         
 
         if (!connection) {
             tl.debug("Image digest couldn't be extracted because no connection was found.");
-            return;
+            return baseImageDetails;
         }
-         else {
+        else {
             let baseImageData = baseImage.split('@');
             if (baseImageData.length > 1) {
                 let digest = baseImageData[1].split(':');
                 if (digest.length > 1) {
-                    baseImageandDigest.baseImageDigest = digest[1];
+                    baseImageDetails.digest = digest[1];
                 }
             } else {
-                baseImageandDigest.baseImageDigest = null;
+                baseImageDetails.digest = null;
             }
         }
-        return baseImageandDigest;
+        return baseImageDetails;
     } catch (error) {
         tl.debug(`An error ocurred getting the base image details. ${error.message}`);
         return null;
