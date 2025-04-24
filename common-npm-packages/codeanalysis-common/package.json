@@ -27,7 +27,8 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/microsoft/azure-pipelines-tasks-common-packages.git"
+        "url": "git+https://github.com/microsoft/azure-pipelines-tasks-common-packages.git",
+        "directory": "common-npm-packages/codeanalysis-common"
     },
     "homepage": "https://github.com/microsoft/azure-pipelines-tasks-common-packages#readme"
 }

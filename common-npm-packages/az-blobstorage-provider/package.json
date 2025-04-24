@@ -4,7 +4,8 @@
     "description": "Common Library to download blobs from azure storage",
     "repository": {
         "type": "git",
-        "url": "git+ssh://git@github.com/Microsoft/azure-pipelines-tasks.git"
+        "url": "git+https://github.com/microsoft/azure-pipelines-tasks-common-packages.git",
+        "directory": "common-npm-packages/az-blobstorage-provider"
     },
     "author": "Microsoft Corporation",
     "license": "MIT",

@@ -4,7 +4,8 @@
     "description": "Common Library for Azure Rest Calls",
     "repository": {
         "type": "git",
-        "url": "git+ssh://git@github.com/Microsoft/azure-pipelines-tasks.git"
+        "url": "git+https://github.com/microsoft/azure-pipelines-tasks-common-packages.git",
+        "directory": "common-npm-packages/utility-common"
     },
     "scripts": {
         "build": "node make.js",

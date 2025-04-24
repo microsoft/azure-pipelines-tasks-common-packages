@@ -4,7 +4,8 @@
     "description": "Common Lib for Azure ARM REST apis",
     "repository": {
         "type": "git",
-        "url": "git+ssh://git@github.com/Microsoft/vsts-tasks.git"
+        "url": "git+ssh://git@github.com/Microsoft/vsts-tasks.git",
+        "directory": "common-npm-packages/azurermdeploycommon"
     },
     "author": "Microsoft Corporation",
     "license": "MIT",

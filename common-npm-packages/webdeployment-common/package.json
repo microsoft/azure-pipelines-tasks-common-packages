@@ -4,7 +4,8 @@
     "description": "Common Lib for MSDeploy Utility",
     "repository": {
         "type": "git",
-        "url": "git+ssh://git@github.com/Microsoft/azure-pipelines-tasks.git"
+        "url": "git+https://github.com/microsoft/azure-pipelines-tasks-common-packages.git",
+        "directory": "common-npm-packages/webdeployment-common"
     },
     "scripts": {
         "build": "pwsh build.ps1",

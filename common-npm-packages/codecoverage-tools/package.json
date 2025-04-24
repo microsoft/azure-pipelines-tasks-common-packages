@@ -32,7 +32,8 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/microsoft/azure-pipelines-tasks-common-packages.git"
+        "url": "git+https://github.com/microsoft/azure-pipelines-tasks-common-packages.git",
+        "directory": "common-npm-packages/codecoverage-tools"
     },
     "homepage": "https://github.com/microsoft/azure-pipelines-tasks-common-packages#readme"
 }

@@ -4,7 +4,8 @@
     "description": "Common Library for Kubernetes",
     "repository": {
         "type": "git",
-        "url": "git+ssh://git@github.com/Microsoft/azure-pipelines-tasks-common-packages.git"
+        "url": "git+ssh://git@github.com/Microsoft/azure-pipelines-tasks-common-packages.git",
+        "directory": "common-npm-packages/kubernetes-common"
     },
     "author": "Microsoft Corporation",
     "license": "MIT",
