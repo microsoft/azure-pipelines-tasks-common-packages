@@ -253,7 +253,7 @@ export function getImageIdFromBuildOutput(output: string): string {
 
     return "";
 }
-export function getBaseImageDetialsFromDockerFIle(dockerFileContentPath: string, connection?: ContainerConnection): any {
+export function getBaseImageDetialsFromDockerFIle(dockerFileContentPath: string, connection?: ContainerConnection):baseImageDetails {
     // This method checks if there is FROM image@sha256:digest present in Dockerfile
     // if matched it returns digest
     // if not, it returns null
@@ -315,4 +315,8 @@ export function getBaseImageDetialsFromDockerFIle(dockerFileContentPath: string,
         tl.debug(`An error ocurred getting the base image details. ${error.message}`);
         return null;
     }
+}
+export class baseImageDetails{
+    name: string;
+    digest: string ;
 }
