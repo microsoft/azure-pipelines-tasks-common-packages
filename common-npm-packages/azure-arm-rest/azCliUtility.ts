@@ -5,6 +5,7 @@ import { IExecSyncResult } from 'azure-pipelines-task-lib/toolrunner';
 import { getHandlerFromToken, WebApi } from "azure-devops-node-api";
 import { ITaskApi } from "azure-devops-node-api/TaskApi";
 import { TaskHubOidcToken } from "azure-devops-node-api/interfaces/TaskAgentInterfaces";
+import * as webClient from "./webClient";
 import Q = require('q');
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
@@ -188,4 +189,49 @@ function isAzVersionGreaterOrEqual(azVersionResultOutput: string, versionToCompa
         tl.error(`Error checking Azure CLI version: ${error.message}`);
         return false;
     }
+}
+
+async function getAzModuleMajorReleases(moduleName: string): Promise<string> {
+    try {
+        let request = new webClient.WebRequest();
+        request.uri = `https://api.github.com/repos/Azure/${moduleName}/releases`;
+        request.method = 'GET';
+        request.headers = request.headers || {};
+        const response = await webClient.sendRequest(request);
+        const lastestCliRelease = moduleName === "azure-powershell" ? response?.body?.filter(x => x?.tag_name?.match(/^v\d+\.\d+\.0/))?.[0] : response?.body?.[0];
+        return lastestCliRelease?.tag_name
+    } catch (err) {
+        tl.error(`Error checking Azure version: ${err.message}`);
+        return
+    }
+}
+
+export async function validateAzModuleVerison(moduleName: string, CurrentVersion: string, displayName: string, versionsToReduce: number, isMajor: boolean = false): Promise<void> {
+    const DisplayWarningForOlderAzVersion: boolean = tl.getPipelineFeature("Show_Warning_On_old_version");
+    try {
+        if (DisplayWarningForOlderAzVersion) {
+            const latestRelease: string = await getAzModuleMajorReleases(moduleName);
+            if (latestRelease) {
+                const [latestsemver, latestMajor, latestMinor] = latestRelease.match(/(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)?/);
+                const [currentsemver, currentMajor, currentMinor] = CurrentVersion.match(/(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)?/);
+                tl.debug(`the Current Version of Module is ${currentsemver}`);
+                tl.debug(`the latest version of Module is ${latestsemver}`);
+                let displayWarning = false;
+                if (isMajor && (Number(currentMajor) < (Number(latestMajor) - versionsToReduce))) {
+                    displayWarning = true;
+                }
+                if (!isMajor && (Number(currentMinor) < (Number(latestMinor) - versionsToReduce))) {
+                    displayWarning = true;
+                }
+                if (displayWarning) {
+                    tl.warning(tl.loc('lowerAzWarning', displayName, currentsemver, latestsemver))
+                }
+                
+            }
+        }
+    } catch (err) {
+        tl.error(`Error on validating Azure version: ${err.message}`);
+        return
+    }
+    
 }

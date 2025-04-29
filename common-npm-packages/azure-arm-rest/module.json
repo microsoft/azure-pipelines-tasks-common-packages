@@ -188,6 +188,7 @@
         "VirtualApplicationDoesNotExist": "Virtual application doesn't exists : %s",
         "CantDownloadClusterCredentials": "Failed to fetch credentials for the cluster %s. Reason %s. Make sure the service connection is assigned an appropriate Azure RBAC role: https://aka.ms/azdo-aks-rm-access.",
         "KubernetesClusterResourceGroup": "Kubernetes cluster %s, resource group %s.",
-        "SettingAzureCloud": "Setting active cloud to: %s"
+        "SettingAzureCloud": "Setting active cloud to: %s",
+        "lowerAzWarning": "%s version %s is out of date, the latest version is %s"
     }
 }
