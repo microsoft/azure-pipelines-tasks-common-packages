@@ -1,17 +1,18 @@
 {
-  "name": "azure-arm-rest",
+  "name": "azure-pipelines-tasks-azurermdeploycommon",
   "version": "1.0.3",
   "description": "Test - Common Lib for Azure ARM REST apis",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/Microsoft/vsts-tasks.git"
+    "url": "git+https://github.com/microsoft/azure-pipelines-tasks-common-packages.git",
+    "directory": "common-npm-packages/azurermdeploycommon/Tests"
   },
   "author": "Microsoft Corporation",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Microsoft/vsts-tasks/issues"
+    "url": "https://github.com/microsoft/azure-pipelines-tasks-common-packages/issues"
   },
-  "homepage": "https://github.com/Microsoft/vsts-tasks#readme",
+  "homepage": "https://github.com/microsoft/azure-pipelines-tasks-common-packages#readme",
   "devDependencies": {
     "nock": "^13.5.5"
   }

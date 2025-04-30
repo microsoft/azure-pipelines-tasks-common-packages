@@ -1,10 +1,11 @@
 {
     "name": "azure-pipelines-tasks-webdeployment-common",
-    "version": "4.256.0",
+    "version": "4.256.1",
     "description": "Common Lib for MSDeploy Utility",
     "repository": {
         "type": "git",
-        "url": "git+ssh://git@github.com/Microsoft/azure-pipelines-tasks.git"
+        "url": "git+https://github.com/microsoft/azure-pipelines-tasks-common-packages.git",
+        "directory": "common-npm-packages/webdeployment-common"
     },
     "scripts": {
         "build": "pwsh build.ps1",
@@ -13,9 +14,9 @@
     "author": "Microsoft Corporation",
     "license": "MIT",
     "bugs": {
-        "url": "https://github.com/Microsoft/azure-pipelines-tasks/issues"
+        "url": "https://github.com/microsoft/azure-pipelines-tasks-common-packages/issues"
     },
-    "homepage": "https://github.com/Microsoft/azure-pipelines-tasks#readme",
+    "homepage": "https://github.com/microsoft/azure-pipelines-tasks-common-packages#readme",
     "dependencies": {
         "@types/ltx": "3.0.6",
         "@types/mocha": "^5.2.7",
