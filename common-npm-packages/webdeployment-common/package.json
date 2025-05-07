@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-webdeployment-common",
-    "version": "4.256.1",
+    "version": "4.257.0",
     "description": "Common Lib for MSDeploy Utility",
     "repository": {
         "type": "git",
@@ -8,6 +8,7 @@
         "directory": "common-npm-packages/webdeployment-common"
     },
     "scripts": {
+        "prebuild": "cd ../build-scripts && npm install",
         "build": "pwsh build.ps1",
         "test": "nyc --all --src ./_build mocha ./_build/Tests/L0.js"
     },
