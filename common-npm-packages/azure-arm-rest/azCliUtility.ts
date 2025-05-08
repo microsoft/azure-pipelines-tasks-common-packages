@@ -205,21 +205,20 @@ async function getLatestAzureModuleReleaseVersion(moduleName: string): Promise<s
     }
 }
 
-export async function validateAzModuleVersion(moduleName: string, CurrentVersion: string, displayName: string, versionsToReduce: number, isMajor: boolean = false): Promise<void> {
-    const DisplayWarningForOlderAzVersion: boolean = tl.getPipelineFeature("Show_Warning_On_old_version");
+export async function validateAzModuleVersion(moduleName: string, currentVersion: string, displayName: string, versionsToReduce: number, isMajor: boolean = false): Promise<void> {
+    const DisplayWarningForOlderAzVersion: boolean = tl.getPipelineFeature("showWarningOnOlderAzureModules");
     try {
         if (DisplayWarningForOlderAzVersion) {
             const latestRelease: string = await getLatestAzureModuleReleaseVersion(moduleName);
             if (latestRelease) {
                 const [latestsemver, latestMajor, latestMinor] = latestRelease.match(/(\d+).(\d+).(\d+)/);
-                const [currentsemver, currentMajor, currentMinor] = CurrentVersion.match(/(\d+).(\d+).(\d+)/);
-                tl.debug(`the currentsemver Version is ${currentsemver}`);
-                tl.debug(`the latestsemver version is ${latestsemver}`);
+                const [currentsemver, currentMajor, currentMinor] = currentVersion.match(/(\d+).(\d+).(\d+)/);
+                tl.debug(`For the module ${moduleName} the current semver Version is ${currentsemver} and the latest semver version is ${latestsemver}`)
                 let displayWarning = false;
-                if (isMajor && (Number(currentMajor) < (Number(latestMajor) - versionsToReduce))) {
+                if (isMajor && Number(currentMajor) < Number(latestMajor) - versionsToReduce) {
                     displayWarning = true;
                 }
-                if (!isMajor && ((Number(currentMajor) < Number(latestMajor)) || (Number(currentMinor) < (Number(latestMinor) - versionsToReduce)))) {
+                if (!isMajor && (Number(currentMajor) < Number(latestMajor) || Number(currentMinor) < Number(latestMinor) - versionsToReduce)) {
                     displayWarning = true;
                 }
                 if (displayWarning) {
