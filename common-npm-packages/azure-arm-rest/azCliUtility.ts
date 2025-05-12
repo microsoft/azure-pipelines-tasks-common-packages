@@ -205,8 +205,8 @@ async function getLatestAzureModuleReleaseVersion(moduleName: string): Promise<s
     }
 }
 
-export async function validateAzModuleVersion(moduleName: string, currentVersion: string, displayName: string, versionsToReduce: number, isMajor: boolean = false): Promise<void> {
-    const DisplayWarningForOlderAzVersion: boolean = tl.getPipelineFeature("showWarningOnOlderAzureModules");
+export async function validateAzModuleVersion(moduleName: string, currentVersion: string, displayName: string, versionTolerance: number, checkOnlyMajorVersion: boolean = false): Promise<void> {
+    const DisplayWarningForOlderAzVersion: boolean = tl.getPipelineFeature("ShowWarningOnOlderAzureModules");
     try {
         if (DisplayWarningForOlderAzVersion) {
             const latestRelease: string = await getLatestAzureModuleReleaseVersion(moduleName);
@@ -215,10 +215,10 @@ export async function validateAzModuleVersion(moduleName: string, currentVersion
                 const [currentsemver, currentMajor, currentMinor] = currentVersion.match(/(\d+).(\d+).(\d+)/);
                 tl.debug(`For the module ${moduleName} the current semver Version is ${currentsemver} and the latest semver version is ${latestsemver}`)
                 let displayWarning = false;
-                if (isMajor && Number(currentMajor) < Number(latestMajor) - versionsToReduce) {
+                if (checkOnlyMajorVersion && Number(currentMajor) < Number(latestMajor) - versionTolerance) {
                     displayWarning = true;
                 }
-                if (!isMajor && (Number(currentMajor) < Number(latestMajor) || Number(currentMinor) < Number(latestMinor) - versionsToReduce)) {
+                if (!checkOnlyMajorVersion && (Number(currentMajor) < Number(latestMajor) || Number(currentMinor) < Number(latestMinor) - versionTolerance)) {
                     displayWarning = true;
                 }
                 if (displayWarning) {
