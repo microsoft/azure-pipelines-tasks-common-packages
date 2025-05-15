@@ -24,7 +24,7 @@ async function getKubeConfigFromAKS(azureSubscriptionEndpoint: string, resourceG
 }
 
 export async function getKubeConfigFromFleet(azureSubscriptionEndpoint, resourceGroup, fleetName): Promise<string> {
-  tl.debug(tl.loc("KubernetesClusterResourceGroup", name, resourceGroup));
+  tl.debug(tl.loc("KubernetesClusterResourceGroup", fleetName, resourceGroup));
   const azureEndpoint: AzureEndpoint = await (new AzureRMEndpoint(azureSubscriptionEndpoint)).getEndpoint();
   const aks = new AzureAksService(azureEndpoint);
   let clusterInfo: AKSCredentialResult = await aks.getFleetCredential(resourceGroup, fleetName);
