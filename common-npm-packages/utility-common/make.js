@@ -1,18 +1,31 @@
-var path = require('path');
-var fs = require('fs');
-var util = require('../build-scripts/util');
-var { downloadArchive } = require('../build-scripts/downloadArchive');
+const path = require('path');
+const fs = require('fs');
 
-var buildPath = './_build'
-var toolPath = './tools'
-var zipUrl = 'https://vstsagenttools.blob.core.windows.net/tools/7zip/5/7zip.zip'
+const util = require('../build-scripts/util');
+const { downloadArchive } = require('../build-scripts/downloadArchive');
 
-const targetPath = downloadArchive(zipUrl, path.join('../_download', toolPath));
-if (!fs.existsSync(toolPath)) {
-    util.mkdir('-p', toolPath);
+const buildPath = './_build';
+const toolPath = './tools';
+const zipUrl5 = 'https://vstsagenttools.blob.core.windows.net/tools/7zip/5/7zip.zip';
+const zipUrl24 = 'https://vstsagenttools.blob.core.windows.net/tools/7zip/24.09/7zip.zip';
+
+// Download and extract 7zip version 5
+const targetPath5 = downloadArchive(zipUrl5, path.join('../_download', toolPath, '7zip5'));
+
+if (!fs.existsSync(path.join(toolPath, '7zip5'))) {
+    util.mkdir('-p', path.join(toolPath, '7zip5'));
 }
 
-util.cp('-rf', path.join(targetPath, '*'), toolPath);
+util.cp('-rf', path.join(targetPath5, '*'), path.join(toolPath, '7zip5'));
+
+// Download and extract 7zip version 24.09
+const targetPath24 = downloadArchive(zipUrl24, path.join('../_download', toolPath, '7zip24'));
+
+if (!fs.existsSync(path.join(toolPath, '7zip24'))) {
+    util.mkdir('-p', path.join(toolPath, '7zip24'));
+}
+
+util.cp('-rf', path.join(targetPath24, '*'), path.join(toolPath, '7zip24'));
 
 util.rm('-rf', buildPath)
 util.run(path.join(__dirname, 'node_modules/.bin/tsc') + ' --outDir ' + buildPath);
