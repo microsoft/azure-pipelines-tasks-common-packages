@@ -1,6 +1,6 @@
 "use strict";
 
-var path    = require('path');
+var path = require('path');
 import * as tl from "azure-pipelines-task-lib/task";
 import * as trm from 'azure-pipelines-task-lib/toolrunner';
 
@@ -11,7 +11,15 @@ var xpTarLocation: string;
 var xpZipLocation: string;
 // 7zip
 var xpSevenZipLocation: string;
-var winSevenZipLocation: string = path.join(__dirname, 'tools/7zip/7z.exe');
+var winSevenZipLocation: string = getWinSevenZipLocation();
+
+function getWinSevenZipLocation(): string {
+    if (tl.getPipelineFeature("Use7zV2409InUtilityCommonPackage")) {
+        return path.join(__dirname, 'tools/7zip24/7z.exe');
+    } else {
+        return path.join(__dirname, 'tools/7zip5/7z.exe');
+    }
+}
 
 // Creates compressed archive of all files(recusively) inside sourceFolder directory (excluding the sourceFolder directly itself)
 export function createArchive(sourceFolder: string, archiveType: string, archiveFile: string) {
@@ -86,7 +94,7 @@ function zipArchive(archive: string, files: string[]) {
             zip.arg(files[i]);
         }
     } else {
-        zip.arg(".");        
+        zip.arg(".");
     }
 
     return handleExecResult(zip.execSync(getOptions()), archive);
@@ -109,7 +117,7 @@ function tarArchive(archive: string, compression: string, files: string[]) {
     }
     tar.arg('-f');
     tar.arg(archive);
-    if(files.length > 0) {    
+    if(files.length > 0) {
         for (var i = 0; i < files.length; i++) {
             tar.arg(files[i]);
         }
