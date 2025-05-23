@@ -27,21 +27,32 @@ const printLabel = (name) => {
     console.log('----------------------------------');
 }
 
+const installBuildScriptsDependencies = () => {
+    console.log('Building Tests');
+    util.cd('common-npm-packages/build-scripts');
+    util.run('npm install');
+    util.cd(__dirname);
+}
+
 const buildPsTestHelpers = () => {
     console.log('Building Tests');
     util.cd('Tests');
     util.run('npm install');
     util.run(path.join('node_modules', '.bin', 'tsc'));
-    util.cd('..');
+    util.cd(__dirname);
 }
+
+installBuildScriptsDependencies();
 
 if (options.build) {
     buildPsTestHelpers();
 
     console.log('\nBuilding shared npm packages');
     util.cd('common-npm-packages');
+
     fs.readdirSync('./', { encoding: 'utf-8' }).forEach(child => {
         if (fs.statSync(child).isDirectory() && !ignoredFolders.includes(child)) {
+            if (options.task && child !== options.task) return;
             printLabel(child);
 
             util.cd(child);
@@ -66,6 +77,7 @@ if (options.test) {
     const startPath = process.cwd();
     fs.readdirSync(startPath, { encoding: 'utf-8' }).forEach(child => {
         if (fs.statSync(child).isDirectory() && !ignoredFolders.includes(child)) {
+            if (options.task && child !== options.task) return;
             printLabel(child);
             const buildPath = path.join(startPath, child, '_build');
 
@@ -86,7 +98,7 @@ if (options.test) {
                     console.log('No tests found for the package');
                 }
             } else {
-                throw new Error('Package has not been built');
+                throw new Error(`Package "${buildPath}" has not been built`);
             }
         }
     });
