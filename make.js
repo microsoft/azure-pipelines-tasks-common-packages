@@ -11,7 +11,8 @@ const predefinedFlags = {
         'test'
     ],
     string: [
-        'suite'
+        'suite',
+        'packageName'
     ]
 };
 
@@ -28,7 +29,7 @@ const printLabel = (name) => {
 }
 
 const installBuildScriptsDependencies = () => {
-    console.log('Building Tests');
+    console.log('Installing dependencies for BuildScripts');
     util.cd('common-npm-packages/build-scripts');
     util.run('npm install');
     util.cd(__dirname);
@@ -52,7 +53,7 @@ if (options.build) {
 
     fs.readdirSync('./', { encoding: 'utf-8' }).forEach(child => {
         if (fs.statSync(child).isDirectory() && !ignoredFolders.includes(child)) {
-            if (options.task && child !== options.task) return;
+            if (options.packageName && child !== options.packageName) return;
             printLabel(child);
 
             util.cd(child);
@@ -77,7 +78,7 @@ if (options.test) {
     const startPath = process.cwd();
     fs.readdirSync(startPath, { encoding: 'utf-8' }).forEach(child => {
         if (fs.statSync(child).isDirectory() && !ignoredFolders.includes(child)) {
-            if (options.task && child !== options.task) return;
+            if (options.packageName && child !== options.packageName) return;
             printLabel(child);
             const buildPath = path.join(startPath, child, '_build');
 
