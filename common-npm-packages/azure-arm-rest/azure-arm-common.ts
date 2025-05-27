@@ -22,10 +22,15 @@ import TaskAgentInterfaces = require("azure-devops-node-api/interfaces/TaskAgent
 
 /// Dynamic msal loading based on the node version
 const nodeVersion = parseInt(process.version.split('.')[0].replace('v', ''));
-const msalVer = nodeVersion < 16 ? "msalv1": "msalv2";
-
+let msalVer;
+if(tl.getPipelineFeature('EnableMsalV3')){
+    msalVer = nodeVersion < 16 ? "msalv1": "msalv3";
+}else{
+    msalVer = nodeVersion < 16 ? "msalv1": "msalv2";
+}
 tl.debug('Using ' + msalVer);
 const msal = require(msalVer);
+
 ///
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
