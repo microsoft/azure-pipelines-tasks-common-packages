@@ -31,6 +31,10 @@ jobs:
     displayName: Verify task source changes
     condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/main'))
 
+  - script: node ./ci/check-versions.js
+    displayName: Verify tasks' versions
+    condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/main'))
+
   - script: |
       npm run test
     displayName: Test Common Npm packages
