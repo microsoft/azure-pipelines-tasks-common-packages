@@ -193,6 +193,31 @@ export class Kudu {
         }
     }
 
+    public async installSiteExtensionWithVersion(extensionID: string, version: string): Promise<SiteExtension> {
+        console.log(tl.loc("InstallingSiteExtensionWithVersion", extensionID, version));
+        var httpRequest = new webClient.WebRequest();
+        httpRequest.method = 'PUT';
+        httpRequest.uri = this.client.getRequestUri(`/api/siteextensions/${extensionID}`);
+        httpRequest.body = JSON.stringify({ version: version });
+        httpRequest.headers = {
+            'Content-Type': 'application/json'
+        };
+
+        try {
+            var response = await this.client.beginRequest(httpRequest);
+            tl.debug(`installSiteExtensionWithVersion. Data: ${JSON.stringify(response)}`);
+            if (response.statusCode == 200) {
+                console.log(tl.loc("SiteExtensionInstalledWithVersion", extensionID, version));
+                return response.body;
+            }
+
+            throw response;
+        }
+        catch (error) {
+            throw Error(tl.loc('FailedToInstallSiteExtensionWithVersion', extensionID, version, this._getFormattedError(error)));
+        }
+    }
+
     public async getSiteExtensions(): Promise<Array<SiteExtension>> {
         var httpRequest = new webClient.WebRequest();
         httpRequest.method = 'GET';

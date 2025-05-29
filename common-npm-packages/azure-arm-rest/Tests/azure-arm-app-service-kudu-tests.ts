@@ -109,6 +109,27 @@ export class KuduTests {
         }
     }
 
+    public static async installSiteExtensionWithVersion() {
+        try {
+            var kudu = new Kudu('http://MOCK_SCM_WEBSITE', 'Bearer MOCK_SCM_TOKEN');
+            await kudu.installSiteExtensionWithVersion('MOCK_EXTENSION', '1.0.0');
+            console.log('KUDU INSTALL SITE EXTENSION WITH VERSION PASSED');
+        }
+        catch (error) {
+            tl.error(error);
+            tl.setResult(tl.TaskResult.Failed, 'KuduTests.installSiteExtensionWithVersion() should have passed but failed');
+        }
+
+        try {
+            var kudu = new Kudu('http://FAIL_MOCK_SCM_WEBSITE', 'Bearer MOCK_SCM_TOKEN');
+            await kudu.installSiteExtensionWithVersion('MOCK_EXTENSION', '1.0.0');
+            tl.setResult(tl.TaskResult.Failed, 'KuduTests.installSiteExtensionWithVersion() should have failed but passed');
+        }
+        catch (error) {
+            tl.error(error);
+        }
+    }
+
     public static async getSiteExtensions() {
         try {
             var kudu = new Kudu('http://MOCK_SCM_WEBSITE', 'Bearer MOCK_SCM_TOKEN');
@@ -384,6 +405,7 @@ async function RUNTESTS() {
     await KuduTests.startContinuousWebJob();
     await KuduTests.stopContinuousWebJob();
     await KuduTests.installSiteExtension();
+    await KuduTests.installSiteExtensionWithVersion();
     await KuduTests.getSiteExtensions();
     await KuduTests.getAllSiteExtensions();
     await KuduTests.getProcess();
