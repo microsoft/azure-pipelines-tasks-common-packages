@@ -99,6 +99,14 @@ function installSiteExtension(tr) {
         'Should have printed: Error: Failed to install site extension MOCK_EXTENSION. Error: null (CODE: 501)');
 }
 
+function installSiteExtensionWithVersion(tr) {
+    assert(tr.stdOutContained("Site extension 'MOCK_EXTENSION' with version '1.0.0' installed successfully."),
+        'Should have printed: Site extension MOCK_EXTENSION with version 1.0.0 installed successfully.');
+
+    assert(tr.stdOutContained("Failed to install site extension 'MOCK_EXTENSION' with version '1.0.0'. Error: null (CODE: 501)"),
+        'Should have printed: Failed to install site extension MOCK_EXTENSION with version 1.0.0. Error: null (CODE: 501)');
+}
+
 function getSiteExtensions(tr) {
     assert(tr.stdOutContained('MOCK KUDU SITE EXTENSIONS COUNT: 2'),
     'Should have printed: MOCK KUDU SITE EXTENSIONS COUNT: 2');
