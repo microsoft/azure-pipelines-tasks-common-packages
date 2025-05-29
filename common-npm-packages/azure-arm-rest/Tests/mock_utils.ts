@@ -612,6 +612,18 @@ export function mockKuduServiceTests() {
     nock('http://FAIL_MOCK_SCM_WEBSITE').
     put('/api/siteextensions/MOCK_EXTENSION').reply(501, 'Internal error occured');
 
+    nock('http://MOCK_SCM_WEBSITE')
+        .put('/api/siteextensions/MOCK_EXTENSION', (body) => {
+            return body && typeof body === 'object' && body.version === '1.0.0';
+        })
+        .reply(200, { id: 'MOCK_EXT', title: 'MOCK_EXT', local_path: 'D:\\home\\Mock_Path', version: '1.0.0' });
+
+    nock('http://FAIL_MOCK_SCM_WEBSITE')
+        .put('/api/siteextensions/MOCK_EXTENSION', (body) => {
+            return body && typeof body === 'object' && body.version === '1.0.0';
+        })
+        .reply(501, 'Internal error occured');
+
     nock('http://MOCK_SCM_WEBSITE').
     get('/api/siteextensions?checkLatest=false').reply(200, [
         {id: "MOCK_EXT", title: "MOCK_EXT", local_path: "D:\\home\\Mock_Path"},
