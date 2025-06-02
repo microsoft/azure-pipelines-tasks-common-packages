@@ -19,6 +19,7 @@ function replaceMultiple(text: string, substitutions: any): string {
     return text;
 }
 
+
 function addMissingParametersValue(appType: string, webConfigParameters) {
     var paramDefaultValue = {
         'node': {
@@ -95,14 +96,14 @@ export function addWebConfigFile(folderPath: any, webConfigParameters, rootDirec
                 }
             } else if(appType == 'Go') {
                 if (util.isNullOrUndefined(webConfigParameters['GoExeFileName'])
-                        || util.isNullOrUndefined(webConfigParameters['GoExeFileName'].value) 
+                        || util.isNullOrUndefined(webConfigParameters['GoExeFileName'].value)
                         || webConfigParameters['GoExeFileName'].value.length <=0) {
                     throw Error(tl.loc('GoExeNameNotPresent'));
                 }
                 selectedAppTypeParams['GoExeFilePath'] = rootDirectoryPath + "\\" + webConfigParameters['GoExeFileName'].value;
             } else if(appType == 'java_springboot') {
                 if (util.isNullOrUndefined(webConfigParameters['JAR_PATH'])
-                || util.isNullOrUndefined(webConfigParameters['JAR_PATH'].value) 
+                || util.isNullOrUndefined(webConfigParameters['JAR_PATH'].value)
                 || webConfigParameters['JAR_PATH'].value.length <= 0) {
                     throw Error(tl.loc('JarPathNotPresent'));
                 }

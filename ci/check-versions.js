@@ -21,7 +21,7 @@ const packages = [
     'webdeployment-common',
 ];
 
-const gitDiffResult = execSync('git diff --name-only main', { encoding: 'utf8' }).split('\n');
+const gitDiffResult = execSync('git --no-pager diff --name-only origin/master', { encoding: 'utf8' }).split('\n');
 const changedFolders = new Set();
 
 for (const filePath of gitDiffResult) {
