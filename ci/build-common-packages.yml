@@ -21,7 +21,7 @@ jobs:
   - script: npm install
     displayName: Npm install
 
-  - script: git branch -l
+  - script: git fetch origin main:refs/remotes/origin/main
 
   - script: node ./ci/check-versions.js
     displayName: Verify tasks' versions
