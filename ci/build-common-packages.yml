@@ -21,6 +21,8 @@ jobs:
   - script: npm install
     displayName: Npm install
 
+  - script: git branch -l
+
   - script: node ./ci/check-versions.js
     displayName: Verify tasks' versions
     condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/main'))
