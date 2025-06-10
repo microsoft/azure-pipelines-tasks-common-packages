@@ -136,6 +136,15 @@ export async function initOIDCToken(connection: WebApi, projectId: string, hub: 
     try {
         token = await taskApi.createOidcToken({}, projectId, hub, planId, jobId, serviceConnectionId)
     } catch (error) {
+        // Handle AggregateError if available, since the package uses Node10 types.
+        // Otherwise handle generic error
+        if (error.name === 'AggregateError' && error['errors'] !== undefined) {
+            for (const err of error.errors) {
+                tl.error(err);
+            }
+        } else {
+            tl.error(error);
+        }
         return Promise.reject(tl.loc('CouldNotFetchAccessTokenforAAD') + " " + error);
     }
 
