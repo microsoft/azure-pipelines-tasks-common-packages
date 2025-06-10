@@ -1,12 +1,14 @@
-import fs = require("fs");
-import path = require("path");
+import fs = require('fs');
+import path = require('path');
+
+import { getHandlerFromToken, WebApi } from 'azure-devops-node-api';
+import { TaskHubOidcToken } from 'azure-devops-node-api/interfaces/TaskAgentInterfaces';
+import { ITaskApi } from 'azure-devops-node-api/TaskApi';
 import * as tl from 'azure-pipelines-task-lib/task';
 import { IExecSyncResult } from 'azure-pipelines-task-lib/toolrunner';
-import { getHandlerFromToken, WebApi } from "azure-devops-node-api";
-import { ITaskApi } from "azure-devops-node-api/TaskApi";
-import { TaskHubOidcToken } from "azure-devops-node-api/interfaces/TaskAgentInterfaces";
-import * as webClient from "./webClient";
 import Q = require('q');
+
+import * as webClient from './webClient';
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
@@ -43,7 +45,7 @@ export async function loginAzureRM(connectedService: string): Promise<void> {
         const azVersionResult: IExecSyncResult = tl.execSync("az", "--version");
         throwIfError(azVersionResult);
         isCertificateParameterSupported = isAzVersionGreaterOrEqual(azVersionResult.stdout, "2.66.0");
-        
+
         if (authType == "spnCertificate") {
             tl.debug('certificate based endpoint');
             if(isCertificateParameterSupported) {
@@ -122,9 +124,9 @@ export async function getFederatedToken(connectedServiceName: string): Promise<s
         connectedServiceName,
         0,
         2000);
-    
+
     tl.setSecret(oidc_token);
-    
+
     return oidc_token;
 }
 
@@ -229,5 +231,4 @@ export async function validateAzModuleVersion(moduleName: string, currentVersion
     } catch (err) {
         tl.error(`Error on validating Azure version: ${err.message}`);
     }
-    
 }

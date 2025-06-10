@@ -1,13 +1,11 @@
+import path = require('path');
+
+import tl = require('azure-pipelines-task-lib/task');
+
+import { AzureEndpoint, WebTest } from './azureModels';
 import { ServiceClient } from './AzureServiceClient';
 import { ToError } from './AzureServiceClientBase';
-import msRestAzure = require('./azure-arm-common');
-import tl = require('azure-pipelines-task-lib/task');
-import util = require('util');
 import webClient = require('./webClient');
-import Model = require('./azureModels');
-import Q = require('q');
-import path = require('path');
-import { AzureEndpoint, WebTest } from './azureModels';
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
@@ -23,7 +21,7 @@ export class ApplicationInsightsWebTests {
     public async list(): Promise<Array<WebTest>> {
         let httpRequest = new webClient.WebRequest();
         httpRequest.method = 'GET';
-        
+
         httpRequest.uri = this._client.getRequestUri(`//subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/microsoft.insights/webtests`,
         {
             '{resourceGroupName}': this._resourceGroupName
@@ -54,10 +52,10 @@ export class ApplicationInsightsWebTests {
     }
 
     public async create(webTestData: WebTest): Promise<WebTest> {
-        
+
         let httpRequest = new webClient.WebRequest();
         httpRequest.method = 'PUT';
-        
+
         httpRequest.body = JSON.stringify(webTestData);
         httpRequest.uri = this._client.getRequestUri(`//subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/microsoft.insights/webtests/{webTestName}`,
         {

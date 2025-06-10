@@ -1,12 +1,14 @@
-import { AzureEndpoint } from './azureModels';
+import path = require('path');
+
+import tl = require('azure-pipelines-task-lib/task');
+import Q = require('q');
+
 import msRestAzure = require('./azure-arm-common');
+import { AzureEndpoint } from './azureModels';
 import azureServiceClient = require('./AzureServiceClient');
 import azureServiceClientBase = require('./AzureServiceClientBase');
 import depolymentsBase = require('./DeploymentsBase');
 import webClient = require('./webClient');
-import tl = require('azure-pipelines-task-lib/task');
-import Q = require('q');
-import path = require('path');
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
