@@ -1,11 +1,14 @@
+import fs = require('node:fs');
+import path = require('node:path');
+
 import tl = require('azure-pipelines-task-lib/task');
 import Q = require('q');
-import webClient = require("./webClient");
-import { AzureEndpoint } from "./azureModels";
+
+import { AzureEndpoint } from './azureModels';
 import { ApplicationTokenCredentials } from './azure-arm-common';
 import constants = require('./constants');
-import fs = require('fs');
-import path = require('path');
+import webClient = require('./webClient');
+
 const certFilePath: string = path.join(tl.getVariable('Agent.TempDirectory'), 'spnCert.pem');
 
 export class AzureRMEndpoint {
@@ -36,7 +39,7 @@ export class AzureRMEndpoint {
                 if (resourceIdSplit.length < 9) {
                     throw new Error(tl.loc('SpecifiedAzureRmEndpointIsInvalid', ''));
                 }
-    
+
                 this.endpoint = {
                     subscriptionName: tl.getEndpointDataParameter(this._connectedServiceName, 'subscriptionname', true),
                     tenantID: tl.getEndpointAuthorizationParameter(this._connectedServiceName, 'tenantid', false),

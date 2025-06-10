@@ -1,14 +1,12 @@
-import msRestAzure = require('./azure-arm-common');
+import path = require('node:path');
+
 import tl = require('azure-pipelines-task-lib/task');
-import util = require('util');
-import webClient = require('./webClient');
+
+import { AzureEndpoint, ApplicationInsights } from './azureModels';
 import { ServiceClient } from './AzureServiceClient';
 import { ToError } from './AzureServiceClientBase';
-import Model = require('./azureModels');
-import Q = require('q');
-import path = require('path');
-import { AzureEndpoint, ApplicationInsights } from './azureModels';
 import { APIVersions } from './constants';
+import webClient = require('./webClient');
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
@@ -113,7 +111,7 @@ export class ApplicationInsightsResources {
     public async list(resourceGroupName?: string, filter?: string[]): Promise<ApplicationInsights[]> {
         var httpRequest = new webClient.WebRequest();
         httpRequest.method = 'GET';
-        resourceGroupName = resourceGroupName ? `resourceGroups/${resourceGroupName}` : ''; 
+        resourceGroupName = resourceGroupName ? `resourceGroups/${resourceGroupName}` : '';
         httpRequest.uri = this._client.getRequestUri(`//subscriptions/{subscriptionId}/${resourceGroupName}/providers/microsoft.insights/components`,
         {}, filter, APIVersions.azure_arm_appinsights);
 

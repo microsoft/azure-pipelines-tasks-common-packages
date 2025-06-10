@@ -1,12 +1,12 @@
-import msRestAzure = require('./azure-arm-common');
+import crypto = require('node:crypto');
+import fs = require('node:fs');
+import path = require('node:path');
+
 import tl = require('azure-pipelines-task-lib/task');
-import fs = require('fs');
-import webClient = require('./webClient');
-import Q = require('q');
+
 import { WebJob, SiteExtension } from './azureModels';
 import { KUDU_DEPLOYMENT_CONSTANTS } from './constants';
-import path = require('path');
-import crypto = require("crypto");
+import webClient = require('./webClient');
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
@@ -747,12 +747,12 @@ export class Kudu {
             stream.on('data', (data) => {
                 hash.update(data);
             });
-        
+
             stream.on('end', () => {
                 const result = hash.digest('hex');
                 resolve(result);
             });
-        
+
             stream.on('error', (error) => {
                 resolve(undefined);
             });

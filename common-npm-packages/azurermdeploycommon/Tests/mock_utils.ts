@@ -1,7 +1,9 @@
-import { AzureEndpoint, WebTest, Scheme } from '../azure-arm-rest/azureModels';
-import * as querystring from "querystring";
-import { ApplicationTokenCredentials } from '../azure-arm-rest/azure-arm-common';
+import * as querystring from 'node:querystring';
+
 export var nock = require('nock');
+
+import { AzureEndpoint } from '../azure-arm-rest/azureModels';
+import { ApplicationTokenCredentials } from '../azure-arm-rest/azure-arm-common';
 
 export function getMockEndpoint(scheme?: string, msiClientId?: string) {
     process.env["AZURE_HTTP_USER_AGENT"] = "TEST_AGENT";
@@ -20,7 +22,7 @@ export function getMockEndpoint(scheme?: string, msiClientId?: string) {
         applicationTokenCredentials: new ApplicationTokenCredentials("MOCK_SPN_ID", "MOCK_TENANT_ID", "MOCK_SPN_KEY", "https://management.azure.com/",
         "https://login.windows.net/", "https://management.azure.com/", false, scheme, msiClientId)
     }
-    
+
     nock("https://login.windows.net", {
         reqheaders: {
             "content-type": "application/x-www-form-urlencoded; charset=utf-8"
@@ -32,9 +34,9 @@ export function getMockEndpoint(scheme?: string, msiClientId?: string) {
         grant_type: "client_credentials",
         client_secret: "MOCK_SPN_KEY"
     }))
-    .reply(200, { 
+    .reply(200, {
         access_token: "DUMMY_ACCESS_TOKEN"
-    }).persist(); 
+    }).persist();
 
     let apiVersion = "2018-02-01";
     let msiClientIdUrl =  msiClientId ? "&client_id=" + msiClientId : "";
@@ -45,7 +47,7 @@ export function getMockEndpoint(scheme?: string, msiClientId?: string) {
           }
     })
     .get("/oauth2/token?resource=https://management.azure.com/")
-    .reply(200, { 
+    .reply(200, {
         access_token: "DUMMY_ACCESS_TOKEN"
     }).persist();
 
@@ -60,7 +62,7 @@ export function mockAzureARMAppInsightsWebTests() {
         name: 'MOCK_TEST_1',
         id: "hidden-link:/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/microsoft.insights/components/MOCK_APP_INSIGHTS_1".toLowerCase()
     };
-    
+
     var MockWebTest2 = {
         type: '',
         location: '',
@@ -104,8 +106,8 @@ export function mockAzureApplicationInsightsTests() {
             "content-type": "application/json; charset=utf-8"
         }
     }).get("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/microsoft.insights/components/MOCK_APP_INSIGHTS_NAME?api-version=2015-05-01")
-    .reply(200, { 
-        id: "subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/microsoft.insights/components/MOCK_APP_INSIGHTS_NAME", 
+    .reply(200, {
+        id: "subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/microsoft.insights/components/MOCK_APP_INSIGHTS_NAME",
         name: "MOCK_APP_INSIGHTS_NAME",
         type: "microsoft.insights/components",
         tags: {},
@@ -127,8 +129,8 @@ export function mockAzureApplicationInsightsTests() {
             "content-type": "application/json; charset=utf-8"
         }
     }).put("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/microsoft.insights/components/MOCK_APP_INSIGHTS_NAME?api-version=2015-05-01")
-    .reply(200, { 
-        id: "subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/microsoft.insights/components/MOCK_APP_INSIGHTS_NAME", 
+    .reply(200, {
+        id: "subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/microsoft.insights/components/MOCK_APP_INSIGHTS_NAME",
         name: "MOCK_APP_INSIGHTS_NAME",
         type: "microsoft.insights/components",
         tags: {},
@@ -231,7 +233,7 @@ export function mockAzureAppServiceTests() {
             state: "Running"
         }
     }).persist();;
-    
+
     nock('https://management.azure.com', {
         reqheaders: {
             "authorization": "Bearer DUMMY_ACCESS_TOKEN",
@@ -257,7 +259,7 @@ export function mockAzureAppServiceTests() {
             state: "Stopped"
         }
     }).persist();;
-    
+
     nock('https://management.azure.com', {
         reqheaders: {
             "authorization": "Bearer DUMMY_ACCESS_TOKEN",
@@ -283,12 +285,12 @@ export function mockAzureAppServiceTests() {
         }
     }).post("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.Web/sites/MOCK_APP_SERVICE_NAME/publishxml?api-version=2016-08-01")
     .reply(200,`<publishData>
-    <publishProfile profileName="MOCK_APP_SERVICE_NAME - Web Deploy" publishMethod="MSDeploy" 
-        publishUrl="MOCK_APP_SERVICE_NAME.scm.azurewebsites.net:443" msdeploySite="MOCK_APP_SERVICE_NAME" 
+    <publishProfile profileName="MOCK_APP_SERVICE_NAME - Web Deploy" publishMethod="MSDeploy"
+        publishUrl="MOCK_APP_SERVICE_NAME.scm.azurewebsites.net:443" msdeploySite="MOCK_APP_SERVICE_NAME"
         userName="$MOCK_APP_SERVICE_NAME" userPWD="MOCK_APP_SERVICE_MSDEPLOY_PASSWORD" destinationAppUrl="http://MOCK_APP_SERVICE_NAME.azurewebsites.net">
     </publishProfile>
     </publishData>`).persist();
-    
+
     nock('https://management.azure.com', {
         reqheaders: {
             "authorization": "Bearer DUMMY_ACCESS_TOKEN",
@@ -315,7 +317,7 @@ export function mockAzureAppServiceTests() {
             scmUri: "https://$v:MOCK_APP_SERVICE_MSDEPLOY_PASSWORD@MOCK_APP_SERVICE_NAME.scm.azurewebsites.net"
         }
     }).persist();;
-    
+
     nock('https://management.azure.com', {
         reqheaders: {
             "authorization": "Bearer DUMMY_ACCESS_TOKEN",
@@ -341,7 +343,7 @@ export function mockAzureAppServiceTests() {
             "MSDEPLOY_RENAME_LOCKED_FILES": "1"
         }
     }).persist();;
-    
+
     nock('https://management.azure.com', {
         reqheaders: {
             "authorization": "Bearer DUMMY_ACCESS_TOKEN",
@@ -379,7 +381,7 @@ export function mockAzureAppServiceTests() {
             "MSDEPLOY_RENAME_LOCKED_FILES": "0"
         }
     }).persist();;
-    
+
     nock('https://management.azure.com', {
         reqheaders: {
             "authorization": "Bearer DUMMY_ACCESS_TOKEN",
@@ -404,7 +406,7 @@ export function mockAzureAppServiceTests() {
             "alwaysOn": false
         }
     }).persist();;
-    
+
     nock('https://management.azure.com', {
         reqheaders: {
             "authorization": "Bearer DUMMY_ACCESS_TOKEN",
@@ -440,7 +442,7 @@ export function mockAzureAppServiceTests() {
             "alwaysOn": true
         }
     }).persist();;
-    
+
     nock('https://management.azure.com', {
         reqheaders: {
             "authorization": "Bearer DUMMY_ACCESS_TOKEN",
@@ -490,7 +492,7 @@ export function mockAzureAppServiceTests() {
             "VSTSRM_ReleaseDefinitionId": 1
         }
     }).persist();
-    
+
     nock('https://management.azure.com', {
         reqheaders: {
             "authorization": "Bearer DUMMY_ACCESS_TOKEN",
@@ -498,7 +500,7 @@ export function mockAzureAppServiceTests() {
         }
     }).post("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.Web/sites/MOCK_APP_SERVICE_NAME/slots/MOCK_SLOT_NAME/config/metadata/list?api-version=2016-08-01")
     .reply(501, 'internal error occurred').persist();
-    
+
     nock('https://management.azure.com', {
         reqheaders: {
             "authorization": "Bearer DUMMY_ACCESS_TOKEN",
@@ -515,7 +517,7 @@ export function mockAzureAppServiceTests() {
             "VSTSRM_ReleaseDefinitionId": 1
         }
     }).persist();
-    
+
     nock('https://management.azure.com', {
         reqheaders: {
             "authorization": "Bearer DUMMY_ACCESS_TOKEN",
@@ -547,16 +549,16 @@ export function mockKuduServiceTests() {
     nock('http://MOCK_SCM_WEBSITE').
     post('/api/continuouswebjobs/MOCK_JOB_NAME/start')
     .reply(200, {name: "CONT_2", status: "Running", runCommand: "hello.cmd", type: "continuous"});
-    
-    
+
+
     nock('http://FAIL_MOCK_SCM_WEBSITE').
     post('/api/continuouswebjobs/MOCK_JOB_NAME/start').reply(501, 'Internal error occured');
 
     nock('http://MOCK_SCM_WEBSITE').
     post('/api/continuouswebjobs/MOCK_JOB_NAME/stop')
     .reply(200, {name: "CONT_1", status: "Stopped", runCommand: "hello.cmd", type: "continuous"});
-    
-    
+
+
     nock('http://FAIL_MOCK_SCM_WEBSITE').
     post('/api/continuouswebjobs/MOCK_JOB_NAME/stop').reply(501, 'Internal error occured');
 
@@ -665,8 +667,8 @@ export function mockAzureARMResourcesTests() {
         }
     }).get("/subscriptions/MOCK_SUBSCRIPTION_ID/resources?$filter=resourceType%20EQ%20%27Microsoft.Web%2Fsites%27%20AND%20name%20EQ%20%27g%C3%B6m-mig-fr%C3%A5n-omv%C3%A4rlden%27&api-version=2016-07-01")
     .reply(200, {
-        value: [{ 
-            id: "subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/microsoft.web/sites/göm-mig-från-omvär", 
+        value: [{
+            id: "subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/microsoft.web/sites/göm-mig-från-omvär",
             name: "MOCK_APP_INSIGHTS_NAME",
             type: "microsoft.insights/components",
             tags: {},

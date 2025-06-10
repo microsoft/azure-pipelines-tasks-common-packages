@@ -1,12 +1,13 @@
-import msRestAzure = require("./azure-arm-common");
-import webClient = require("./webClient");
+import path = require('node:path');
+
 import tl = require('azure-pipelines-task-lib/task');
-import util = require("util");
-import azureServiceClient = require("./AzureServiceClient");
-import azureServiceClientBase = require("./AzureServiceClientBase");
-import Q = require("q");
+import Q = require('q');
+
+import msRestAzure = require('./azure-arm-common');
+import azureServiceClient = require('./AzureServiceClient');
+import azureServiceClientBase = require('./AzureServiceClientBase');
 import constants = require('./constants');
-import path = require('path');
+import webClient = require('./webClient');
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
@@ -51,14 +52,14 @@ export class FirewallRules {
     constructor(client) {
         this.client = client;
     }
-    
+
     /**
-     * Create or update firewall rule for mysql server 
-     * @param resourceGroupName     resource group name of mysql server 
+     * Create or update firewall rule for mysql server
+     * @param resourceGroupName     resource group name of mysql server
      * @param serverName            mysql server name
      * @param firewallRuleName      rule name to be added or updated
      * @param parameters            optional parameter like start and end ip address
-     * @param callback              response callback 
+     * @param callback              response callback
      */
     public createOrUpdate(resourceGroupName: string, serverName: string, firewallRuleName: string, parameters, callback?:  azureServiceClientBase.ApiCallback) {
         var client = this.client;
@@ -90,7 +91,7 @@ export class FirewallRules {
                 '{serverName}': serverName,
                 '{firewallRuleName}': firewallRuleName
             });
-            
+
         if (parameters !== null && parameters !== undefined) {
             httpRequest.body = JSON.stringify(parameters);
         }
@@ -121,10 +122,10 @@ export class FirewallRules {
 
     /**
      * Delete firewall rule of mysql server
-     * @param resourceGroupName     resource group name of mysql server 
+     * @param resourceGroupName     resource group name of mysql server
      * @param serverName            mysql server name
-     * @param firewallRuleName      firewall rule name to be deleted 
-     * @param callback              response callback 
+     * @param firewallRuleName      firewall rule name to be deleted
+     * @param callback              response callback
      */
     public delete(resourceGroupName: string, serverName: string, firewallRuleName: string, callback?:  azureServiceClientBase.ApiCallback) {
         var client = this.client;
@@ -176,10 +177,10 @@ export class FirewallRules {
 
     /**
      * Get firewall rule of mysql server
-     * @param resourceGroupName     resource group name of mysql server 
+     * @param resourceGroupName     resource group name of mysql server
      * @param serverName            mysql server name
-     * @param firewallRuleName      firewall rule name to be deleted 
-     * @param callback              response callback 
+     * @param firewallRuleName      firewall rule name to be deleted
+     * @param callback              response callback
      */
     public get(resourceGroupName: string, serverName: string, firewallRuleName: string, callback?:  azureServiceClientBase.ApiCallback) {
         var client = this.client;
@@ -232,9 +233,9 @@ export class FirewallRules {
 
     /**
      * Retry get call to check firewall rule has added or not
-     * @param resourceGroupName     resource group name of mysql server 
+     * @param resourceGroupName     resource group name of mysql server
      * @param serverName            mysql server name
-     * @param firewallRuleName      firewall rule name to be deleted 
+     * @param firewallRuleName      firewall rule name to be deleted
      * @param retryOption           no of time to retry
      */
     private _recursiveGetCall(resourceGroupName: string, serverName: string, firewallRuleName: string, retryOption: number, timeToWait: number) : Q.Promise<azureServiceClientBase.ApiResult>{
@@ -253,7 +254,7 @@ export class FirewallRules {
                     deferred.resolve(new azureServiceClientBase.ApiResult(null, result));
                 }
             });
-        }, waitedTime); 
+        }, waitedTime);
 
         return deferred.promise;
     }
@@ -303,7 +304,7 @@ export class  MysqlServers {
                     }
                     result.concat(nextResult.result);
                 }
-                
+
                 return new azureServiceClientBase.ApiResult(null, result);
             }
             else {

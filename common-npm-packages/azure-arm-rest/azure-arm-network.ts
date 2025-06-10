@@ -1,11 +1,12 @@
-import msRestAzure = require("./azure-arm-common");
-import webClient = require("./webClient");
+import path = require('node:path');
+
 import tl = require('azure-pipelines-task-lib/task');
-import util = require("util");
-import azureServiceClient = require("./AzureServiceClient");
-import azureServiceClientBase = require("./AzureServiceClientBase");
-import Q = require("q");
-import path = require('path');
+import Q = require('q');
+
+import msRestAzure = require('./azure-arm-common');
+import azureServiceClient = require('./AzureServiceClient');
+import azureServiceClientBase = require('./AzureServiceClientBase');
+import webClient = require('./webClient');
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
