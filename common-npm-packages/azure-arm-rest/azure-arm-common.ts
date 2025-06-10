@@ -1,6 +1,6 @@
 import crypto = require('crypto');
-import path = require('path');
 import fs = require('fs');
+import path = require('path');
 import querystring = require('querystring');
 
 import { Mutex } from 'async-mutex';
@@ -11,9 +11,10 @@ import fetch = require('node-fetch');
 import jwt = require('jsonwebtoken');
 import Q = require('q');
 
-import webClient = require('./webClient');
+import azCliUtility = require('./azCliUtility');
 import AzureModels = require('./azureModels');
 import constants = require('./constants');
+import webClient = require('./webClient');
 
 // Important note! Since the msal v2.** doesn't work with Node 10, and we still need to support Node 10 execution handler, a dynamic msal loading was implemented.
 // Dynamic loading imposes restrictions on type validation when compiling TypeScript and we can't use it in this case.
@@ -217,28 +218,7 @@ export class ApplicationTokenCredentials {
     }
 
     private static async initOIDCToken(connection: WebApi, projectId: string, hub: string, planId: string, jobId: string, serviceConnectionId: string, retryCount: number = 0, timeToWait: number = 2000): Promise<string> {
-        let error: any;
-        for (let i = retryCount > 0 ? retryCount : 3; i > 0; i--) {
-            try {
-                const api = await connection.getTaskApi();
-                const response = await api.createOidcToken({}, projectId, hub, planId, jobId, serviceConnectionId);
-                if (response && response.oidcToken) {
-                    tl.debug('Got OIDC token');
-                    return response.oidcToken;
-                }
-            } catch (e: any) {
-                error = e;
-            }
-            await new Promise(r => setTimeout(r, timeToWait));
-            tl.debug(`Retrying OIDC token fetch. Retries left: ${i}`);
-        }
-
-        let message = tl.loc('CouldNotFetchAccessTokenforAAD');
-        if (error) {
-            message += " " + error;
-        }
-
-        return Promise.reject(message);
+        return await azCliUtility.initOIDCToken(connection, projectId, hub, planId, jobId, serviceConnectionId, retryCount, timeToWait);
     }
 
     private static getSystemAccessToken() : string {

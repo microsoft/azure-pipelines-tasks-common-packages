@@ -3,10 +3,8 @@ import path = require('path');
 
 import { getHandlerFromToken, WebApi } from 'azure-devops-node-api';
 import { TaskHubOidcToken } from 'azure-devops-node-api/interfaces/TaskAgentInterfaces';
-import { ITaskApi } from 'azure-devops-node-api/TaskApi';
-import * as tl from 'azure-pipelines-task-lib/task';
+import tl from 'azure-pipelines-task-lib/task';
 import { IExecSyncResult } from 'azure-pipelines-task-lib/toolrunner';
-import Q = require('q');
 
 import * as webClient from './webClient';
 
@@ -130,37 +128,33 @@ export async function getFederatedToken(connectedServiceName: string): Promise<s
     return oidc_token;
 }
 
-function initOIDCToken(connection: WebApi, projectId: string, hub: string, planId: string, jobId: string, serviceConnectionId: string, retryCount: number, timeToWait: number): Q.Promise<string> {
-    var deferred = Q.defer<string>();
-    connection.getTaskApi().then(
-        (taskApi: ITaskApi) => {
-            taskApi.createOidcToken({}, projectId, hub, planId, jobId, serviceConnectionId).then(
-                (response: TaskHubOidcToken) => {
-                    if (response != null) {
-                        tl.debug('Got OIDC token');
-                        deferred.resolve(response.oidcToken);
-                    }
-                    else if (response.oidcToken == null) {
-                        if (retryCount < 3) {
-                            let waitedTime = timeToWait;
-                            retryCount += 1;
-                            setTimeout(() => {
-                                deferred.resolve(initOIDCToken(connection, projectId, hub, planId, jobId, serviceConnectionId, retryCount, waitedTime));
-                            }, waitedTime);
-                        }
-                        else {
-                            deferred.reject(tl.loc('CouldNotFetchAccessTokenforAAD'));
-                        }
-                    }
-                },
-                (error) => {
-                    deferred.reject(tl.loc('CouldNotFetchAccessTokenforAAD') + " " + error);
-                }
-            );
-        }
-    );
+export async function initOIDCToken(connection: WebApi, projectId: string, hub: string, planId: string, jobId: string, serviceConnectionId: string, retryCount: number = 0, timeToWait: number = 2000): Promise<string> {
+    const taskApi = await connection.getTaskApi();
 
-    return deferred.promise;
+    let token: TaskHubOidcToken;
+
+    try {
+        token = await taskApi.createOidcToken({}, projectId, hub, planId, jobId, serviceConnectionId)
+    } catch (error) {
+        return Promise.reject(tl.loc('CouldNotFetchAccessTokenforAAD') + " " + error);
+    }
+
+    if (token != null) {
+        tl.debug('Got OIDC token');
+        return Promise.resolve(token.oidcToken);
+    }
+
+    if (token.oidcToken === null && retryCount >= 3) {
+        return Promise.reject(tl.loc('CouldNotFetchAccessTokenforAAD'));
+    }
+
+    retryCount += 1;
+
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve(initOIDCToken(connection, projectId, hub, planId, jobId, serviceConnectionId, retryCount, timeToWait));
+        }, timeToWait * retryCount);
+    });
 }
 
 function isAzVersionGreaterOrEqual(azVersionResultOutput: string, versionToCompare: string): boolean {
