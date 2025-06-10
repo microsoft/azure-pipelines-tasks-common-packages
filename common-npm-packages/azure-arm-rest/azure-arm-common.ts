@@ -1,7 +1,7 @@
-import crypto = require('node:crypto');
-import path = require('node:path');
-import fs = require('node:fs');
-import querystring = require('node:querystring');
+import crypto = require('crypto');
+import path = require('path');
+import fs = require('fs');
+import querystring = require('querystring');
 
 import { Mutex } from 'async-mutex';
 import { getHandlerFromToken, WebApi } from 'azure-devops-node-api';

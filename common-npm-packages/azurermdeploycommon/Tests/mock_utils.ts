@@ -1,4 +1,4 @@
-import * as querystring from 'node:querystring';
+import * as querystring from 'querystring';
 
 export var nock = require('nock');
 

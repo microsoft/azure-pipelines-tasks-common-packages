@@ -1,6 +1,6 @@
-import crypto = require('node:crypto');
-import fs = require('node:fs');
-import path = require('node:path');
+import crypto = require('crypto');
+import fs = require('fs');
+import path = require('path');
 
 import tl = require('azure-pipelines-task-lib/task');
 

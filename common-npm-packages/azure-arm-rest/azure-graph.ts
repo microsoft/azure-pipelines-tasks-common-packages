@@ -1,4 +1,4 @@
-import util = require('node:util');
+import util = require('util');
 
 import tl = require('azure-pipelines-task-lib/task');
 import Q = require('q');

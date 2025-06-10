@@ -1,5 +1,5 @@
-import fs = require('node:fs');
-import path = require('node:path');
+import fs = require('fs');
+import path = require('path');
 
 import tl = require('azure-pipelines-task-lib/task');
 import Q = require('q');

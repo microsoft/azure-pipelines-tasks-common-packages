@@ -1,4 +1,4 @@
-import path = require('node:path');
+import path = require('path');
 
 import tl = require('azure-pipelines-task-lib/task');
 

@@ -1,5 +1,5 @@
-import fs = require('node:fs');
-import path = require('node:path');
+import fs = require('fs');
+import path = require('path');
 
 import { getHandlerFromToken, WebApi } from 'azure-devops-node-api';
 import { TaskHubOidcToken } from 'azure-devops-node-api/interfaces/TaskAgentInterfaces';
