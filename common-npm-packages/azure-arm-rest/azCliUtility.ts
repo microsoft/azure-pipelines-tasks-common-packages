@@ -3,7 +3,7 @@ import path = require('path');
 
 import { getHandlerFromToken, WebApi } from 'azure-devops-node-api';
 import { TaskHubOidcToken } from 'azure-devops-node-api/interfaces/TaskAgentInterfaces';
-import tl from 'azure-pipelines-task-lib/task';
+import * as tl from 'azure-pipelines-task-lib/task';
 import { IExecSyncResult } from 'azure-pipelines-task-lib/toolrunner';
 
 import * as webClient from './webClient';
