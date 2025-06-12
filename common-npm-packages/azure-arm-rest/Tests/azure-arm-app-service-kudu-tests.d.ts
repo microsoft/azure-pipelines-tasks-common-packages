@@ -4,6 +4,7 @@ export declare class KuduTests {
     static startContinuousWebJob(): Promise<void>;
     static stopContinuousWebJob(): Promise<void>;
     static installSiteExtension(): Promise<void>;
+    static installSiteExtensionWithVersion(): Promise<void>;
     static getSiteExtensions(): Promise<void>;
     static getAllSiteExtensions(): Promise<void>;
     static getProcess(): Promise<void>;

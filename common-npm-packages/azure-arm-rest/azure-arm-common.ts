@@ -1,19 +1,19 @@
-import tl = require('azure-pipelines-task-lib/task');
-import Q = require('q');
-import querystring = require('querystring');
-import webClient = require("./webClient");
-import AzureModels = require("./azureModels");
-import constants = require('./constants');
+import crypto = require('crypto');
 import path = require('path');
 import fs = require('fs');
-import jwt = require('jsonwebtoken');
-import crypto = require("crypto");
+import querystring = require('querystring');
+
 import { Mutex } from 'async-mutex';
+import { getHandlerFromToken, WebApi } from 'azure-devops-node-api';
+import tl = require('azure-pipelines-task-lib/task');
 import HttpsProxyAgent = require('https-proxy-agent');
 import fetch = require('node-fetch');
-import { getHandlerFromToken, WebApi } from "azure-devops-node-api";
-import { ITaskApi } from "azure-devops-node-api/TaskApi";
-import TaskAgentInterfaces = require("azure-devops-node-api/interfaces/TaskAgentInterfaces");
+import jwt = require('jsonwebtoken');
+import Q = require('q');
+
+import webClient = require('./webClient');
+import AzureModels = require('./azureModels');
+import constants = require('./constants');
 
 // Important note! Since the msal v2.** doesn't work with Node 10, and we still need to support Node 10 execution handler, a dynamic msal loading was implemented.
 // Dynamic loading imposes restrictions on type validation when compiling TypeScript and we can't use it in this case.
@@ -22,10 +22,16 @@ import TaskAgentInterfaces = require("azure-devops-node-api/interfaces/TaskAgent
 
 /// Dynamic msal loading based on the node version
 const nodeVersion = parseInt(process.version.split('.')[0].replace('v', ''));
-const msalVer = nodeVersion < 16 ? "msalv1": "msalv2";
+let msalVer;
+if (tl.getPipelineFeature('EnableMsalV3')) {
+    msalVer = nodeVersion < 16 ? "msalv1": "msalv3";
+} else {
+    msalVer = nodeVersion < 16 ? "msalv1": "msalv2";
+}
 
 tl.debug('Using ' + msalVer);
 const msal = require(msalVer);
+
 ///
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
@@ -207,7 +213,7 @@ export class ApplicationTokenCredentials {
         }
     }
 
-    private static async initOIDCToken(connection: WebApi, projectId: string, hub: string, planId: string, jobId: string, serviceConnectionId: string, retryCount: number, timeToWait: number): Promise<string> {
+    private static async initOIDCToken(connection: WebApi, projectId: string, hub: string, planId: string, jobId: string, serviceConnectionId: string, retryCount: number = 0, timeToWait: number = 2000): Promise<string> {
         let error: any;
         for (let i = retryCount > 0 ? retryCount : 3; i > 0; i--) {
             try {
@@ -218,11 +224,11 @@ export class ApplicationTokenCredentials {
                     return response.oidcToken;
                 }
             } catch (e: any) {
-                error = e;            
+                error = e;
             }
             await new Promise(r => setTimeout(r, timeToWait));
             tl.debug(`Retrying OIDC token fetch. Retries left: ${i}`);
-        } 
+        }
 
         let message = tl.loc('CouldNotFetchAccessTokenforAAD');
         if (error) {

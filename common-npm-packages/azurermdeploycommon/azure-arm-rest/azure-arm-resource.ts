@@ -1,10 +1,10 @@
+import tl = require('azure-pipelines-task-lib/task');
+
 import { ToError, ServiceClient } from './AzureServiceClient';
 import { AzureEndpoint } from './azureModels';
 import msRestAzure = require('./azure-arm-common');
 import azureServiceClient = require('./AzureServiceClient');
 import webClient = require('./webClient');
-import tl = require('azure-pipelines-task-lib/task');
-import Q = require('q');
 
 export class ResourceManagementClient extends azureServiceClient.ServiceClient {
 
