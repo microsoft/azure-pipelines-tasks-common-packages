@@ -4,6 +4,8 @@ import { ApplicationInsightsTests } from "./L0-azure-arm-appinsights-tests";
 import { ApplicationInsightsTests as ApplicationInsightsTestsWebTests } from "./L0-azure-arm-appinsights-webtests-tests";
 import { ResourcesTests } from "./L0-azure-arm-resource-tests";
 import { AksServiceTests } from "./L0-azure-arm-aks-service-tests";
+import { AzureCliUtilityTests } from "./L0-azure-cli-utility-tests";
+
 const DEFAULT_TIMEOUT = 1000 * 20;
 
 describe("AzureARMRestTests", function () {
@@ -14,4 +16,5 @@ describe("AzureARMRestTests", function () {
     describe("ApplicationInsightsWeb tests", ApplicationInsightsTestsWebTests.bind(ApplicationInsightsTestsWebTests, DEFAULT_TIMEOUT))
     describe("Resources Tests", ResourcesTests.bind(ResourcesTests, DEFAULT_TIMEOUT));
     describe("AKS Tests", AksServiceTests.bind(AksServiceTests, DEFAULT_TIMEOUT));
+    describe("Azure Cli Utility Tests", AzureCliUtilityTests.bind(AzureCliUtilityTests, DEFAULT_TIMEOUT));
 });
