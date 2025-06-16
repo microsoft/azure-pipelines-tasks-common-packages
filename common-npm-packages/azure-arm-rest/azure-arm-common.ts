@@ -452,9 +452,8 @@ export class ApplicationTokenCredentials {
             hub,
             planId,
             jobId,
-            this.connectedServiceName,
-            3,
-            2000);
+            this.connectedServiceName
+        );
 
         return oidc_token;
     }
