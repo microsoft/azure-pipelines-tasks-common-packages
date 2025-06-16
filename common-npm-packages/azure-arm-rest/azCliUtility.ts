@@ -142,6 +142,9 @@ export async function initOIDCToken(connection: WebApi, projectId: string, hub: 
             tl.debug('Got OIDC token');
             return Promise.resolve(token.oidcToken);
         }
+
+        // If the token is null, it means the OIDC token could not be fetched
+        throw new Error(tl.loc('CouldNotFetchAccessTokenforAAD'));
     } catch (error) {
         // Handle AggregateError if available, since the package uses Node10 types.
         // Otherwise handle generic error
@@ -154,7 +157,7 @@ export async function initOIDCToken(connection: WebApi, projectId: string, hub: 
         }
 
         if (retryCount >= MAX_CREATE_OIDC_TOKEN_RETRIES) {
-            return Promise.reject(tl.loc('CouldNotFetchAccessTokenforAAD'));
+            return Promise.reject(tl.loc('CouldNotFetchAccessTokenForAADRetryLimitExceeded'));
         }
 
         tl.debug(`Retrying OIDC token fetch. Retries left: ${MAX_CREATE_OIDC_TOKEN_RETRIES - retryCount}`);
