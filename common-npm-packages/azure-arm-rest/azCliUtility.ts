@@ -133,12 +133,11 @@ export async function getFederatedToken(connectedServiceName: string): Promise<s
 
 export async function initOIDCToken(connection: WebApi, projectId: string, hub: string, planId: string, jobId: string, serviceConnectionId: string, retryCount: number = 0, timeToWait: number = 2000): Promise<string> {
     const taskApi = await connection.getTaskApi();
-    retryCount += 1;
 
     try {
         const token = await taskApi.createOidcToken({}, projectId, hub, planId, jobId, serviceConnectionId);
 
-        if (token?.oidcToken !== null) {
+        if (token?.oidcToken !== null && token?.oidcToken !== undefined) {
             tl.debug('Got OIDC token');
             return Promise.resolve(token.oidcToken);
         }
@@ -159,6 +158,8 @@ export async function initOIDCToken(connection: WebApi, projectId: string, hub: 
         if (retryCount >= MAX_CREATE_OIDC_TOKEN_RETRIES) {
             return Promise.reject(tl.loc('CouldNotFetchAccessTokenForAADRetryLimitExceeded'));
         }
+
+        retryCount += 1;
 
         tl.debug(`Retrying OIDC token fetch. Retries left: ${MAX_CREATE_OIDC_TOKEN_RETRIES - retryCount}`);
 
