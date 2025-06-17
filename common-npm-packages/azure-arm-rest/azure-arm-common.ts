@@ -217,10 +217,6 @@ export class ApplicationTokenCredentials {
         }
     }
 
-    private static async initOIDCToken(connection: WebApi, projectId: string, hub: string, planId: string, jobId: string, serviceConnectionId: string, retryCount: number = 0, timeToWait: number = 2000): Promise<string> {
-        return await azCliUtility.initOIDCToken(connection, projectId, hub, planId, jobId, serviceConnectionId, retryCount, timeToWait);
-    }
-
     private static getSystemAccessToken() : string {
         tl.debug('Getting credentials for local feeds');
         const auth = tl.getEndpointAuthorization('SYSTEMVSSCONNECTION', false);
@@ -437,32 +433,25 @@ export class ApplicationTokenCredentials {
     }
 
     public async getFederatedToken(): Promise<string> {
-        const projectId: string = tl.getVariable("System.TeamProjectId");
-        const hub: string = tl.getVariable("System.HostType");
+        const projectId: string = tl.getVariable('System.TeamProjectId');
+        const hub: string = tl.getVariable('System.HostType');
         const planId: string = tl.getVariable('System.PlanId');
         const jobId: string = tl.getVariable('System.JobId');
-        let uri = tl.getVariable("System.CollectionUri");
+        let uri = tl.getVariable('System.CollectionUri');
+
         if (!uri) {
-            uri = tl.getVariable("System.TeamFoundationServerUri");
+            uri = tl.getVariable('System.TeamFoundationServerUri');
         }
 
         const token = ApplicationTokenCredentials.getSystemAccessToken();
         const authHandler = getHandlerFromToken(token);
         const connection = new WebApi(uri, authHandler);
-        const oidc_token: string = await ApplicationTokenCredentials.initOIDCToken(
-            connection,
-            projectId,
-            hub,
-            planId,
-            jobId,
-            this.connectedServiceName
-        );
 
-        return oidc_token;
+        return azCliUtility.initOIDCToken(connection, projectId, hub, planId, jobId, this.connectedServiceName);
     }
 
     private async configureMSALWithOIDC(msalConfig: any /*msal.Configuration*/): Promise<any> /*Promise<msal.ConfidentialClientApplication>*/ {
-        tl.debug("MSAL - FederatedAccess - OIDC is used.");
+        tl.debug('MSAL - FederatedAccess - OIDC is used.');
 
         msalConfig.auth.clientAssertion = await this.getFederatedToken();
 

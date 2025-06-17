@@ -131,7 +131,16 @@ export async function getFederatedToken(connectedServiceName: string): Promise<s
     return oidc_token;
 }
 
-export async function initOIDCToken(connection: WebApi, projectId: string, hub: string, planId: string, jobId: string, serviceConnectionId: string, retryCount: number = 0, timeToWait: number = 2000): Promise<string> {
+export async function initOIDCToken(
+    connection: WebApi,
+    projectId: string,
+    hub: string,
+    planId: string,
+    jobId: string,
+    serviceConnectionId: string,
+    retryCount: number = 0,
+    timeToWait: number = 2000
+): Promise<string> {
     const taskApi = await connection.getTaskApi();
 
     try {
