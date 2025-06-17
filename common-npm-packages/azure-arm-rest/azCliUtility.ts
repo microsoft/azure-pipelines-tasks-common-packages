@@ -148,7 +148,7 @@ export async function initOIDCToken(
 
         if (token?.oidcToken !== null && token?.oidcToken !== undefined) {
             tl.debug('Got OIDC token');
-            return Promise.resolve(token.oidcToken);
+            return token.oidcToken;
         }
 
         // If the token is null, it means the OIDC token could not be fetched
