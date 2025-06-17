@@ -16,8 +16,9 @@ _Assess the level of risk and provide reasoning (e.g., scope, impact, backward c
 
 ---
 
-### **Unit Tests Added or Updated** (Yes / No)  
-_Indicate whether unit tests were added or modified to reflect these changes. Provide links to test results if available._
+### **Unit Tests Added or Updated**   
+- [ ] Unit tests added or updated
+- [ ] Manual tests performed
 
 ---
 
