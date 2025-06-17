@@ -169,14 +169,11 @@ export async function initOIDCToken(
         }
 
         retryCount += 1;
-
         tl.debug(`Retrying OIDC token fetch. Retries left: ${MAX_CREATE_OIDC_TOKEN_RETRIES - retryCount}`);
 
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve(initOIDCToken(connection, projectId, hub, planId, jobId, serviceConnectionId, retryCount, timeToWait));
-            }, Math.min(timeToWait * retryCount, MAX_CREATE_OIDC_TOKEN_BACKOFF_TIMEOUT));
-        });
+        // Wait for a backoff time before retrying
+        await new Promise(resolve => setTimeout(resolve, Math.min(timeToWait * retryCount, MAX_CREATE_OIDC_TOKEN_BACKOFF_TIMEOUT)));
+        return initOIDCToken(connection, projectId, hub, planId, jobId, serviceConnectionId, retryCount, timeToWait);
     }
 }
 
