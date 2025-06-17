@@ -14,21 +14,21 @@ export function codecoverageconstantsTests() {
     describe('function getFormattedFileCollectionAssignGradle', () => {
         it ('should return syntax for Gradle < 5.x', () => {
             const property = 'testProperty';
-
-            const expected = `${property} =`;
+            
+            const expected = `${property} =`
             const actual = getFormattedFileCollectionAssignGradle(property, false);
-
+    
             assert.strictEqual(actual, expected);
-        });
-
+        })
+    
         it ('should return syntax for Gradle >= 5.x', () => {
             const property = 'testProperty';
-
-            const expected = `${property}.setFrom`;
+            
+            const expected = `${property}.setFrom`
             const actual = getFormattedFileCollectionAssignGradle(property, true);
-
+    
             assert.strictEqual(actual, expected);
-        });
+        })    
     });
 
     describe('functions related to build script configuration', () => {
@@ -95,7 +95,7 @@ export function codecoverageconstantsTests() {
                 fakeData.groupId,
                 fakeData.formattedParentData,
                 fakeData.modules);
-
+            
             assert.strictEqual(actual, expectedResults.jacocoMavenMultiProject);
         });
 
@@ -104,6 +104,11 @@ export function codecoverageconstantsTests() {
             codecoverageconstantsRewire.coberturaMavenEnable(fakeData.includeFilterStringified, fakeData.excludeFilterStringified, fakeData.aggregate);
             sinon.assert.calledOnceWithExactly(convertXmlStringToJsonStub, expectedResults.coberturaMavenEnableConfiguration);
             convertXmlStringToJsonStub.restore();
+        });
+
+        it('function jacocoAntReport should return correct configuration', () => {
+            const actual = codecoverageconstantsRewire.jacocoAntReport(fakeData.reportDir, fakeData.classDir, fakeData.sourceDir);
+            assert.strictEqual(actual, expectedResults.jacocoAntReportConfiguration);
         });
 
         it('function jacocoAntReport should return correct configuration', () => {
