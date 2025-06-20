@@ -2,13 +2,16 @@ import fs = require('fs');
 import path = require('path');
 
 import { getHandlerFromToken, WebApi } from 'azure-devops-node-api';
-import { TaskHubOidcToken } from 'azure-devops-node-api/interfaces/TaskAgentInterfaces';
-import { ITaskApi } from 'azure-devops-node-api/TaskApi';
 import * as tl from 'azure-pipelines-task-lib/task';
 import { IExecSyncResult } from 'azure-pipelines-task-lib/toolrunner';
-import Q = require('q');
 
 import * as webClient from './webClient';
+
+// Maximum number of retries for creating OIDC token
+const MAX_CREATE_OIDC_TOKEN_RETRIES = 3;
+
+// Maximum backoff timeout for creating OIDC token in milliseconds
+const MAX_CREATE_OIDC_TOKEN_BACKOFF_TIMEOUT = 15000;
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
@@ -121,46 +124,57 @@ export async function getFederatedToken(connectedServiceName: string): Promise<s
         hub,
         planId,
         jobId,
-        connectedServiceName,
-        0,
-        2000);
+        connectedServiceName);
 
     tl.setSecret(oidc_token);
 
     return oidc_token;
 }
 
-function initOIDCToken(connection: WebApi, projectId: string, hub: string, planId: string, jobId: string, serviceConnectionId: string, retryCount: number, timeToWait: number): Q.Promise<string> {
-    var deferred = Q.defer<string>();
-    connection.getTaskApi().then(
-        (taskApi: ITaskApi) => {
-            taskApi.createOidcToken({}, projectId, hub, planId, jobId, serviceConnectionId).then(
-                (response: TaskHubOidcToken) => {
-                    if (response != null) {
-                        tl.debug('Got OIDC token');
-                        deferred.resolve(response.oidcToken);
-                    }
-                    else if (response.oidcToken == null) {
-                        if (retryCount < 3) {
-                            let waitedTime = timeToWait;
-                            retryCount += 1;
-                            setTimeout(() => {
-                                deferred.resolve(initOIDCToken(connection, projectId, hub, planId, jobId, serviceConnectionId, retryCount, waitedTime));
-                            }, waitedTime);
-                        }
-                        else {
-                            deferred.reject(tl.loc('CouldNotFetchAccessTokenforAAD'));
-                        }
-                    }
-                },
-                (error) => {
-                    deferred.reject(tl.loc('CouldNotFetchAccessTokenforAAD') + " " + error);
-                }
-            );
-        }
-    );
+export async function initOIDCToken(
+    connection: WebApi,
+    projectId: string,
+    hub: string,
+    planId: string,
+    jobId: string,
+    serviceConnectionId: string,
+    retryCount: number = 0,
+    timeToWait: number = 2000
+): Promise<string> {
+    const taskApi = await connection.getTaskApi();
 
-    return deferred.promise;
+    try {
+        const token = await taskApi.createOidcToken({}, projectId, hub, planId, jobId, serviceConnectionId);
+
+        if (token?.oidcToken !== null && token?.oidcToken !== undefined) {
+            tl.debug('Got OIDC token');
+            return token.oidcToken;
+        }
+
+        // If the token is null, it means the OIDC token could not be fetched
+        throw new Error(tl.loc('CouldNotFetchAccessTokenforAAD'));
+    } catch (error) {
+        // Handle AggregateError if available, since the package uses Node10 types.
+        // Otherwise handle generic error
+        if (error.name === 'AggregateError' && error['errors'] !== undefined) {
+            for (const err of error.errors) {
+                tl.error(`Error while trying to get OIDC token: ${err}`);
+            }
+        } else {
+            tl.error(`Error while trying to get OIDC token: ${error}`);
+        }
+
+        if (retryCount >= MAX_CREATE_OIDC_TOKEN_RETRIES) {
+            return Promise.reject(tl.loc('CouldNotFetchAccessTokenForAADRetryLimitExceeded'));
+        }
+
+        retryCount += 1;
+        tl.debug(`Retrying OIDC token fetch. Retries left: ${MAX_CREATE_OIDC_TOKEN_RETRIES - retryCount}`);
+
+        // Wait for a backoff time before retrying
+        await new Promise(resolve => setTimeout(resolve, Math.min(timeToWait * retryCount, MAX_CREATE_OIDC_TOKEN_BACKOFF_TIMEOUT)));
+        return initOIDCToken(connection, projectId, hub, planId, jobId, serviceConnectionId, retryCount, timeToWait);
+    }
 }
 
 function isAzVersionGreaterOrEqual(azVersionResultOutput: string, versionToCompare: string): boolean {
