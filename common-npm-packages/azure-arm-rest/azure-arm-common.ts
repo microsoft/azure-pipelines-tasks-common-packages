@@ -491,15 +491,10 @@ export class ApplicationTokenCredentials {
         if (force) {
             msalApp.clearCache();
         }
-        var a = 1;
         try {
             const request: any /*msal.ClientCredentialRequest*/ = {
                 scopes: [this.activeDirectoryResourceId + "/.default"]
             };
-            if (a == 1) {
-                a = 2;
-                throw new Error("This is a test error to check retry logic in getMSALToken");
-            }
             const response = await msalApp.acquireTokenByClientCredential(request);
             tl.debug(`MSAL - retrieved token - isFromCache?: ${response.fromCache}`);
             return response.accessToken;
