@@ -1,11 +1,14 @@
-import fs = require("fs");
-import path = require("path");
+import fs = require('fs');
+import path = require('path');
+
+import { getHandlerFromToken, WebApi } from 'azure-devops-node-api';
+import { TaskHubOidcToken } from 'azure-devops-node-api/interfaces/TaskAgentInterfaces';
+import { ITaskApi } from 'azure-devops-node-api/TaskApi';
 import * as tl from 'azure-pipelines-task-lib/task';
 import { IExecSyncResult } from 'azure-pipelines-task-lib/toolrunner';
-import { getHandlerFromToken, WebApi } from "azure-devops-node-api";
-import { ITaskApi } from "azure-devops-node-api/TaskApi";
-import { TaskHubOidcToken } from "azure-devops-node-api/interfaces/TaskAgentInterfaces";
 import Q = require('q');
+
+import * as webClient from './webClient';
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
@@ -42,7 +45,7 @@ export async function loginAzureRM(connectedService: string): Promise<void> {
         const azVersionResult: IExecSyncResult = tl.execSync("az", "--version");
         throwIfError(azVersionResult);
         isCertificateParameterSupported = isAzVersionGreaterOrEqual(azVersionResult.stdout, "2.66.0");
-        
+
         if (authType == "spnCertificate") {
             tl.debug('certificate based endpoint');
             if(isCertificateParameterSupported) {
@@ -121,9 +124,9 @@ export async function getFederatedToken(connectedServiceName: string): Promise<s
         connectedServiceName,
         0,
         2000);
-    
+
     tl.setSecret(oidc_token);
-    
+
     return oidc_token;
 }
 
@@ -187,5 +190,45 @@ function isAzVersionGreaterOrEqual(azVersionResultOutput: string, versionToCompa
     } catch (error) {
         tl.error(`Error checking Azure CLI version: ${error.message}`);
         return false;
+    }
+}
+
+async function getLatestAzureModuleReleaseVersion(moduleName: string): Promise<string> {
+    try {
+        let request = new webClient.WebRequest();
+        request.uri = `https://api.github.com/repos/Azure/${moduleName}/releases`;
+        request.method = 'GET';
+        request.headers = request.headers || {};
+        const response = await webClient.sendRequest(request);
+        const lastestCliRelease = moduleName === "azure-powershell" ? response?.body?.filter(x => x?.tag_name?.match(/^v\d+\.\d+\.0/))?.[0] : response?.body?.[0];
+        return lastestCliRelease?.tag_name
+    } catch (err) {
+        tl.error(`Error checking Azure version: ${err.message}`);
+    }
+}
+
+export async function validateAzModuleVersion(moduleName: string, currentVersion: string, displayName: string, versionTolerance: number, checkOnlyMajorVersion: boolean = false): Promise<void> {
+    const DisplayWarningForOlderAzVersion: boolean = tl.getPipelineFeature("ShowWarningOnOlderAzureModules");
+    try {
+        if (DisplayWarningForOlderAzVersion) {
+            const latestRelease: string = await getLatestAzureModuleReleaseVersion(moduleName);
+            if (latestRelease) {
+                const [latestsemver, latestMajor, latestMinor] = latestRelease.match(/(\d+).(\d+).(\d+)/);
+                const [currentsemver, currentMajor, currentMinor] = currentVersion.match(/(\d+).(\d+).(\d+)/);
+                tl.debug(`For the module ${moduleName} the current semver Version is ${currentsemver} and the latest semver version is ${latestsemver}`)
+                let displayWarning = false;
+                if (checkOnlyMajorVersion && Number(currentMajor) < Number(latestMajor) - versionTolerance) {
+                    displayWarning = true;
+                }
+                if (!checkOnlyMajorVersion && (Number(currentMajor) < Number(latestMajor) || Number(currentMinor) < Number(latestMinor) - versionTolerance)) {
+                    displayWarning = true;
+                }
+                if (displayWarning) {
+                    tl.warning(tl.loc('lowerAzWarning', displayName, currentsemver, latestsemver))
+                }
+            }
+        }
+    } catch (err) {
+        tl.error(`Error on validating Azure version: ${err.message}`);
     }
 }

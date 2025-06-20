@@ -1,10 +1,11 @@
 {
     "name": "azure-pipelines-tasks-docker-common",
-    "version": "2.247.0",
+    "version": "2.256.2",
     "description": "Common Library for Azure Rest Calls",
     "repository": {
         "type": "git",
-        "url": "git+ssh://git@github.com/Microsoft/azure-pipelines-tasks-common-packages.git"
+        "url": "git+ssh://git@github.com/Microsoft/azure-pipelines-tasks-common-packages.git",
+        "directory": "common-npm-packages/docker-common"
     },
     "author": "Microsoft Corporation",
     "license": "MIT",

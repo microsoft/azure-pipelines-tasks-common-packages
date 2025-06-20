@@ -1,12 +1,13 @@
-import msRestAzure = require("./azure-arm-common");
-import azureServiceClient = require("./AzureServiceClient");
-import azureServiceClientBase = require("./AzureServiceClientBase");
-import Model = require("./azureModels");
-import webClient = require("./webClient");
+import path = require('path');
+
 import tl = require('azure-pipelines-task-lib/task');
 import Q = require('q');
-import util = require("util");
-import path = require('path');
+
+import msRestAzure = require('./azure-arm-common');
+import azureServiceClient = require('./AzureServiceClient');
+import azureServiceClientBase = require('./AzureServiceClientBase');
+import Model = require('./azureModels');
+import webClient = require('./webClient');
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
@@ -231,11 +232,11 @@ export class StorageAccounts {
                 '{storageAccountName}': storageAccountName
             }
         );
-        
+
         if (response.statusCode == 200) {
             return response.body;
         }
-        
+
         // SubscribtionId will be placed automatically
         // The endpoint for classic storage account
         response = await this.sendRequest(
@@ -246,7 +247,7 @@ export class StorageAccounts {
                 '{storageAccountName}': storageAccountName
             }
         );
-        
+
         if (response.statusCode == 200) {
             return response.body;
         }
