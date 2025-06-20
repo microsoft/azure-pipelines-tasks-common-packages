@@ -24,6 +24,9 @@ import TaskAgentInterfaces = require("azure-devops-node-api/interfaces/TaskAgent
 const nodeVersion = parseInt(process.version.split('.')[0].replace('v', ''));
 const msalVer = nodeVersion < 16 ? "msalv1": "msalv2";
 
+// Maximum backoff timeout for creating AAD token in milliseconds
+const MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT = 15000;
+
 tl.debug('Using ' + msalVer);
 const msal = require(msalVer);
 ///
@@ -488,11 +491,15 @@ export class ApplicationTokenCredentials {
         if (force) {
             msalApp.clearCache();
         }
-
+        var a = 1;
         try {
             const request: any /*msal.ClientCredentialRequest*/ = {
                 scopes: [this.activeDirectoryResourceId + "/.default"]
             };
+            if (a == 1) {
+                a = 2;
+                throw new Error("This is a test error to check retry logic in getMSALToken");
+            }
             const response = await msalApp.acquireTokenByClientCredential(request);
             tl.debug(`MSAL - retrieved token - isFromCache?: ${response.fromCache}`);
             return response.accessToken;
@@ -501,7 +508,8 @@ export class ApplicationTokenCredentials {
                 tl.debug(`MSAL - retrying getMSALToken - temporary error code: ${error.errorCode}`);
                 tl.debug(`MSAL - retrying getMSALToken - remaining attempts: ${retryCount}`);
 
-                await new Promise(r => setTimeout(r, retryWaitMS));
+                // Wait for a backoff time before retrying
+                await new Promise(r => setTimeout(r, Math.min(retryWaitMS * retryCount, MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT)));
                 return await this.getMSALToken(force, (retryCount - 1), retryWaitMS);
             }
 
@@ -573,7 +581,7 @@ export class ApplicationTokenCredentials {
 
         let webRequestOptions: webClient.WebRequestOptions = {
             retriableErrorCodes: null,
-            retriableStatusCodes: [400, 408, 409, 500, 502, 503, 504],
+            retriableStatusCodes: [400, 408, 409, 429, 500, 502, 503, 504],
             retryCount: null,
             retryIntervalInSeconds: null,
             retryRequestTimedout: null
@@ -619,7 +627,7 @@ export class ApplicationTokenCredentials {
 
         let webRequestOptions: webClient.WebRequestOptions = {
             retriableErrorCodes: null,
-            retriableStatusCodes: [400, 403, 408, 409, 500, 502, 503, 504],
+            retriableStatusCodes: [400, 403, 408, 409, 429, 500, 502, 503, 504],
             retryCount: null,
             retryIntervalInSeconds: null,
             retryRequestTimedout: null
