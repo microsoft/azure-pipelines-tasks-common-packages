@@ -432,6 +432,31 @@ export class ApplicationTokenCredentials {
         return msalInstance;
     }
 
+    private static async initOIDCToken(connection: WebApi, projectId: string, hub: string, planId: string, jobId: string, serviceConnectionId: string, retryCount: number = 0, timeToWait: number = 2000): Promise<string> {
+        let error: any;
+        for (let i = retryCount > 0 ? retryCount : 3; i > 0; i--) {
+            try {
+                const api = await connection.getTaskApi();
+                const response = await api.createOidcToken({}, projectId, hub, planId, jobId, serviceConnectionId);
+                if (response && response.oidcToken) {
+                    tl.debug('Got OIDC token');
+                    return response.oidcToken;
+                }
+            } catch (e: any) {
+                error = e;
+            }
+            await new Promise(r => setTimeout(r, timeToWait));
+            tl.debug(`Retrying OIDC token fetch. Retries left: ${i}`);
+        }
+
+        let message = tl.loc('CouldNotFetchAccessTokenforAAD');
+        if (error) {
+            message += " " + error;
+        }
+
+        return Promise.reject(message);
+    }
+
     public async getFederatedToken(): Promise<string> {
         const projectId: string = tl.getVariable('System.TeamProjectId');
         const hub: string = tl.getVariable('System.HostType');
@@ -447,7 +472,21 @@ export class ApplicationTokenCredentials {
         const authHandler = getHandlerFromToken(token);
         const connection = new WebApi(uri, authHandler);
 
-        return azCliUtility.initOIDCToken(connection, projectId, hub, planId, jobId, this.connectedServiceName);
+        if (tl.getPipelineFeature("UseOIDCToken2InAzureArmRest")) {
+            return azCliUtility.initOIDCToken2(connection, projectId, hub, planId, jobId, this.connectedServiceName);
+        }
+
+        const oidc_token: string = await ApplicationTokenCredentials.initOIDCToken(
+            connection,
+            projectId,
+            hub,
+            planId,
+            jobId,
+            this.connectedServiceName,
+            3,
+            2000);
+
+        return oidc_token;
     }
 
     private async configureMSALWithOIDC(msalConfig: any /*msal.Configuration*/): Promise<any> /*Promise<msal.ConfidentialClientApplication>*/ {
