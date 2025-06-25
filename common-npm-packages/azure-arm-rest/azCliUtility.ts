@@ -149,7 +149,7 @@ export async function initOIDCToken2(
     try {
         const token = await taskApi.createOidcToken({}, projectId, hub, planId, jobId, serviceConnectionId);
 
-        if (token?.oidcToken) {
+        if (!token?.oidcToken) {
             tl.debug('Got OIDC token');
             return token.oidcToken;
         }
