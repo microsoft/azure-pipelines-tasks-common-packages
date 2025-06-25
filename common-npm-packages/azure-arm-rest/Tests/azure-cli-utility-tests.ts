@@ -1,5 +1,5 @@
 import { WebApi } from "azure-devops-node-api";
-import { initOIDCToken } from "../azCliUtility";
+import { initOIDCToken2 } from "../azCliUtility";
 
 class TaskApiNull {
     async createOidcToken() {
@@ -46,7 +46,7 @@ class WebApiMockThrowing {
 export class AzureCliUtilityTests {
     public static async initOIDCTokenTestRetryMechanism() {
         try {
-            await initOIDCToken(new WebApiMockNull() as WebApi, 'https://dev.azure.com/organization', 'project', 'pipeline', 'job', 'task', 0, 0);
+            await initOIDCToken2(new WebApiMockNull() as WebApi, 'https://dev.azure.com/organization', 'project', 'pipeline', 'job', 'task', 0, 0);
         } catch (error) {
             //
         }
@@ -54,7 +54,7 @@ export class AzureCliUtilityTests {
 
     public static async initOIDCTokenTestAggregateError() {
         try {
-            await initOIDCToken(new WebApiMockThrowing() as WebApi, 'https://dev.azure.com/organization', 'project', 'pipeline', 'job', 'task', 3, 0);
+            await initOIDCToken2(new WebApiMockThrowing() as WebApi, 'https://dev.azure.com/organization', 'project', 'pipeline', 'job', 'task', 3, 0);
         } catch (error) {
             //
         }
