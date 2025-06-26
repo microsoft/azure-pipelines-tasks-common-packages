@@ -134,6 +134,42 @@ export async function getFederatedToken(connectedServiceName: string): Promise<s
     return oidc_token;
 }
 
+function initOIDCToken(connection: WebApi, projectId: string, hub: string, planId: string, jobId: string, serviceConnectionId: string, retryCount: number = 0, timeToWait: number = 2000): Promise<string> {
+    if (tl.getPipelineFeature("UseOIDCToken2InAzureArmRest")) {
+        return initOIDCToken2(connection, projectId, hub, planId, jobId, serviceConnectionId, retryCount, timeToWait);
+    }
+
+    return new Promise<string>((resolve, reject) => {
+        connection.getTaskApi().then(
+            (taskApi: ITaskApi) => {
+                taskApi.createOidcToken({}, projectId, hub, planId, jobId, serviceConnectionId).then(
+                    (response: TaskHubOidcToken) => {
+                        if (response != null) {
+                            tl.debug('Got OIDC token');
+                            resolve(response.oidcToken);
+                        }
+                        else if (response.oidcToken == null) {
+                            if (retryCount < 3) {
+                                let waitedTime = timeToWait;
+                                retryCount += 1;
+                                setTimeout(() => {
+                                    resolve(initOIDCToken(connection, projectId, hub, planId, jobId, serviceConnectionId, retryCount, waitedTime));
+                                }, waitedTime);
+                            }
+                            else {
+                                reject(tl.loc('CouldNotFetchAccessTokenforAAD'));
+                            }
+                        }
+                    },
+                    (error) => {
+                        reject(tl.loc('CouldNotFetchAccessTokenforAAD') + " " + error);
+                    }
+                );
+            }
+        );
+    });
+}
+
 export async function initOIDCToken2(
     connection: WebApi,
     projectId: string,
@@ -178,42 +214,6 @@ export async function initOIDCToken2(
         await new Promise(resolve => setTimeout(resolve, Math.min(timeToWait * retryCount, MAX_CREATE_OIDC_TOKEN_BACKOFF_TIMEOUT)));
         return initOIDCToken2(connection, projectId, hub, planId, jobId, serviceConnectionId, retryCount, timeToWait);
     }
-}
-
-function initOIDCToken(connection: WebApi, projectId: string, hub: string, planId: string, jobId: string, serviceConnectionId: string, retryCount: number = 0, timeToWait: number = 2000): Promise<string> {
-    if (tl.getPipelineFeature("UseOIDCToken2InAzureArmRest")) {
-        return initOIDCToken2(connection, projectId, hub, planId, jobId, serviceConnectionId, retryCount, timeToWait);
-    }
-
-    return new Promise<string>((resolve, reject) => {
-        connection.getTaskApi().then(
-            (taskApi: ITaskApi) => {
-                taskApi.createOidcToken({}, projectId, hub, planId, jobId, serviceConnectionId).then(
-                    (response: TaskHubOidcToken) => {
-                        if (response != null) {
-                            tl.debug('Got OIDC token');
-                            resolve(response.oidcToken);
-                        }
-                        else if (response.oidcToken == null) {
-                            if (retryCount < 3) {
-                                let waitedTime = timeToWait;
-                                retryCount += 1;
-                                setTimeout(() => {
-                                    resolve(initOIDCToken(connection, projectId, hub, planId, jobId, serviceConnectionId, retryCount, waitedTime));
-                                }, waitedTime);
-                            }
-                            else {
-                                reject(tl.loc('CouldNotFetchAccessTokenforAAD'));
-                            }
-                        }
-                    },
-                    (error) => {
-                        reject(tl.loc('CouldNotFetchAccessTokenforAAD') + " " + error);
-                    }
-                );
-            }
-        );
-    });
 }
 
 function isAzVersionGreaterOrEqual(azVersionResultOutput: string, versionToCompare: string): boolean {
