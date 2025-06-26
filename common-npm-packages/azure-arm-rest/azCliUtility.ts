@@ -204,7 +204,7 @@ export async function initOIDCToken2(
         }
 
         if (retryCount >= MAX_CREATE_OIDC_TOKEN_RETRIES) {
-            return Promise.reject(tl.loc('CouldNotFetchAccessTokenForAADRetryLimitExceeded'));
+            throw Error(tl.loc('CouldNotFetchAccessTokenForAADRetryLimitExceeded'));
         }
 
         retryCount += 1;
