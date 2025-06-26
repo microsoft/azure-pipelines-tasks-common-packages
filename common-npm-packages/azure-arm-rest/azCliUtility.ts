@@ -149,13 +149,13 @@ export async function initOIDCToken2(
     try {
         const token = await taskApi.createOidcToken({}, projectId, hub, planId, jobId, serviceConnectionId);
 
-        if (token?.oidcToken) {
-            tl.debug('Got OIDC token');
-            return token.oidcToken;
+        // If the token is null or undefined, it means the OIDC token could not be fetched
+        if (!token?.oidcToken) {
+            throw new Error(tl.loc('CouldNotFetchAccessTokenforAAD'));
         }
 
-        // If the token is null, it means the OIDC token could not be fetched
-        throw new Error(tl.loc('CouldNotFetchAccessTokenforAAD'));
+        tl.debug('Got OIDC token');
+        return token.oidcToken;
     } catch (error) {
         // Handle AggregateError if available, since the package uses Node10 types.
         // Otherwise handle generic error
@@ -176,7 +176,7 @@ export async function initOIDCToken2(
 
         // Wait for a backoff time before retrying
         await new Promise(resolve => setTimeout(resolve, Math.min(timeToWait * retryCount, MAX_CREATE_OIDC_TOKEN_BACKOFF_TIMEOUT)));
-        return initOIDCToken(connection, projectId, hub, planId, jobId, serviceConnectionId, retryCount, timeToWait);
+        return initOIDCToken2(connection, projectId, hub, planId, jobId, serviceConnectionId, retryCount, timeToWait);
     }
 }
 
