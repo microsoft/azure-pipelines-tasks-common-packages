@@ -7,8 +7,7 @@ export function AzureCliUtilityTests() {
     it('azure-arm-rest azure-cli-utility check retry count', (done: Mocha.Done) => {
         process.env['SYSTEM_DEBUG'] = 'true';
 
-        let tr = new MockTestRunner(join(__dirname, 'azure-cli-utility-tests.js'));
-        let passed = true;
+        const tr = new MockTestRunner(join(__dirname, 'azure-cli-utility-tests.js'));
 
         tr.runAsync()
             .then(() => {
@@ -20,7 +19,6 @@ export function AzureCliUtilityTests() {
                 done();
             })
             .catch((error) => {
-                passed = false;
                 console.log(tr.stdout);
                 console.log(tr.stderr);
                 done(error);
