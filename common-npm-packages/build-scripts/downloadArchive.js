@@ -27,8 +27,7 @@ const downloadFile = function (url, downloadPath) {
 
         // delete any previous partial attempt
         if (util.test('-f', targetPath)) {
-            // @ts-ignore
-            rm('-f', targetPath);
+            util.rm('-f', targetPath);
         }
 
         // download the file
@@ -79,8 +78,7 @@ const downloadArchive = function (url, downloadPath) {
 
         // delete any previously attempted extraction directory
         if (util.test('-d', targetPath)) {
-            // @ts-ignore
-            rm('-rf', targetPath);
+            util.rm('-rf', targetPath);
         }
 
         // extract
