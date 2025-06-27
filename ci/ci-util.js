@@ -52,4 +52,5 @@ const run = function (cl, inheritStreams) {
         throw new Error(`The following command line failed: '${cl}'`);
     }
 }
+
 exports.run = run;
