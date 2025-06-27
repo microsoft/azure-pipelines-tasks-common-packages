@@ -112,19 +112,18 @@ const downloadArchive = function (url, downloadPath) {
     return targetPath;
 }
 
-const args = process.argv.slice(2);
-const archiveUrl = args[0];
-const dest = args[1];
+// If this script is run directly, download the archive and copy its contents to the destination
+if (require.main === module) {
+    const [ archiveUrl, dest ] = process.argv.slice(2);
 
-if (!archiveUrl) {
-    throw new Error('Archive URL must be specified as the first argument');
-}
+    if (!archiveUrl) {
+        throw new Error('Archive URL must be specified as the first argument');
+    }
 
-if (!dest) {
-    throw new Error('Destination path must be specified as the second argument');
-}
+    if (!dest) {
+        throw new Error('Destination path must be specified as the second argument');
+    }
 
-if (args.length) {
     const targetPath = downloadArchive(archiveUrl, path.join('../_download', dest));
 
     if (!fs.existsSync(dest)) {
