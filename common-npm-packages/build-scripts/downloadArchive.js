@@ -1,30 +1,39 @@
-var fs = require('fs');
-var path = require('path');
-var process = require('process');
-var syncRequest = require('sync-request');
-var util = require('./util');
+const fs = require('node:fs');
+const path = require('node:path');
+const process = require('node:process');
 
-var downloadFile = function (url, downloadPath) {
+const syncRequest = require('sync-request');
+
+const util = require('./util');
+
+/**
+ * Downloads a file from the specified URL and saves it to the downloadPath.
+ * @param {string} url - The URL of the file to download.
+ * @param {string} downloadPath - The path where the downloaded file should be saved.
+ * @returns {string} - The path to the downloaded file.
+ */
+const downloadFile = function (url, downloadPath) {
     // validate parameters
     if (!url) {
         throw new Error('Parameter "url" must be set.');
     }
 
     // skip if already downloaded
-    var scrubbedUrl = url.replace(/[/\:?]/g, '_');
-    var targetPath = path.join(downloadPath, 'file', scrubbedUrl);
-    var marker = targetPath + '.completed';
+    const scrubbedUrl = url.replace(/[/\:?]/g, '_');
+    const targetPath = path.join(downloadPath, 'file', scrubbedUrl);
+    const marker = targetPath + '.completed';
     if (!util.test('-f', marker)) {
         console.log('Downloading file: ' + url);
 
         // delete any previous partial attempt
         if (util.test('-f', targetPath)) {
-            rm('-f', targetPath);
+            util.rm('-f', targetPath);
         }
 
         // download the file
         util.mkdir('-p', path.join(downloadPath, 'file'));
-        var result = syncRequest('GET', url);
+        // @ts-ignore
+        const result = syncRequest('GET', url);
         fs.writeFileSync(targetPath, result.getBody());
 
         // write the completed marker
@@ -34,40 +43,47 @@ var downloadFile = function (url, downloadPath) {
     return targetPath;
 }
 
-var downloadArchive = function (url, downloadPath) {
+/**
+ * Downloads an archive from the specified URL and extracts it to the downloadPath.
+ * @param {string} url - The URL of the archive to download.
+ * @param {string} downloadPath - The path where the downloaded archive should be saved.
+ * @returns {string} - The path to the extracted archive directory.
+ */
+const downloadArchive = function (url, downloadPath) {
     // validate parameters
     if (!url) {
         throw new Error('Parameter "url" must be set.');
     }
 
-    var isZip;
-    var isTargz;
+    let isZip;
+    let isTargz;
+
     if (url.match(/\.zip$/)) {
         isZip = true;
-    }
-    else if (url.match(/\.tar\.gz$/) && (process.platform == 'darwin' || process.platform == 'linux')) {
+    } else if (url.match(/\.tar\.gz$/) && (process.platform == 'darwin' || process.platform == 'linux')) {
         isTargz = true;
-    }
-    else {
+    } else {
         throw new Error('Unexpected archive extension');
     }
 
     // skip if already downloaded and extracted
-    var scrubbedUrl = url.replace(/[/\:?]/g, '_');
-    var targetPath = path.join(downloadPath, 'archive', scrubbedUrl);
-    var marker = targetPath + '.completed';
+    const scrubbedUrl = url.replace(/[/\:?]/g, '_');
+    const targetPath = path.join(downloadPath, 'archive', scrubbedUrl);
+    const marker = targetPath + '.completed';
+
     if (!util.test('-f', marker)) {
         // download the archive
-        var archivePath = downloadFile(url, downloadPath);
+        const archivePath = downloadFile(url, downloadPath);
         console.log('Extracting archive: ' + url);
 
         // delete any previously attempted extraction directory
         if (util.test('-d', targetPath)) {
-            rm('-rf', targetPath);
+            util.rm('-rf', targetPath);
         }
 
         // extract
         util.mkdir('-p', targetPath);
+
         if (isZip) {
             if (process.platform == 'win32') {
                 let escapedFile = archivePath.replace(/'/g, "''").replace(/"|\n|\r/g, ''); // double-up single quotes, remove double quotes and newlines
@@ -78,14 +94,13 @@ var downloadArchive = function (url, downloadPath) {
             } else {
                 util.run(`unzip ${archivePath} -d ${targetPath}`);
             }
-        }
-        else if (isTargz) {
-            var originalCwd = process.cwd();
+        } else if (isTargz) {
+            const originalCwd = process.cwd();
             util.cd(targetPath);
+
             try {
                 util.run(`tar -xzf "${archivePath}"`);
-            }
-            finally {
+            } finally {
                 util.cd(originalCwd);
             }
         }
@@ -97,16 +112,24 @@ var downloadArchive = function (url, downloadPath) {
     return targetPath;
 }
 
-const args = process.argv.slice(2);
-const archiveUrl = args[0];
-const dest = args[1];
+// If this script is run directly, download the archive and copy its contents to the destination
+if (require.main === module) {
+    const [ archiveUrl, dest ] = process.argv.slice(2);
 
-if (args.length) {
+    if (!archiveUrl) {
+        throw new Error('Archive URL must be specified as the first argument');
+    }
+
+    if (!dest) {
+        throw new Error('Destination path must be specified as the second argument');
+    }
+
     const targetPath = downloadArchive(archiveUrl, path.join('../_download', dest));
+
     if (!fs.existsSync(dest)) {
         util.mkdir('-p', dest);
     }
     util.cp('-rf', path.join(targetPath, '*'), dest);
 }
 
-exports.downloadArchive=downloadArchive;
+exports.downloadArchive = downloadArchive;

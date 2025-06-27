@@ -30,11 +30,13 @@ export function BuildOutputTests() {
         });
 
         afterEach(() => {
+            // @ts-ignore
             glob.sync.reset();
             buildOutputInstance.getModuleName.reset();
         });
 
         it('should return correct list of module outputs', () => {
+            // @ts-ignore
             glob.sync.returns(['first-path', 'second-path']);
             buildOutputInstance.getModuleName
                 .onCall(0).returns('first-module')
