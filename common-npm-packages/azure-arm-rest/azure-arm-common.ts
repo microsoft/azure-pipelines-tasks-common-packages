@@ -498,7 +498,7 @@ export class ApplicationTokenCredentials {
         return msalInstance;
     }
 
-    private async getMSALToken(force?: boolean, retryCount: number = 3, retryWaitMS: number = 2000): Promise<string> {
+    private async getMSALToken(force?: boolean, retryCount: number = 3, retryWaitMS: number = 2000, exponentialBackoffTryCount: number = 1): Promise<string> {
         tl.debug(`MSAL - getMSALToken called. force=${force}`);
         const msalApp: any /*msal.ConfidentialClientApplication*/ = await this.getMSAL();
         if (force) {
@@ -517,7 +517,7 @@ export class ApplicationTokenCredentials {
                 tl.debug(`MSAL - retrying getMSALToken - remaining attempts: ${retryCount}`);
 
                 // Wait for a backoff time before retrying
-                await new Promise(r => setTimeout(r, Math.min(retryWaitMS * retryCount, MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT)));
+                await new Promise(r => setTimeout(r, Math.min(retryWaitMS * (exponentialBackoffTryCount++), MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT)));
                 return await this.getMSALToken(force, (retryCount - 1), retryWaitMS);
             }
 
