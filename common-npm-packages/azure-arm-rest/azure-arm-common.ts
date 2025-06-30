@@ -516,9 +516,8 @@ export class ApplicationTokenCredentials {
                 tl.debug(`MSAL - retrying getMSALToken - temporary error code: ${error.errorCode}`);
                 tl.debug(`MSAL - retrying getMSALToken - remaining attempts: ${retryCount}`);
 
-                // Wait for a backoff time before retrying
-                await new Promise(r => setTimeout(r, Math.min(retryWaitMS * retryCount, MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT)));
-                return await this.getMSALToken(force, (retryCount - 1), retryWaitMS);
+                await new Promise(r => setTimeout(r, Math.min(retryWaitMS, MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT)));
+                return await this.getMSALToken(force, (retryCount - 1), retryWaitMS * 2);
             }
 
             if (error.errorMessage && error.errorMessage.toString().startsWith("7000222")) {
