@@ -22,7 +22,7 @@ async function publishPackages(packages) {
             }
             catch(ex) {
                 if (ex instanceof util.CreateReleaseError) {
-                    console.log(`Error creating release notes: ${ex.message}`);                    
+                    console.log(`Error creating release notes: ${ex.message}`);
                 } else {
                     console.log('Publish failed - this usually indicates that the package has already been published');
                 }
@@ -33,5 +33,5 @@ async function publishPackages(packages) {
 }
 
 util.cd('common-npm-packages');
-var packages = fs.readdirSync('./', { encoding: 'utf-8' });
+const packages = fs.readdirSync('./', { encoding: 'utf-8' });
 publishPackages(packages);
