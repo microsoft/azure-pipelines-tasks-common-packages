@@ -498,7 +498,7 @@ export class ApplicationTokenCredentials {
         return msalInstance;
     }
 
-    private async getMSALToken(force?: boolean, retryCount: number = 3, retryWaitMS: number = 2000, exponentialBackoffTryCount: number = 0): Promise<string> {
+    private async getMSALToken(force?: boolean, retryCount: number = 3, retryWaitMS: number = 2000): Promise<string> {
         tl.debug(`MSAL - getMSALToken called. force=${force}`);
         const msalApp: any /*msal.ConfidentialClientApplication*/ = await this.getMSAL();
         if (force) {
