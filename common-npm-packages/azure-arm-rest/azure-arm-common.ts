@@ -1,6 +1,6 @@
 import crypto = require('crypto');
-import path = require('path');
 import fs = require('fs');
+import path = require('path');
 import querystring = require('querystring');
 
 import { Mutex } from 'async-mutex';
@@ -11,9 +11,10 @@ import fetch = require('node-fetch');
 import jwt = require('jsonwebtoken');
 import Q = require('q');
 
-import webClient = require('./webClient');
+import azCliUtility = require('./azCliUtility');
 import AzureModels = require('./azureModels');
 import constants = require('./constants');
+import webClient = require('./webClient');
 
 // Important note! Since the msal v2.** doesn't work with Node 10, and we still need to support Node 10 execution handler, a dynamic msal loading was implemented.
 // Dynamic loading imposes restrictions on type validation when compiling TypeScript and we can't use it in this case.
@@ -457,18 +458,24 @@ export class ApplicationTokenCredentials {
     }
 
     public async getFederatedToken(): Promise<string> {
-        const projectId: string = tl.getVariable("System.TeamProjectId");
-        const hub: string = tl.getVariable("System.HostType");
+        const projectId: string = tl.getVariable('System.TeamProjectId');
+        const hub: string = tl.getVariable('System.HostType');
         const planId: string = tl.getVariable('System.PlanId');
         const jobId: string = tl.getVariable('System.JobId');
-        let uri = tl.getVariable("System.CollectionUri");
+        let uri = tl.getVariable('System.CollectionUri');
+
         if (!uri) {
-            uri = tl.getVariable("System.TeamFoundationServerUri");
+            uri = tl.getVariable('System.TeamFoundationServerUri');
         }
 
         const token = ApplicationTokenCredentials.getSystemAccessToken();
         const authHandler = getHandlerFromToken(token);
         const connection = new WebApi(uri, authHandler);
+
+        if (tl.getPipelineFeature("UseOIDCToken2InAzureArmRest")) {
+            return azCliUtility.initOIDCToken2(connection, projectId, hub, planId, jobId, this.connectedServiceName);
+        }
+
         const oidc_token: string = await ApplicationTokenCredentials.initOIDCToken(
             connection,
             projectId,
@@ -483,7 +490,7 @@ export class ApplicationTokenCredentials {
     }
 
     private async configureMSALWithOIDC(msalConfig: any /*msal.Configuration*/): Promise<any> /*Promise<msal.ConfidentialClientApplication>*/ {
-        tl.debug("MSAL - FederatedAccess - OIDC is used.");
+        tl.debug('MSAL - FederatedAccess - OIDC is used.');
 
         msalConfig.auth.clientAssertion = await this.getFederatedToken();
 
@@ -509,9 +516,8 @@ export class ApplicationTokenCredentials {
                 tl.debug(`MSAL - retrying getMSALToken - temporary error code: ${error.errorCode}`);
                 tl.debug(`MSAL - retrying getMSALToken - remaining attempts: ${retryCount}`);
 
-                // Wait for a backoff time before retrying
-                await new Promise(r => setTimeout(r, Math.min(retryWaitMS * retryCount, MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT)));
-                return await this.getMSALToken(force, (retryCount - 1), retryWaitMS);
+                await new Promise(r => setTimeout(r, Math.min(retryWaitMS, MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT)));
+                return await this.getMSALToken(force, (retryCount - 1), retryWaitMS * 2);
             }
 
             if (error.errorMessage && error.errorMessage.toString().startsWith("7000222")) {
