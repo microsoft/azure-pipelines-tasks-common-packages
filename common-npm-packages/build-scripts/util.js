@@ -1,47 +1,43 @@
-var fs = require('fs');
-var ncp = require('child_process');
-var path = require('path');
-var process = require('process');
-var shell = require('shelljs');
-const { exception } = require('console');
+const ncp = require('node:child_process');
+const fs = require('node:fs');
+const path = require('node:path');
+const process = require('node:process');
 
-var shellAssert = function () {
-    var errMsg = shell.error();
+const shell = require('shelljs');
+
+const shellAssert = function () {
+    const errMsg = shell.error();
+
     if (errMsg) {
         throw new Error(errMsg);
     }
 }
 /**
  * Function to run command line via child_process.execSync
- * @param {*} cl Command line to run
- * @param {*} inheritStreams - Inherit/pipe stdio streams
- * @param {*} noHeader - Don't print command line header
- * @returns 
+ * @param {string} cl Command line to run
+ * @param {boolean} [inheritStreams] - Inherit/pipe stdio streams
+ * @param {boolean} [noHeader] - Don't print command line header
+ * @returns
  */
-var run = function (cl, inheritStreams, noHeader) {
+const run = function (cl, inheritStreams, noHeader) {
     if (!noHeader) {
         console.log();
         console.log('> ' + cl);
     }
 
-    var options = {
-        stdio: inheritStreams ? 'inherit' : 'pipe'
-    };
-    var rc = 0;
-    var output;
     try {
-        output = ncp.execSync(cl, options);
-    }
-    catch (err) {
+        return ncp.execSync(cl, {
+            stdio: inheritStreams ? 'inherit' : 'pipe'
+        })?.toString().trim();
+    } catch (err) {
         if (!inheritStreams) {
             console.error(err.output ? err.output.toString() : err.message);
         }
 
-        throw new Error(`Command '${cl}' failed`)
+        throw new Error(`Command '${cl}' failed`);
     }
-
-    return (output || '').toString().trim();
 }
+
 exports.run = run;
 
 /**
@@ -49,8 +45,9 @@ exports.run = run;
  * change process.cwd() to dir
  * @param {String} dir - Directory path
  */
-var cd = function (dir) {
-    var cwd = process.cwd();
+const cd = function (dir) {
+    const cwd = process.cwd();
+
     if (cwd != dir) {
         console.log('');
         console.log(`> cd ${path.relative(cwd, dir)}`);
@@ -66,11 +63,10 @@ exports.cd = cd;
  * @param {String} source - Source folder path
  * @param {String} dest - Destination folder path
  */
-var cp = function (options, source, dest) {
+const cp = function (options, source, dest) {
     if (dest) {
         shell.cp(options, source, dest);
-    }
-    else {
+    } else {
         shell.cp(options, source);
     }
 
@@ -83,11 +79,10 @@ exports.cp = cp;
  * @param {String} options - Command options
  * @param {String} target - Destination path
  */
-var mkdir = function (options, target) {
+const mkdir = function (options, target) {
     if (target) {
         shell.mkdir(options, target);
-    }
-    else {
+    } else {
         shell.mkdir(options);
     }
 
@@ -97,12 +92,12 @@ exports.mkdir = mkdir;
 
 /**
  * test unix command via shelljs
- * @param {String} options - Command options
+ * @param {shell.TestOptions} options - Command options
  * @param {String} p - Destination path
- * @returns 
+ * @returns
  */
-var test = function (options, p) {
-    var result = shell.test(options, p);
+const test = function (options, p) {
+    const result = shell.test(options, p);
     shellAssert();
     return result;
 }
@@ -111,13 +106,12 @@ exports.test = test;
 /**
  * rm unix command via shelljs
  * @param {String} options - Command options
- * @param {String} target - Destination path
+ * @param {String} [target] - Destination path
  */
-var rm = function (options, target) {
+const rm = function (options, target) {
     if (target) {
         shell.rm(options, target);
-    }
-    else {
+    } else {
         shell.rm(options);
     }
 
@@ -134,7 +128,6 @@ exports.rm = rm;
  */
 const createMochaOptions = function (reporterPath, baseOutput, reportName) {
     if (!reporterPath || !baseOutput || !reportName) return '';
-
     const mochaFile = path.join(baseOutput, reportName + '.xml');
     return `-R ${reporterPath} -O mochaFile=${mochaFile}`
 }
@@ -143,11 +136,11 @@ exports.createMochaOptions = createMochaOptions;
 /**
  * Function to remove folder content
  * @param {String} folder - Path to folder
- * @param {Array} excludedNames - Array of excluded names
+ * @param {string[]} excludedNames - Array of excluded names
  */
 const cleanFolder = function (folder, excludedNames) {
     if (!fs.existsSync(folder)) return;
-    
+
     const stack = [folder];
     const excluded = excludedNames || [];
 
@@ -155,22 +148,29 @@ const cleanFolder = function (folder, excludedNames) {
         const currentFolder = stack.pop();
 
         try {
+            if (currentFolder === undefined) {
+                throw new Error('Current folder is undefined');
+            }
+
             const files = fs.readdirSync(currentFolder);
+
             if (files.length === 0) {
                 fs.rmdirSync(currentFolder);
-            } else {
-                files.forEach(file => {
-                    if (excluded.indexOf(file) === -1) {
-                        const filePath = path.join(currentFolder, file);
-                        const fileStat = fs.statSync(filePath);
-                        if (fileStat.isDirectory()) {
-                            stack.push(filePath);
-                        } else {
-                            fs.unlinkSync(filePath);
-                        }
-                    }
-                });
+                continue;
             }
+
+            files.forEach(file => {
+                if (excluded.indexOf(file) === -1) {
+                    const filePath = path.join(currentFolder, file);
+                    const fileStat = fs.statSync(filePath);
+
+                    if (fileStat.isDirectory()) {
+                        stack.push(filePath);
+                    } else {
+                        fs.unlinkSync(filePath);
+                    }
+                }
+            });
         } catch (err) {
             console.error(err);
         }
@@ -185,11 +185,13 @@ exports.cleanFolder = cleanFolder;
  * @param {String} newName - New file name
  * @returns void
  */
-var renameFile = function (folderPath, oldName, newName) {
+const renameFile = function (folderPath, oldName, newName) {
     try {
         if (!fs.existsSync(folderPath)) return;
+
         const oldFile = path.join(folderPath, oldName);
         const newFile = path.join(folderPath, newName);
+
         if (fs.existsSync(oldFile)) {
             fs.renameSync(oldFile, newFile);
         }
@@ -200,21 +202,40 @@ var renameFile = function (folderPath, oldName, newName) {
 exports.renameFile = renameFile;
 
 class CreateReleaseError extends Error {
+    /**
+     * CreateReleaseError constructor
+     * @param {String} message - Error message
+     */
     constructor(message) {
         super(message);
+
         this.name = 'CreateReleaseError';
         Error.captureStackTrace(this, CreateReleaseError)
     }
 }
 
 exports.CreateReleaseError = CreateReleaseError;
+
+/**
+ * @typedef {Object} PRDefinitionData
+ * @property {string} merged_at - Date when the pull request was merged
+ *
+ * @typedef {Object} PRDefinition
+ * @property {PRDefinitionData} pull_request - Pull request object
+ * @property {string} title - Title of the pull request
+ * @property {number} number - Pull request number
+ * @property {boolean} packageExists - Flag indicating if the package exists
+ */
+
 /**
  * Function to form task changes from PRs
- * @param {Array<object>} PRs - PRs to get the release notes for
- * @returns {Object} - Object containing the task changes where key is a task and values - changes for the task
+ * @param {PRDefinition[]} PRs - PRs to get the release notes for
+ * @returns {string[]} - Object containing the task changes where key is a task and values - changes for the task
  */
 function getChangesFromPRs(PRs) {
+    /** @type {string[]} */
     const changes = [];
+
     PRs.forEach(PR => {
         if (!PR.packageExists) return;
 
@@ -222,22 +243,24 @@ function getChangesFromPRs(PRs) {
         const date = new Date(closedDate).toISOString().split('T')[0];
         changes.push(` - ${PR.title} (#${PR.number}) (${date})`);
     });
-    
+
     return changes;
 }
 exports.getChangesFromPRs = getChangesFromPRs;
 
 /**
  * Function to get current version of the package
- * @param {String} package - Package name
+ * @param {String} _package - Package name
  * @returns {String} - version of the package
  **/
 
-function getCurrentPackageVersion(package) {
-    const packagePath = path.join(__dirname, '..', package, 'package.json');
+function getCurrentPackageVersion(_package) {
+    const packagePath = path.join(__dirname, '..', _package, 'package.json');
+
     if (!fs.existsSync(packagePath)) {
-        throw new CreateReleaseError(`package.json for Package ${package} not found.`)
+        throw new CreateReleaseError(`package.json for Package ${_package} not found.`)
     }
+
     const packageJson = require(packagePath);
     return packageJson.version;
 }
