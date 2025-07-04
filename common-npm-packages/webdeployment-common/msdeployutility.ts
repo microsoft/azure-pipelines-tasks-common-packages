@@ -119,8 +119,9 @@ function escapeQuotes(additionalArguments: string): string {
         let equalsSignEncountered = false;
         for (let i = 0; i < arg.length; i++) {
             const char = arg.charAt(i); 
+            var connectionStringCheck = new RegExp("\\bdata\\s*source\\s*=", "i");
             let quotedStringCheck =  (char == separator && equalsSignEncountered && ((formattedArg.startsWith("'") && formattedArg.endsWith("'")) || (formattedArg.startsWith('"') && formattedArg.endsWith('"'))));     
-            let commaSeperatorCheck = commaSeperatedCSEnabled ? quotedStringCheck : (char == separator && equalsSignEncountered);
+            let commaSeperatorCheck = commaSeperatedCSEnabled && connectionStringCheck.test(formattedArg)  ? quotedStringCheck : (char == separator && equalsSignEncountered);
             if (commaSeperatorCheck) {
                 equalsSignEncountered = false;
                 arg = arg.replace(formattedArg, escapeArg(formattedArg));
