@@ -123,8 +123,8 @@ function escapeQuotes(additionalArguments: string): string {
             let quotedStringCheck = (char == separator && equalsSignEncountered && ((formattedArg.startsWith("'") && formattedArg.endsWith("'")) || (formattedArg.startsWith('"') && formattedArg.endsWith('"'))));
             let commaSeperatorCheck = commaSeperatedCSEnabled && connectionStringCheck.test(formattedArg) ? quotedStringCheck : (char == separator && equalsSignEncountered);
             if (commaSeperatorCheck) {
-                let commaSeperatedCSEnabledTelemetry = '{"CommaSeperatedConnectionStringFeatureFlagEnabled":"' + commaSeperatedCSEnabled + '"connectionStringCheck":"' + connectionStringCheck.test(formattedArg) + '"}';
-                console.log("##vso[telemetry.publish area=TaskEndpointId;feature=MsDeployUtility]" + commaSeperatedCSEnabledTelemetry);
+                let commaSeperatedCSEnabledTelemetry = ' {"CommaSeperatedConnectionStringFeatureFlagEnabled":"' + commaSeperatedCSEnabled + '"connectionStringCheck":"' + connectionStringCheck.test(formattedArg) + '"}';
+                tl.debug("formattedArg : " + formattedArg + commaSeperatedCSEnabledTelemetry);
                 equalsSignEncountered = false;
                 arg = arg.replace(formattedArg, escapeArg(formattedArg));
                 formattedArg = '';
