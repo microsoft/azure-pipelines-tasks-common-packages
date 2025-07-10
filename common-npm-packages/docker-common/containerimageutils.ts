@@ -36,10 +36,10 @@ export function getBaseImageNameFromDockerFile(dockerFilePath: string): string {
         tl.debug(`Failed to get the base image name of Dockerfile : ${dockerFilePath}`);
     }
 
-    return baseImageName
+    return baseImageName!;
 }
 
-export function getBaseImageName(dockerFileContent: string): string {
+export function getBaseImageName(dockerFileContent: string): string | null {
     // This method takes into consideration multi-stage dockerfiles, it tries to find the final
     // base image for the container.
     // ex:
@@ -50,7 +50,7 @@ export function getBaseImageName(dockerFileContent: string): string {
     //
     // FROM base
     // RUN echo 'test2'
-    // 
+    //
     // This code is going to return ubuntu:16.04
 
     try {
@@ -74,15 +74,15 @@ export function getBaseImageName(dockerFileContent: string): string {
                 var alias = nameComponents[1].trim();
 
                 if (aliasToImageNameMapping.has(prospectImageName)) {
-                    aliasToImageNameMapping.set(alias, aliasToImageNameMapping.get(prospectImageName));
+                    aliasToImageNameMapping.set(alias, aliasToImageNameMapping.get(prospectImageName)!);
                 } else {
                     aliasToImageNameMapping.set(alias, prospectImageName);
                 }
 
-                baseImage = aliasToImageNameMapping.get(alias);
+                baseImage = aliasToImageNameMapping.get(alias)!;
             } else {
                 baseImage = aliasToImageNameMapping.has(prospectImageName)
-                    ? aliasToImageNameMapping.get(prospectImageName)
+                    ? aliasToImageNameMapping.get(prospectImageName)!
                     : prospectImageName;
             }
         }
@@ -91,12 +91,13 @@ export function getBaseImageName(dockerFileContent: string): string {
             ? null
             : sanityzeBaseImage(baseImage);
     } catch (error) {
+        // @ts-ignore
         tl.debug(`An error ocurred getting the base image name. ${error.message}`);
         return null;
     }
 }
 
-function sanityzeBaseImage(baseImage: string): string {
+function sanityzeBaseImage(baseImage: string): string | null{
     if (!baseImage){
         return null;
     }
@@ -117,7 +118,6 @@ export function getResourceName(image: string, digest: string) {
     var registry = match[1];
     var namespace = match[2];
     var repository = match[3];
-    var tag = match[4];
 
     if (!namespace && registry && !/[:.]/.test(registry)) {
         namespace = registry
@@ -135,7 +135,7 @@ export function getResourceName(image: string, digest: string) {
     return "https://" + registry + namespace + repository + "@sha256:" + digest;
 }
 
-export function getImageDigest(connection: ContainerConnection, imageName: string,): string {
+export function getImageDigest(connection: ContainerConnection, imageName: string): string | null {
     try {
         pullImage(connection, imageName);
         let inspectObj = inspectImage(connection, imageName);
@@ -158,6 +158,7 @@ export function getImageDigest(connection: ContainerConnection, imageName: strin
 
         return repoDigests[0].split("@")[1];
     } catch (error) {
+        // @ts-ignore
         tl.debug(`An exception was thrown getting the image digest for ${imageName}, the error was ${error.message}`)
         return null;
     }
@@ -174,7 +175,7 @@ function pullImage(connection: ContainerConnection, imageName: string) {
     }
 }
 
-function inspectImage(connection: ContainerConnection, imageName): any {
+function inspectImage(connection: ContainerConnection, imageName: string): any {
     try {
         let inspectCommand = connection.createCommand();
         inspectCommand.arg("inspect");
@@ -195,6 +196,7 @@ function inspectImage(connection: ContainerConnection, imageName): any {
 
         return inspectObj[0];
     } catch (error) {
+        // @ts-ignore
         tl.debug(`An error ocurred running the inspect command: ${error.message}`);
         return null;
     }
@@ -203,7 +205,7 @@ function inspectImage(connection: ContainerConnection, imageName): any {
 export function shareBuiltImageId(builtImageId: string) {
     const IMAGE_SEPARATOR_CHAR: string = ";";
     const ENV_VARIABLE_MAX_SIZE = 32766;
-    let builtImages: string = tl.getVariable("DOCKER_TASK_BUILT_IMAGES");
+    let builtImages: string = tl.getVariable("DOCKER_TASK_BUILT_IMAGES")!;
 
     if (builtImages && builtImages != "") {
         const newImageId = `${IMAGE_SEPARATOR_CHAR}${builtImages}`;
@@ -224,7 +226,7 @@ export function shareBuiltImageId(builtImageId: string) {
 
 export function getImageIdFromBuildOutput(output: string): string {
     const standardParser = (text: string): string => {
-        let parsedOutput: string[] = text.match(new RegExp("Successfully built ([0-9a-f]{12})", 'g'));
+        let parsedOutput: RegExpMatchArray | null = text.match(new RegExp("Successfully built ([0-9a-f]{12})", 'g'));
 
         return !parsedOutput || parsedOutput.length == 0
             ? ""
@@ -232,7 +234,7 @@ export function getImageIdFromBuildOutput(output: string): string {
     };
 
     const buildKitParser = (text: string): string => {
-        let parsedOutput: string[] = text.match(new RegExp("writing image sha256:([0-9a-f]{64})", 'gi'));
+        let parsedOutput: RegExpMatchArray | null = text.match(new RegExp("writing image sha256:([0-9a-f]{64})", 'gi'));
 
         return !parsedOutput || parsedOutput.length == 0
             ? ""
@@ -248,12 +250,13 @@ export function getImageIdFromBuildOutput(output: string): string {
             }
         }
     } catch (error) {
+        // @ts-ignore
         tl.debug(`An error occurred getting the image id from the docker ouput: ${error.message}`)
     }
 
     return "";
 }
-export function getBaseImageDetialsFromDockerFIle(dockerFileContentPath: string, connection?: ContainerConnection):baseImageDetails {
+export function getBaseImageDetialsFromDockerFIle(dockerFileContentPath: string, connection?: ContainerConnection): BaseImageDetails | null {
     // This method checks if there is FROM image@sha256:digest present in Dockerfile
     // if matched it returns digest
     // if not, it returns null
@@ -266,7 +269,7 @@ export function getBaseImageDetialsFromDockerFIle(dockerFileContentPath: string,
         var lines = dockerFileContent.split(/[\r?\n]/);
         var aliasToImageNameMapping: Map<string, string> = new Map<string, string>();
         var baseImage = "";
-        const baseImageDetails = { name: "", digest: "" };
+        const baseImageDetails: BaseImageDetails = { name: "", digest: "" };
 
         for (var i = 0; i < lines.length; i++) {
             const currentLine = lines[i].trim();
@@ -281,19 +284,19 @@ export function getBaseImageDetialsFromDockerFIle(dockerFileContentPath: string,
                 var alias = nameComponents[1].trim();
 
                 if (aliasToImageNameMapping.has(prospectImageName)) {
-                    aliasToImageNameMapping.set(alias, aliasToImageNameMapping.get(prospectImageName));
+                    aliasToImageNameMapping.set(alias, aliasToImageNameMapping.get(prospectImageName)!);
                 } else {
                     aliasToImageNameMapping.set(alias, prospectImageName);
                 }
 
-                baseImage = aliasToImageNameMapping.get(alias);
+                baseImage = aliasToImageNameMapping.get(alias)!;
             } else {
                 baseImage = aliasToImageNameMapping.has(prospectImageName)
-                    ? aliasToImageNameMapping.get(prospectImageName)
+                    ? aliasToImageNameMapping.get(prospectImageName)!
                     : prospectImageName;
             }
         }
-        baseImageDetails.name = baseImage.includes("$") ? null : sanityzeBaseImage(baseImage);// In this case the base image has an argument and we don't know what its real value is         
+        baseImageDetails.name = baseImage.includes("$") ? null : sanityzeBaseImage(baseImage);// In this case the base image has an argument and we don't know what its real value is
 
         if (!connection) {
             tl.debug("Image digest couldn't be extracted because no connection was found.");
@@ -312,11 +315,13 @@ export function getBaseImageDetialsFromDockerFIle(dockerFileContentPath: string,
         }
         return baseImageDetails;
     } catch (error) {
+        // @ts-ignore
         tl.debug(`An error ocurred getting the base image details. ${error.message}`);
         return null;
     }
 }
-export class baseImageDetails{
-    name: string;
-    digest: string ;
+
+export type BaseImageDetails = {
+    name: string | null;
+    digest: string | null;
 }

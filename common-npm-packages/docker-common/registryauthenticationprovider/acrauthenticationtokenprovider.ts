@@ -1,24 +1,18 @@
-"use strict";
-
-import { ApplicationTokenCredentials } from "azure-pipelines-tasks-azure-arm-rest/azure-arm-common";
-import { AzureRMEndpoint } from "azure-pipelines-tasks-azure-arm-rest/azure-arm-endpoint";
-import * as webClient from "azure-pipelines-tasks-azure-arm-rest/webClient";
-import * as tl from "azure-pipelines-task-lib/task";
+import * as tl from 'azure-pipelines-task-lib/task';
+import { ApplicationTokenCredentials } from 'azure-pipelines-tasks-azure-arm-rest/azure-arm-common';
+import { AzureRMEndpoint } from 'azure-pipelines-tasks-azure-arm-rest/azure-arm-endpoint';
+import * as webClient from 'azure-pipelines-tasks-azure-arm-rest/webClient';
 import Q = require('q');
 
-import AuthenticationTokenProvider from "./authenticationtokenprovider";
-import RegistryAuthenticationToken from "./registryauthenticationtoken";
+import AuthenticationTokenProvider from './authenticationtokenprovider';
+import RegistryAuthenticationToken from './registryauthenticationtoken';
 
 export default class ACRAuthenticationTokenProvider extends AuthenticationTokenProvider{
-
     // URL to registry like jitekuma-microsoft.azurecr.io
-    private registryURL: string;
+    private registryURL: string | undefined;
 
     // name of the azure subscription endpoint like RMDev
-    private endpointName: string;
-
-    // ACR fragment like /subscriptions/c00d16c7-6c1f-4c03-9be1-6934a4c49682/resourcegroups/jitekuma-RG/providers/Microsoft.ContainerRegistry/registries/jitekuma
-    private acrFragmentUrl: string;
+    private endpointName: string | undefined;
 
     constructor(endpointName?: string, registerNameValue?: string) {
         super();
@@ -28,7 +22,6 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
               tl.debug("Reading the acr registry in old versions");
               var obj = JSON.parse(registerNameValue);
               this.registryURL = obj.loginServer;
-              this.acrFragmentUrl = obj.id;
             }
             catch(e) {
               tl.debug("Reading the acr registry in kubernetesV1");
@@ -39,11 +32,11 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
         }
     }
 
-    public getAuthenticationToken(): RegistryAuthenticationToken {
+    public getAuthenticationToken(): RegistryAuthenticationToken | null {
         if (this.registryURL && this.endpointName) {
             return new RegistryAuthenticationToken(
-                tl.getEndpointAuthorizationParameter(this.endpointName, 'serviceprincipalid', true),
-                tl.getEndpointAuthorizationParameter(this.endpointName, 'serviceprincipalkey', true),
+                tl.getEndpointAuthorizationParameter(this.endpointName, 'serviceprincipalid', true)!,
+                tl.getEndpointAuthorizationParameter(this.endpointName, 'serviceprincipalkey', true)!,
                 this.registryURL,
                 "ServicePrincipal@AzureRM",
                 this.getXMetaSourceClient());
@@ -52,17 +45,17 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
     }
 
     public async getToken(): Promise<RegistryAuthenticationToken> {
-        let authType: string;
+        let authType: string | null | undefined;
         try {
             tl.debug("Attempting to get endpoint authorization scheme...");
-            authType = tl.getEndpointAuthorizationScheme(this.endpointName, false);
+            authType = tl.getEndpointAuthorizationScheme(this.endpointName!, false);
         } catch (error) {
             tl.debug("Failed to get endpoint authorization scheme.")
         }
         if (!authType) {
             try {
                 tl.debug("Attempting to get endpoint authorization scheme as an authorization parameter...");
-                authType = tl.getEndpointAuthorizationParameter(this.endpointName, "scheme", false);
+                authType = tl.getEndpointAuthorizationParameter(this.endpointName!, "scheme", false);
             } catch (error) {
                 tl.debug("Failed to get endpoint authorization scheme as an authorization parameter. Will default authorization scheme to ServicePrincipal.");
                 authType = "ServicePrincipal";
@@ -74,18 +67,18 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
             return await this._getMSIAuthenticationToken(0, 0);
         }
         else if (authType === 'WorkloadIdentityFederation') {
-            const endpoint = await new AzureRMEndpoint(this.endpointName).getEndpoint();
+            const endpoint = await new AzureRMEndpoint(this.endpointName!).getEndpoint();
             const aadToken = await endpoint.applicationTokenCredentials.getToken();
-            let acrToken = await ACRAuthenticationTokenProvider._getACRToken(aadToken, this.endpointName, this.registryURL, 0, 0);
+            let acrToken = await ACRAuthenticationTokenProvider._getACRToken(aadToken, this.endpointName!, this.registryURL!, 0, 0);
             return new RegistryAuthenticationToken(
                 "00000000-0000-0000-0000-000000000000",
                 acrToken,
-                this.registryURL,
+                this.registryURL!,
                 "WorkloadIdentityFederation@AzureRM",
                 this.getXMetaSourceClient());
         }
         else {
-            return this.getAuthenticationToken();
+            return this.getAuthenticationToken()!;
         }
     }
 

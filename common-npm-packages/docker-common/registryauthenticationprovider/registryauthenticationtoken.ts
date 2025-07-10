@@ -1,7 +1,7 @@
-"use strict";
+const util = require('util');
 
 import * as tl from "azure-pipelines-task-lib/task";
-const util = require('util');
+
 import ACRAuthenticationTokenProvider from "./acrauthenticationtokenprovider"
 import GenericAuthenticationTokenProvider from "./genericauthenticationtokenprovider";
 
@@ -55,12 +55,12 @@ export default class RegistryServerAuthenticationToken {
     }
 }
 
-export async function getDockerRegistryEndpointAuthenticationToken(endpointId: string): Promise<RegistryServerAuthenticationToken> {
+export async function getDockerRegistryEndpointAuthenticationToken(endpointId: string): Promise<RegistryServerAuthenticationToken | null> {
     var registryType = tl.getEndpointDataParameter(endpointId, "registrytype", true);
-    let authToken: RegistryServerAuthenticationToken;
+    let authToken: RegistryServerAuthenticationToken | null;
 
     if (registryType === "ACR") {
-        const loginServer = tl.getEndpointAuthorizationParameter(endpointId, "loginServer", false).toLowerCase();
+        const loginServer = tl.getEndpointAuthorizationParameter(endpointId, "loginServer", false)!.toLowerCase();
         let acrAuthenticationTokenProvider: ACRAuthenticationTokenProvider = new ACRAuthenticationTokenProvider(endpointId, loginServer);
         authToken = await acrAuthenticationTokenProvider.getToken();
     }

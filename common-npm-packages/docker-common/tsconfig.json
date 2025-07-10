@@ -3,10 +3,30 @@
         "module": "commonjs",
         "target": "es6",
         "declaration": true,
-        "noImplicitAny": false,
-        "sourceMap": false
+        "sourceMap": false,
+        "outDir": "./_build",
+        "allowJs": true,
+        "checkJs": true,
+        "noEmit": false,
+        "noEmitOnError": false,
+        "forceConsistentCasingInFileNames": true,
+        "strict": true,
+        "noImplicitAny": true,
+        "strictNullChecks": true,
+        "strictFunctionTypes": true,
+        "strictBindCallApply": true,
+        "strictPropertyInitialization": true,
+        "noImplicitThis": true,
+        "alwaysStrict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "allowUnusedLabels": true,
+        "allowUnreachableCode": true,
+        "skipLibCheck": true
     },
-    "exclude": [
-        "node_modules"
+    "include": [
+        "./**.ts"
     ]
 }

@@ -61,7 +61,7 @@ function addBaseImageLabels(connection: ContainerConnection, labels: string[], d
     if (digestImageFromFileEnabled) {
 
         // using getBaseImageDetialsFromDockerFIle method to fetch both image and imagedigest
-        const baseImage = containerUtils.getBaseImageDetialsFromDockerFIle(dockerFilePath, connection);
+        const baseImage = containerUtils.getBaseImageDetialsFromDockerFIle(dockerFilePath, connection)!;
         if (!baseImage.name) {
             return;
         }
@@ -97,14 +97,14 @@ function addBaseImageLabels(connection: ContainerConnection, labels: string[], d
     }
 }
 
-function getReverseDNSName(): string {
+function getReverseDNSName(): string | null {
     // Hostname part of URL used as prefix for labels.
     // it is safe to use url.parse on SYSTEM_TEAMFOUNDATIONCOLLECTIONURI here.
     var teamFoundationCollectionURI = tl.getVariable("SYSTEM_TEAMFOUNDATIONCOLLECTIONURI");
     if (teamFoundationCollectionURI) {
         var parsedUrl = URL.parse(teamFoundationCollectionURI);
         if (parsedUrl) {
-            var hostName = parsedUrl.hostname.split(".").reverse().join(".");
+            var hostName = parsedUrl.hostname!.split(".").reverse().join(".");
             tl.debug(`Reverse DNS name ${hostName}`);
             return hostName;
         }
@@ -123,7 +123,7 @@ export function getDefaultLabels(addPipelineData?: boolean, addBaseImageData?: b
     let hostName = getReverseDNSName();
     if (hostName) {
         addCommonLabels(hostName, labels, addPipelineData);
-        let hostType = tl.getVariable("SYSTEM_HOSTTYPE");
+        let hostType = tl.getVariable("SYSTEM_HOSTTYPE")!;
         if (hostType.toLowerCase() === "build") {
             addBuildLabels(hostName, labels, addPipelineData);
         }
@@ -134,8 +134,9 @@ export function getDefaultLabels(addPipelineData?: boolean, addBaseImageData?: b
 
     if (addBaseImageData) {
         try {
-            addBaseImageLabels(connection, labels, dockerFilePath)
+            addBaseImageLabels(connection!, labels, dockerFilePath!)
         } catch (error) {
+            // @ts-ignore
             tl.debug(`An error ocurred getting the base image lables ${error.message}`);
         }
     }

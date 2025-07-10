@@ -1,10 +1,9 @@
-"use strict";
-
 import * as tl from "azure-pipelines-task-lib/task";
+
 import * as gitUtils from "./gitutils";
 
 export function getSourceTags(): string[] {
-    var tags: string[];
+    var tags: string[] = [];
 
     var sourceProvider = tl.getVariable("Build.Repository.Provider");
     if (!sourceProvider) {
@@ -34,5 +33,5 @@ export function getSourceTags(): string[] {
             break;
     }
 
-    return tags || [];
+    return tags;
 }
