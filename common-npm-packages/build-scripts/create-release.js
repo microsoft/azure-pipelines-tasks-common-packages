@@ -75,7 +75,7 @@ async function getPreviousReleaseDate(_package) {
 /**
  * Function to get the PR date from the commit hash
  * @param {string} sha1 - commit hash
- * @returns {Promise<string>} - date as a string with merged PR
+ * @returns {Promise<string | null>} - date as a string with merged PR
  */
 async function getPRDateFromCommit(sha1) {
     const response = await octokit.request('GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls', {
@@ -91,7 +91,7 @@ async function getPRDateFromCommit(sha1) {
         throw new Error(`No PRs found for commit ${sha1}`);
     }
 
-    return response.data[0].merged_at;
+    return response.data[0]?.merged_at ?? null;
 }
 
 /**
@@ -221,13 +221,18 @@ async function createReleaseNotes(_package, branch) {
             return;
         }
 
-
         const date = await getPreviousReleaseDate(_package);
+
+        if (!date) {
+            throw new util.CreateReleaseError(`Could not find previous release date for ${_package}`);
+        }
+
         const data = await getPRsFromDate(branch, date);
         console.log(`Found ${data.length} PRs`);
 
         const PRs = await getPRsFiles(data, _package);
         const changes = util.getChangesFromPRs(PRs);
+
         if (!changes.length) {
             console.log(`No changes found for ${_package}`);
             return;
