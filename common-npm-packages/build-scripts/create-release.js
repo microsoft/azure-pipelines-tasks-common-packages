@@ -1,8 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path')
 
-const { Octokit } = require('@octokit/rest');
-
 const util = require('./util');
 
 const basePath = path.join(__dirname, '..');
@@ -13,10 +11,16 @@ if (!token) {
     throw new util.CreateReleaseError('GH_TOKEN is not defined');
 }
 
-const octokit = new Octokit({ auth: token });
-
 const OWNER = 'microsoft';
 const REPO = 'azure-pipelines-tasks-common-packages';
+
+/**
+ * @param {string} [auth] - GitHub authentication token
+ */
+async function getESMOctokit(auth) {
+    const { Octokit } = await import('@octokit/rest');
+    return new Octokit({ auth });
+}
 
 /**
  * The function looks for the date of the commit where the package version was bumped
@@ -75,9 +79,10 @@ async function getPreviousReleaseDate(_package) {
 /**
  * Function to get the PR date from the commit hash
  * @param {string} sha1 - commit hash
- * @returns {Promise<string>} - date as a string with merged PR
+ * @returns {Promise<string | null>} - date as a string with merged PR
  */
 async function getPRDateFromCommit(sha1) {
+    const octokit = await getESMOctokit(token);
     const response = await octokit.request('GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls', {
         owner: OWNER,
         repo: REPO,
@@ -91,7 +96,7 @@ async function getPRDateFromCommit(sha1) {
         throw new Error(`No PRs found for commit ${sha1}`);
     }
 
-    return response.data[0].merged_at;
+    return response.data[0]?.merged_at ?? null;
 }
 
 /**
@@ -101,6 +106,7 @@ async function getPRDateFromCommit(sha1) {
  * @returns {Promise<*>} - PRs merged since date
  */
 async function getPRsFromDate(branch, date) {
+    const octokit = await getESMOctokit(token);
     const PRs = [];
     let page = 1;
     try {
@@ -132,6 +138,7 @@ async function getPRsFromDate(branch, date) {
  * @returns {Promise<import('./util').PRDefinition[]>} - Modified files for the PRs which contains packages options.
  */
 async function getPRsFiles(PRs, _package) {
+    const octokit = await getESMOctokit(token);
     for (let i = 0; i < PRs.length; i++) {
         const PR = PRs[i];
         if (!PR) continue;
@@ -171,6 +178,7 @@ async function createRelease(releaseNotes, _package, version, releaseBranch) {
     const name = `Release ${_package} ${version}`;
     const tagName = `${_package}-${version}`;
     console.log(`Creating release ${tagName} on ${releaseBranch}`);
+    const octokit = await getESMOctokit(token);
 
     const newRelease = await octokit.repos.createRelease({
         owner: OWNER,
@@ -193,6 +201,7 @@ async function createRelease(releaseNotes, _package, version, releaseBranch) {
  */
 async function isReleaseTagExists(_package, version) {
     try {
+        const octokit = await getESMOctokit(token);
         const tagName = `${_package}-${version}`;
         await octokit.repos.getReleaseByTag({
             owner: OWNER,
@@ -221,13 +230,18 @@ async function createReleaseNotes(_package, branch) {
             return;
         }
 
-
         const date = await getPreviousReleaseDate(_package);
+
+        if (!date) {
+            throw new util.CreateReleaseError(`Could not find previous release date for ${_package}`);
+        }
+
         const data = await getPRsFromDate(branch, date);
         console.log(`Found ${data.length} PRs`);
 
         const PRs = await getPRsFiles(data, _package);
         const changes = util.getChangesFromPRs(PRs);
+
         if (!changes.length) {
             console.log(`No changes found for ${_package}`);
             return;
