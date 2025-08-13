@@ -13,7 +13,7 @@ tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
 const helmToolName = 'helm';
 const helmAllReleasesUrl = 'https://api.github.com/repos/helm/helm/releases';
-const stableHelmVersion = 'v3.1.2';
+const stableHelmVersion = '';
 
 export async function getHelm(version?: string) {
     try {
@@ -73,6 +73,9 @@ export async function getStableHelmVersion(): Promise<string> {
     try {
         const downloadPath = await toolLib.downloadTool(helmAllReleasesUrl);
         const responseArray = JSON.parse(fs.readFileSync(downloadPath, 'utf8').toString().trim());
+        if (responseArray === 0) {
+            throw new Error(tl.loc('HelmReleasesNotFound'));
+        }
         let latestHelmVersion = semver.clean(stableHelmVersion);
         responseArray.forEach(response => {
             if (response && response.tag_name) {
