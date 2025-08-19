@@ -128,7 +128,6 @@ export function findJavaHome(jdkVersion: string, jdkArch: string): string {
     if(jdkArch.toLowerCase() === 'arm64'){
          // For arm64, we use a different environment variable naming convention
          envName = "JAVA_HOME_" + jdkMajorVersion + "_" + jdkArch.toLowerCase();
-         tl.debug('envName for arm64 is ' + envName);
          discoveredJavaHome = process.env[envName];
     } else {
         envName = "JAVA_HOME_" + jdkMajorVersion + "_" + jdkArch.toUpperCase();
