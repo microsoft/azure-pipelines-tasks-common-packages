@@ -22,6 +22,73 @@ export class AzureRMEndpoint {
         'AzureStack': 'azurestack'
     }
 
+    private _azureScopes = {
+        AzureCloud: {
+            resoucemanager: 'https://management.azure.com/.default',
+            appservice: 'https://appservice.azure.com/.default',
+            storage: 'https://storage.azure.com/.default',
+            keyvalut: 'https://vault.azure.net/.default',
+            sqldatabase: 'https://database.windows.net/.default',
+            cosmosdb: 'https://cosmos.azure.com/.default',
+            servicebus: 'https://servicebus.azure.net/.default',
+            eventhubs: 'https://eventhubs.azure.net/.default',
+            eventgrid: 'https://eventgrid.azure.net/.default',
+            cognitiveservices: 'https://cognitiveservices.azure.com/.default',
+            containerregistry: 'https://containerregistry.azure.net/.default',
+            devops: 'https://app.vssps.visualstudio.com/.default',
+            batch: 'https://batch.core.windows.net/.default',
+            datafactory: 'https://datafactory.azure.net/.default'
+        },
+        AzureChinaCloud: {
+            resourcemanager: "https://management.chinacloudapi.cn/.default",
+            appservice: "https://appservice.azure.cn/.default",
+            storage: "https://storage.azure.cn/.default",
+            keyvalut: "https://vault.azure.cn/.default",
+            sqldatabase: "https://database.chinacloudapi.cn/.default",
+            cosmosdb: "https://cosmos.azure.cn/.default",
+            servicebus: "https://servicebus.azure.cn/.default",
+            eventhubs: "https://eventhubs.azure.cn/.default",
+            eventgrid: "https://eventgrid.azure.cn/.default",
+            cognitiveservices: "https://cognitiveservices.azure.cn/.default",
+            containerregistry: "https://containerregistry.azure.cn/.default",
+            devops: "https://app.vssps.visualstudio.cn/.default",
+            batch: "https://batch.core.chinacloudapi.cn/.default",
+            datafactory: "https://datafactory.azure.cn/.default"
+        },
+        AzureUSGovernment: {
+            resoucemanager: 'https://management.usgovcloudapi.net/.default',
+            appservice: 'https://appservice.azure.us/.default',
+            storage: 'https://storage.azure.us/.default',
+            keyvalut: 'https://vault.azure.us/.default',
+            sqldatabase: 'https://database.usgovcloudapi.net/.default',
+            cosmosdb: 'https://cosmos.azure.us/.default',
+            servicebus: 'https://servicebus.azure.us/.default',
+            eventhubs: 'https://eventhubs.azure.us/.default',
+            eventgrid: 'https://eventgrid.azure.us/.default',
+            cognitiveservices: 'https://cognitiveservices.azure.us/.default',
+            containerregistry: 'https://containerregistry.azure.us/.default',
+            devops: 'https://app.vssps.visualstudio.us/.default',
+            batch: 'https://batch.core.usgovcloudapi.net/.default',
+            datafactory: 'https://datafactory.azure.us/.default'
+        },
+        AzureGermanCloud: {
+            resoucemanager: 'https://management.microsoftazure.de/.default',
+            appservice: 'https://appservice.azure.de/.default',
+            storage: 'https://storage.azure.de/.default',
+            keyvalut: 'https://vault.azure.de/.default',
+            sqldatabase: 'https://database.cloudapi.de/.default',
+            cosmosdb: 'https://cosmos.azure.de/.default',
+            servicebus: 'https://servicebus.azure.de/.default',
+            eventhubs: 'https://eventhubs.azure.de/.default',
+            eventgrid: 'https://eventgrid.azure.de/.default',
+            cognitiveservices: 'https://cognitiveservices.azure.de/.default',
+            containerregistry: 'https://containerregistry.azure.de/.default',
+            devops: 'https://app.vssps.visualstudio.de/.default',
+            batch: 'https://batch.core.cloudapi.de/.default',
+            datafactory: 'https://datafactory.azure.de/.default'
+        }
+    }
+
     constructor(connectedServiceName: string) {
         this._connectedServiceName = connectedServiceName;
         this.endpoint = null;
@@ -132,7 +199,11 @@ export class AzureRMEndpoint {
                         this.endpoint.activeDirectoryResourceID = this.endpoint.url;
                     }
                 }
-
+                let scopes: any;
+                const allowScopeLevelToken = tl.getPipelineFeature("ALLOWSCOPELEVELTOKEN");
+                if (allowScopeLevelToken && this.endpoint.environment && this.endpoint.environment.toLowerCase() != this._environments.AzureStack) {
+                    scopes = this.getScopesByEnvironment();
+                }
                 let access_token: string = tl.getEndpointAuthorizationParameter(this._connectedServiceName, "apitoken", true);
                 this.endpoint.applicationTokenCredentials = new ApplicationTokenCredentials(
                     this._connectedServiceName,
@@ -149,7 +220,9 @@ export class AzureRMEndpoint {
                     this.endpoint.servicePrincipalCertificatePath,
                     this.endpoint.isADFSEnabled,
                     access_token,
-                    useMSAL
+                    useMSAL,
+                    allowScopeLevelToken,
+                    scopes
                 );
             }
         }
@@ -217,6 +290,10 @@ export class AzureRMEndpoint {
         }
 
         return endpoint;
+    }
+
+    private getScopesByEnvironment(): any {
+         return this._azureScopes[this.endpoint.environment];
     }
 }
 
