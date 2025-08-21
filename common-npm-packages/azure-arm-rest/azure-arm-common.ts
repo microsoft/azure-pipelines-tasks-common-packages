@@ -15,6 +15,7 @@ import azCliUtility = require('./azCliUtility');
 import AzureModels = require('./azureModels');
 import constants = require('./constants');
 import webClient = require('./webClient');
+import { ManagedIdentityCredential, WorkloadIdentityCredential, ClientSecretCredential, ClientCertificateCredential } from "@azure/identity";
 
 // Important note! Since the msal v2.** doesn't work with Node 10, and we still need to support Node 10 execution handler, a dynamic msal loading was implemented.
 // Dynamic loading imposes restrictions on type validation when compiling TypeScript and we can't use it in this case.
@@ -59,6 +60,8 @@ export class ApplicationTokenCredentials {
     private token_deferred: Q.Promise<string>;
     private useMSAL: boolean;
     private msalInstance: any; //msal.ConfidentialClientApplication
+    private scopes: any;
+    private allowScopeLevelToken: boolean;
 
     private readonly tokenMutex: Mutex;
 
@@ -77,7 +80,9 @@ export class ApplicationTokenCredentials {
         certFilePath?: string,
         isADFSEnabled?: boolean,
         access_token?: string,
-        useMSAL?: boolean) {
+        useMSAL?: boolean,
+        allowScopeLevelToken?: boolean,
+        scopes?: any) {
 
         if (!Boolean(connectedServiceName) || typeof tenantId.valueOf() !== 'string') {
             throw new Error(tl.loc("serviceConnectionIdCannotBeEmpty"));
@@ -144,6 +149,8 @@ export class ApplicationTokenCredentials {
         this.accessToken = access_token;
 
         this.useMSAL = useMSAL;
+        this.scopes = scopes;
+        this.allowScopeLevelToken = allowScopeLevelToken || false;
         this.tokenMutex = new Mutex();
     }
 
@@ -530,6 +537,59 @@ export class ApplicationTokenCredentials {
             } else {
                 throw new Error(tl.loc('CouldNotFetchAccessTokenforAzureStatusCode', error.errorCode, error.errorMessage));
             }
+        }
+    }
+
+    public async acquireTokenForScope(scopeKind: string): Promise<string> {
+        tl.debug(`acquireTokenForScope called with scopeKind: ${scopeKind}`);
+        try {
+            if (this.allowScopeLevelToken && this.scopes && this.scopes[scopeKind]) {
+                tl.debug(`allowScopeLevelToken is enabled, using scope: ${this.scopes[scopeKind]}`);
+                const credential = await this.buildCredentialByScheme();
+                const tokenResponse = await credential.getToken(this.scopes[scopeKind]);
+                return tokenResponse.token;
+            } else {
+                tl.debug(`allowScopeLevelToken is disabbled`);
+                return await this.getToken();
+            }
+        } catch (error) {
+            tl.debug(`acquireTokenForScopes - error: ${error}`);
+            throw new Error(tl.loc('CouldNotFetchAccessTokenforAzureStatusCode', error.errorCode, error.errorMessage));
+        }
+    }
+
+    private async buildCredentialByScheme(): Promise<any> {
+        tl.debug(`buildCredentialByScheme called. scheme = ${AzureModels.Scheme[this.scheme]}`);
+        switch (this.scheme) {
+            case AzureModels.Scheme.ManagedServiceIdentity:
+                tl.debug('Using ManagedIdentityCredential for MSI');
+                return new ManagedIdentityCredential(this.msiClientId);
+                
+            case AzureModels.Scheme.WorkloadIdentityFederation:
+                tl.debug('Using WorkloadIdentityCredential for OIDC');
+                const federatedToken = await this.getFederatedToken();
+                const tokenFilePath = path.join(
+                    tl.getVariable('Agent.TempDirectory') || tl.getVariable('system.DefaultWorkingDirectory'), 
+                    'token.jwt'
+                );
+                fs.writeFileSync(tokenFilePath, federatedToken);
+                
+                return new WorkloadIdentityCredential({
+                    tenantId: this.tenantId,
+                    clientId: this.clientId,
+                    tokenFilePath: tokenFilePath
+                });
+                
+            case AzureModels.Scheme.SPN:
+            default:
+                tl.debug('Using specific credential for Service Principal');
+                if (this.authType === constants.AzureServicePrinicipalAuthentications.servicePrincipalKey) {
+                    tl.debug('Using ClientSecretCredential for key-based SPN');
+                    return new ClientSecretCredential(this.tenantId, this.clientId, this.secret);
+                } else {
+                    tl.debug('Using ClientCertificateCredential for certificate-based SPN');
+                    return new ClientCertificateCredential(this.tenantId, this.clientId, this.certFilePath);
+                }
         }
     }
 
