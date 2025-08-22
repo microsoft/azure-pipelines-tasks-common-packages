@@ -1,6 +1,6 @@
 {
     "name": "azp-tasks-az-blobstorage-provider",
-    "version": "3.256.0",
+    "version": "3.262.0",
     "description": "Common Library to download blobs from azure storage",
     "repository": {
         "type": "git",
