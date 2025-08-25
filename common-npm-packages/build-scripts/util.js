@@ -61,7 +61,7 @@ exports.cd = cd;
  * mkdir unix command via shelljs
  * @param {String} options - Command options
  * @param {String} source - Source folder path
- * @param {String} dest - Destination folder path
+ * @param {String} [dest] - Destination folder path
  */
 const cp = function (options, source, dest) {
     if (dest) {

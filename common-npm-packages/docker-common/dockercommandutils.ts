@@ -1,11 +1,10 @@
-"use strict";
+import * as path from "path";
+import * as crypto from "crypto";
 
 import * as tl from "azure-pipelines-task-lib/task";
 import * as Q from "q";
+
 import ContainerConnection from "./containerconnection";
-import * as pipelineUtils from "./pipelineutils";
-import * as path from "path";
-import * as crypto from "crypto";
 
 const matchPatternForSize = new RegExp(/[\d\.]+/);
 const orgUrl = tl.getVariable('System.TeamFoundationCollectionUri');
@@ -14,7 +13,7 @@ const hostType = tl.getVariable("System.HostType");
 const isBuild = hostType && hostType.toLowerCase() === buildString;
 const matchPatternForDigest = new RegExp(/sha256\:(.+)/);
 
-export function build(connection: ContainerConnection, dockerFile: string, commandArguments: string, labelArguments: string[], tagArguments: string[], onCommandOut: (output) => any): any {
+export function build(connection: ContainerConnection, dockerFile: string, commandArguments: string, labelArguments: string[], tagArguments: string[], onCommandOut: (output: string) => any): any {
     var command = connection.createCommand();
 
     command.arg("build");
@@ -49,7 +48,7 @@ export function build(connection: ContainerConnection, dockerFile: string, comma
     });
 }
 
-export function command(connection: ContainerConnection, dockerCommand: string, commandArguments: string, onCommandOut: (output) => any): any {
+export function command(connection: ContainerConnection, dockerCommand: string, commandArguments: string, onCommandOut: (output: string) => any): any {
     let command = connection.createCommand();
     command.arg(dockerCommand);
     command.line(commandArguments);
@@ -66,7 +65,7 @@ export function command(connection: ContainerConnection, dockerCommand: string, 
     });
 }
 
-export function push(connection: ContainerConnection, image: string, commandArguments: string, onCommandOut: (image, output) => any): any {
+export function push(connection: ContainerConnection, image: string, commandArguments: string, onCommandOut: (image: string, output: string) => any): any {
     var command = connection.createCommand();
     command.arg("push");
     command.arg(image);
@@ -84,7 +83,7 @@ export function push(connection: ContainerConnection, image: string, commandArgu
     });
 }
 
-export function start(connection: ContainerConnection, container: string, commandArguments: string, onCommandOut: (container, output) => any): any {
+export function start(connection: ContainerConnection, container: string, commandArguments: string, onCommandOut: (container: string, output: string) => any): any {
     var command = connection.createCommand();
     command.arg("start");
     command.arg(container);
@@ -102,7 +101,7 @@ export function start(connection: ContainerConnection, container: string, comman
     });
 }
 
-export function stop(connection: ContainerConnection, container: string, commandArguments: string, onCommandOut: (container, output) => any): any {
+export function stop(connection: ContainerConnection, container: string, commandArguments: string, onCommandOut: (container: string, output: string) => any): any {
     var command = connection.createCommand();
     command.arg("stop");
     command.arg(container);
@@ -129,10 +128,10 @@ export function getCreatorEmail(): string {
     const buildReason = tl.getVariable("Build.Reason");
     let userEmail: string = "";
     if (isBuild && (!buildReason || buildReason.toLowerCase() !== schedule)) {
-        userEmail = tl.getVariable("Build.RequestedForEmail");
+        userEmail = tl.getVariable("Build.RequestedForEmail")!;
     }
     else {
-        userEmail = tl.getVariable("Release.RequestedForEmail");
+        userEmail = tl.getVariable("Release.RequestedForEmail")!;
     }
 
     return userEmail;
@@ -141,10 +140,10 @@ export function getCreatorEmail(): string {
 export function getPipelineLogsUrl(): string {
     let pipelineUrl = "";
     if (isBuild) {
-        pipelineUrl = orgUrl + tl.getVariable("System.TeamProject") + "/_build/results?buildId=" + tl.getVariable("Build.BuildId");
+        pipelineUrl = orgUrl + tl.getVariable("System.TeamProject")! + "/_build/results?buildId=" + tl.getVariable("Build.BuildId");
     }
     else {
-        pipelineUrl = orgUrl + tl.getVariable("System.TeamProject") + "/_releaseProgress?releaseId=" + tl.getVariable("Release.ReleaseId");
+        pipelineUrl = orgUrl + tl.getVariable("System.TeamProject")! + "/_releaseProgress?releaseId=" + tl.getVariable("Release.ReleaseId");
     }
 
     return pipelineUrl;
@@ -172,7 +171,7 @@ export function getBuildAndPushArguments(dockerFile: string, labelArguments: str
 }
 
 export function getBuildContext(dockerFile: string): string {
-    let buildContext = tl.getPathInput("buildContext");
+    let buildContext = tl.getPathInput("buildContext")!;
     if (useDefaultBuildContext(buildContext)) {
         buildContext = path.dirname(dockerFile);
     }
@@ -181,7 +180,7 @@ export function getBuildContext(dockerFile: string): string {
 }
 
 export function useDefaultBuildContext(buildContext: string): boolean {
-    let defaultWorkingDir = tl.getVariable("SYSTEM_DEFAULTWORKINGDIRECTORY");
+    let defaultWorkingDir = tl.getVariable("SYSTEM_DEFAULTWORKINGDIRECTORY")!;
     let defaultPath = path.join(defaultWorkingDir, "**");
     return buildContext === defaultPath;
 }
@@ -190,17 +189,17 @@ export function getPipelineUrl(): string {
     let pipelineUrl = "";
     const pipelineId = tl.getVariable("System.DefinitionId");
     if (isBuild) {
-        pipelineUrl = orgUrl + tl.getVariable("System.TeamProject") + "/_build?definitionId=" + pipelineId;
+        pipelineUrl = orgUrl + tl.getVariable("System.TeamProject")! + "/_build?definitionId=" + pipelineId;
     }
     else {
-        pipelineUrl = orgUrl + tl.getVariable("System.TeamProject") + "/_release?definitionId=" + pipelineId;
+        pipelineUrl = orgUrl + tl.getVariable("System.TeamProject")! + "/_release?definitionId=" + pipelineId;
     }
 
     return pipelineUrl;
 }
 
-export function getLayers(history: string): { [key: string]: string }[] {
-    var layers = [];
+export function getLayers(history: string): { [key: string]: string }[] | null {
+    var layers: { [key: string]: string }[] = [];
     if (!history) {
         return null;
     }
@@ -216,7 +215,7 @@ export function getLayers(history: string): { [key: string]: string }[] {
     return layers.reverse();
 }
 
-export function getImageFingerPrintV1Name(history: string): string {
+export function getImageFingerPrintV1Name(history: string): string | null {
     let v1Name = "";
     if (!history) {
         return null;
@@ -341,7 +340,7 @@ export async function getHistory(connection: ContainerConnection, image: string)
     catch (e) {
         // Swallow any exceptions encountered in executing command
         // such as --format flag not supported in old docker cli versions
-        output = null;
+        output = "";
         defer.resolve();
         tl.warning("Not publishing to image meta data store as get history failed with error " + e);
     }
@@ -373,7 +372,7 @@ export async function getImageRootfsLayers(connection: ContainerConnection, imag
     }
     catch (e) {
         // Swallow any exceptions encountered in executing command
-        output = null;
+        output = "";
         defer.resolve();
         tl.warning("get image inspect failed with error " + e);
     }
@@ -430,5 +429,5 @@ function generateV2Name(input: string): string {
 
 function isBuildKitBuild(): boolean {
     const isBuildKitBuildValue = tl.getVariable("DOCKER_BUILDKIT");
-    return isBuildKitBuildValue && Number(isBuildKitBuildValue) == 1;
+    return !!isBuildKitBuildValue && Number(isBuildKitBuildValue) == 1;
 }

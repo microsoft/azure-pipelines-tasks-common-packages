@@ -1,10 +1,7 @@
-"use strict";
+import * as fs from 'fs';
+import * as path from 'path';
 
-import * as del from "del";
-import * as fs from "fs";
-import * as path from "path";
-import * as url from "url";
-import * as tl from "azure-pipelines-task-lib/task";
+import * as tl from 'azure-pipelines-task-lib/task';
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
@@ -29,7 +26,7 @@ export function writeFileSync(filePath: string, data: string): number {
 export function findDockerFile(dockerfilepath: string) : string {
     if (dockerfilepath.indexOf('*') >= 0 || dockerfilepath.indexOf('?') >= 0) {
         tl.debug(tl.loc('ContainerPatternFound'));
-        let workingDirectory = tl.getVariable('System.DefaultWorkingDirectory');
+        let workingDirectory = tl.getVariable('System.DefaultWorkingDirectory')!;
         let allFiles = tl.find(workingDirectory);
         let matchingResultsFiles = tl.match(allFiles, dockerfilepath, workingDirectory, { matchBase: true });
 
