@@ -4,6 +4,7 @@ var parseString = require('xml2js').parseString;
 import { AzureAppService } from './azure-arm-app-service';
 import { Kudu } from './azure-arm-app-service-kudu';
 import webClient = require('./webClient');
+import { SiteContainer, VolumeMount, EnvironmentVariable } from './SiteContainer';
 
 export class AzureAppServiceUtility {
 
@@ -272,4 +273,57 @@ export class AzureAppServiceUtility {
             return false;
         }
     }
+
+     public async updateSiteContainer(siteContainer: SiteContainer): Promise<void> {
+        const properties = await this.filterProperties(siteContainer);
+        await this._appService.updateSiteContainer(properties, siteContainer.getName());
+    }
+
+    private async filterProperties(siteContainer: SiteContainer): Promise<any> {
+        const filteredProperties = {};
+
+        const environmentVariablesProperties = [];
+        if (siteContainer.getEnvironmentVariables()) {
+            siteContainer.getEnvironmentVariables().forEach(env => {
+                environmentVariablesProperties.push(EnvironmentVariable.toJson(env));
+            });
+        }
+
+        const volumeMountsProperties = [];
+        if (siteContainer.getVolumeMounts()) {
+            siteContainer.getVolumeMounts().forEach((mount: VolumeMount) => {
+                volumeMountsProperties.push(VolumeMount.toJson(mount));
+            });
+        }
+
+        const allProperties = {
+            image: siteContainer.getImage(),
+            targetPort: siteContainer.getTargetPort(),
+            isMain: siteContainer.getIsMain(),
+            startupCommand: siteContainer.getStartupCommand(),
+            authType: siteContainer.getAuthType(),
+            userName: siteContainer.getUserName(),
+            passwordSecret: siteContainer.getPasswordSecret(),
+            userManagedIdentityClientId: siteContainer.getUserManagedIdentityClientId(),
+            inheritAppSettingsAndConnectionStrings: siteContainer.getInheritAppSettingsAndConnectionStrings()
+        };
+
+        for (const key in allProperties) {
+            const value = allProperties[key];
+            if (value !== null && value !== undefined && value !== '') {
+                filteredProperties[key] = value;
+            }
+        }
+
+        if (volumeMountsProperties.length > 0) {
+            filteredProperties["volumeMounts"] = volumeMountsProperties;
+        }
+
+        if (environmentVariablesProperties.length > 0) {
+            filteredProperties["environmentVariables"] = environmentVariablesProperties;
+        }
+
+        return filteredProperties;
+    }
 }
+
