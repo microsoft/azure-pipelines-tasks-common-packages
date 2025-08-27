@@ -917,21 +917,23 @@ export class AzureAppService {
 
     public async updateSiteContainer(siteContainerProperties: any, siteContainerName: string): Promise<any> {
         try {
-            var httpRequest = new webClient.WebRequest();
+            let httpRequest = new webClient.WebRequest();
             httpRequest.method = 'PUT';
             httpRequest.body = JSON.stringify({
                 properties: siteContainerProperties
             });
-            var slotUrl: string = !!this._slot ? `/slots/${this._slot}` : '';
+            
+            const slotUrl: string = !!this._slot ? `/slots/${this._slot}` : '';
+            
             httpRequest.uri = this._client.getRequestUri(`//subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/${slotUrl}/sitecontainers/${siteContainerName}`,
             {
                 '{resourceGroupName}': this._resourceGroup,
                 '{name}': this._name,
             }, null, '2024-11-01');
 
-            var response = await this._client.beginRequest(httpRequest);
-            
-            if (response.statusCode != 200 && response.statusCode != 202) {
+            const response = await this._client.beginRequest(httpRequest);
+
+            if (response.statusCode != 200) {
                 throw ToError(response);
             }
 
