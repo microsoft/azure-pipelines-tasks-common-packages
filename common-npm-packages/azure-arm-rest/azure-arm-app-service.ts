@@ -917,7 +917,7 @@ export class AzureAppService {
 
     public async updateSiteContainer(siteContainerProperties: any, siteContainerName: string): Promise<any> {
         try {
-            let httpRequest = new webClient.WebRequest();
+            const httpRequest = new webClient.WebRequest();
             httpRequest.method = 'PUT';
             httpRequest.body = JSON.stringify({
                 properties: siteContainerProperties
