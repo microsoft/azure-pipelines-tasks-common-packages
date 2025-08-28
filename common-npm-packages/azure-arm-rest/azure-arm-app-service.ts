@@ -914,4 +914,33 @@ export class AzureAppService {
             throw Error(`Failed to get SitePublishingCredentialPolicies. Error: ${this._client.getFormattedError(error)}`);
         }
     }
+
+    public async updateSiteContainer(siteContainerProperties: any, siteContainerName: string): Promise<any> {
+        try {
+            const httpRequest = new webClient.WebRequest();
+            httpRequest.method = 'PUT';
+            httpRequest.body = JSON.stringify({
+                properties: siteContainerProperties
+            });
+            
+            const slotUrl: string = !!this._slot ? `/slots/${this._slot}` : '';
+            
+            httpRequest.uri = this._client.getRequestUri(`//subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/${slotUrl}/sitecontainers/${siteContainerName}`,
+            {
+                '{resourceGroupName}': this._resourceGroup,
+                '{name}': this._name,
+            }, null, '2024-11-01');
+
+            const response = await this._client.beginRequest(httpRequest);
+
+            if (response.statusCode != 200) {
+                throw ToError(response);
+            }
+
+            return response.body;
+        }
+        catch(error) {
+            throw Error(tl.loc('FailedToUpdateSiteContainer', this._getFormattedName(), siteContainerName, this._client.getFormattedError(error)));
+        }
+    }
  }
