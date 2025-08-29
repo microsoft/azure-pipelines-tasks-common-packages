@@ -34,26 +34,42 @@ export class SecureFileHelpers {
      * @param secureFileId
      */
     async downloadSecureFile(secureFileId: string): Promise<string> {
-        const tempDownloadPath: string = this.getSecureFileTempDownloadPath(secureFileId);
 
+        const tempDownloadPath: string = this.getSecureFileTempDownloadPath(secureFileId);
         tl.debug('Downloading secure file contents to: ' + tempDownloadPath);
-        const file: NodeJS.WritableStream = fs.createWriteStream(tempDownloadPath);
 
         const agentApi = await this.serverConnection.getTaskAgentApi();
-
         const ticket = tl.getSecureFileTicket(secureFileId);
         if (!ticket) {
             // Workaround bug #7491. tl.loc only works if the consuming tasks define the resource string.
             throw new Error(`Download ticket for SecureFileId ${secureFileId} not found.`);
         }
 
-        const stream = (await agentApi.downloadSecureFile(
-            tl.getVariable('SYSTEM.TEAMPROJECT'), secureFileId, ticket, false)).pipe(file);
+        tl.debug(`Starting secure file download for SecureFileId: ${secureFileId}`);
+        const response = await agentApi.downloadSecureFile(tl.getVariable('SYSTEM.TEAMPROJECT'), secureFileId, ticket, false);
 
-        const defer = Q.defer();
+        const httpResponse = response as any;
+        tl.debug(`HTTP Status: ${httpResponse.statusCode} ${httpResponse.statusMessage}`);
+        tl.debug(`Content-Type: ${httpResponse.headers['content-type'] || 'unknown'}`);
+
+        if (httpResponse.statusCode && httpResponse.statusCode >= 400) {
+            let errorBody = '';
+            httpResponse.on('data', (chunk: Buffer) => {
+                errorBody += chunk.toString();
+            });
+            httpResponse.on('end', () => {
+                throw new Error(`Failed to download secure file. HTTP ${httpResponse.statusCode}: ${httpResponse.statusMessage} Error content: ${errorBody}`);
+            });            
+        }
+
+        const defer = Q.defer<void>();
+        const file: NodeJS.WritableStream = fs.createWriteStream(tempDownloadPath);
+        const stream = response.pipe(file);
+        
         stream.on('finish', () => {
             defer.resolve();
         });
+
         await defer.promise;
         tl.debug('Downloaded secure file contents to: ' + tempDownloadPath);
         return tempDownloadPath;
