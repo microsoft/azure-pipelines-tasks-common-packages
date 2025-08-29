@@ -38,7 +38,6 @@ export class SecureFileHelpers {
         const tempDownloadPath: string = this.getSecureFileTempDownloadPath(secureFileId);
         tl.debug('Downloading secure file contents to: ' + tempDownloadPath);
 
-        const file: NodeJS.WritableStream = fs.createWriteStream(tempDownloadPath);
         const agentApi = await this.serverConnection.getTaskAgentApi();
         const ticket = tl.getSecureFileTicket(secureFileId);
         if (!ticket) {
@@ -49,50 +48,28 @@ export class SecureFileHelpers {
         tl.debug(`Starting secure file download for SecureFileId: ${secureFileId}`);
         const response = await agentApi.downloadSecureFile(tl.getVariable('SYSTEM.TEAMPROJECT'), secureFileId, ticket, false);
 
-        // Check if response is valid before piping to file
-        const defer = Q.defer<void>();
-        let hasError = false;
+        const httpResponse = response as any;
+        tl.debug(`HTTP Status: ${httpResponse.statusCode} ${httpResponse.statusMessage}`);
+        tl.debug(`Content-Type: ${httpResponse.headers['content-type'] || 'unknown'}`);
 
-        response.on('error', (error) => {
-            hasError = true;
-            file.end();
-            // Clean up the partial file if it was created
-            if (tl.exist(tempDownloadPath)) {
-                tl.rmRF(tempDownloadPath);
-            }
-            defer.reject(new Error(`Failed to download secure file: ${error.message}`));
-            return;
+        if (httpResponse.statusCode && httpResponse.statusCode >= 400) {
+            let errorBody = '';
+            httpResponse.on('data', (chunk: Buffer) => {
+                errorBody += chunk.toString();
+            });
+            httpResponse.on('end', () => {
+                throw new Error(`Failed to download secure file. HTTP ${httpResponse.statusCode}: ${httpResponse.statusMessage} Error content: ${errorBody}`);
+            });            
+        }
+
+        const defer = Q.defer<void>();
+        const file: NodeJS.WritableStream = fs.createWriteStream(tempDownloadPath);
+        const stream = response.pipe(file);
+        
+        stream.on('finish', () => {
+            defer.resolve();
         });
 
-        tl.debug("Piping response to file stream");
-        const stream = response.pipe(file);
-
-        stream.on('finish', () => {
-        if (!hasError) {
-                // Additional validation: check if the downloaded file contains error JSON
-                try {
-                    const fileContent = fs.readFileSync(tempDownloadPath, 'utf8');
-                    const trimmedContent = fileContent.trim();
-                    
-                    if (trimmedContent.startsWith('{"$id":"1","innerException":null,"message":') ||
-                        trimmedContent.includes('TF15004: The download request signature has expired') ||
-                        trimmedContent.includes('"typeKey":"DownloadTicketValidationException"')) {
-                        
-                        tl.error(`Downloaded file contains error response instead of expected content.`);
-                        tl.error(`Error content: ${trimmedContent.substring(0, 200)}...`);
-                        
-                        tl.rmRF(tempDownloadPath);
-                        defer.reject(new Error(`Downloaded file contains error response instead of expected content. Error: ${trimmedContent.substring(0, 200)}...`));
-                        return;
-                    }
-                } catch (readError) {
-                    // If we can't read as text, it's likely a binary file which is fine
-                    tl.debug('Downloaded file appears to be binary content (expected for some secure files)');
-                }
-                tl.debug(`Secure file download completed successfully. File saved to: ${tempDownloadPath}`);
-                defer.resolve();
-            }
-       });
         await defer.promise;
         tl.debug('Downloaded secure file contents to: ' + tempDownloadPath);
         return tempDownloadPath;
