@@ -14,7 +14,7 @@ tlClone.getVariable = variable => {
     return variable;
 };
 tlClone.getEndpointAuthorizationParameter = (id: string, key: string, optional: boolean) => `${id}_${key}_${optional}`;
-tlClone.getSecureFileName = (secureFileId: number) => secureFileId;
+//tlClone.getSecureFileName = (secureFileId: number) => secureFileId;
 tlClone.getSecureFileTicket = () => {
     return true;
 };

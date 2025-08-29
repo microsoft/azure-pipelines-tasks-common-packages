@@ -31,16 +31,28 @@ export class SecureFileHelpers {
 
     /**
      * Download secure file contents to a temporary location for the build
-     * @param secureFileId
+     * @param secureFileName
      */
-    async downloadSecureFile(secureFileId: string): Promise<string> {
-        const tempDownloadPath: string = this.getSecureFileTempDownloadPath(secureFileId);
+    async downloadSecureFile(secureFileName: string): Promise<string> {
+        const tempDownloadPath: string = this.getSecureFileTempDownloadPath(secureFileName);
 
         tl.debug('Downloading secure file contents to: ' + tempDownloadPath);
         const file: NodeJS.WritableStream = fs.createWriteStream(tempDownloadPath);
 
         const agentApi = await this.serverConnection.getTaskAgentApi();
+        // Get the id of the secure file
+        // Use the names function instead of the name function cause this function provides strict name matching
+        const secureFiles = await agentApi.getSecureFilesByNames(tl.getVariable('SYSTEM.TEAMPROJECT'), [secureFileName]);
 
+        if (!secureFiles) {
+            throw new Error(`Secure file ${secureFileName} not found.`);
+        } else if (secureFiles.length !== 1) {
+            throw new Error(`Expected 1 secure file with name ${secureFileName}, but found ${secureFiles.length}.`);
+        }
+
+        const secureFile = secureFiles[0];
+
+        const secureFileId= secureFile.id;
         const ticket = tl.getSecureFileTicket(secureFileId);
         if (!ticket) {
             // Workaround bug #7491. tl.loc only works if the consuming tasks define the resource string.
@@ -61,10 +73,10 @@ export class SecureFileHelpers {
 
     /**
      * Delete secure file from the temporary location for the build
-     * @param secureFileId
+     * @param secureFileName
      */
-    deleteSecureFile(secureFileId: string): void {
-        const tempDownloadPath: string = this.getSecureFileTempDownloadPath(secureFileId);
+    deleteSecureFile(secureFileName: string): void {
+        const tempDownloadPath: string = this.getSecureFileTempDownloadPath(secureFileName);
         if (tl.exist(tempDownloadPath)) {
             tl.debug('Deleting secure file at: ' + tempDownloadPath);
             tl.rmRF(tempDownloadPath);
@@ -73,11 +85,10 @@ export class SecureFileHelpers {
 
     /**
      * Returns the temporary download location for the secure file
-     * @param secureFileId
+     * @param secureFileName
      */
-    getSecureFileTempDownloadPath(secureFileId: string): string {
-        const fileName: string = tl.getSecureFileName(secureFileId);
-        return tl.resolve(tl.getVariable('Agent.TempDirectory'), fileName);
+    getSecureFileTempDownloadPath(secureFileName: string): string {
+        return tl.resolve(tl.getVariable('Agent.TempDirectory'), secureFileName);
     }
 }
 
