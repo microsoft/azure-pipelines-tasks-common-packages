@@ -56,7 +56,7 @@ export class SecureFileHelpers {
         tl.debug(`HTTP Status: ${httpResponse.statusCode} ${httpResponse.statusMessage}`);
         tl.debug(`Content-Type: ${httpResponse.headers['content-type'] || 'unknown'}`);
 
-        if (httpResponse.statusCode && httpResponse.statusCode >= 400) {
+        if (httpResponse.statusCode && httpResponse.statusCode != 200) {
             let errorBody = '';
             httpResponse.on('data', (chunk: Buffer) => {
                 errorBody += chunk.toString();
