@@ -166,7 +166,8 @@ export function getImageDigest(connection: ContainerConnection, imageName: strin
 function pullImage(connection: ContainerConnection, imageName: string) {
     let reservedNameCheck = tl.getPipelineFeature('EnableDockerReservedNameCheck');
     if (reservedNameCheck) {
-        if (imageName.toLowerCase() != "scratch" && imageName.toLowerCase() != "context") {
+        const reservedImageName="scratch";
+        if (imageName.toLowerCase() != reservedImageName) {
             pullImageReservedNameCheck(connection, imageName);
         }
     } else {
@@ -179,7 +180,8 @@ function inspectImage(connection: ContainerConnection, imageName): any {
         let reservedNameCheck = tl.getPipelineFeature('EnableDockerReservedNameCheck');
         let inspectObj = null;
         if (reservedNameCheck) {
-            if (imageName.toLowerCase() != "scratch" && imageName.toLowerCase() != "context") {
+            const reservedImageName = "scratch";
+            if (imageName.toLowerCase() != reservedImageName) {
                 inspectObj = inspectImageReservedName(connection, imageName);
             }
         } else {
