@@ -121,10 +121,19 @@ export function findJavaHome(jdkVersion: string, jdkArch: string): string {
 
     const jdkShortVersion: string = getShortJavaVersion(jdkVersion);
     const jdkMajorVersion: number = coerce(jdkShortVersion).major;
-    // jdkArchitecture is either x64 or x86
+    // jdkArchitecture is either x64, x86 or arm64
     // envName for version 1.7 and x64 would be "JAVA_HOME_7_X64"
-    var envName = "JAVA_HOME_" + jdkMajorVersion + "_" + jdkArch.toUpperCase();
-    let discoveredJavaHome = tl.getVariable(envName);
+    var envName: string;
+    let discoveredJavaHome: string;
+    if(jdkArch.toLowerCase() === 'arm64'){
+         // For arm64, we use a different environment variable naming convention
+         envName = "JAVA_HOME_" + jdkMajorVersion + "_" + jdkArch.toLowerCase();
+         discoveredJavaHome = process.env[envName];
+    } else {
+        envName = "JAVA_HOME_" + jdkMajorVersion + "_" + jdkArch.toUpperCase();
+        discoveredJavaHome = tl.getVariable(envName);
+    }
+
     if (!discoveredJavaHome) {
         if (isWindows) {
             discoveredJavaHome = readJavaHomeFromRegistry(jdkShortVersion, jdkArch);
