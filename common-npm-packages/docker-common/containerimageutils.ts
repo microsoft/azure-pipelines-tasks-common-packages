@@ -3,6 +3,9 @@ import * as tl from "azure-pipelines-task-lib/task";
 import * as fs from 'fs';
 import ContainerConnection from "./containerconnection";
 
+const reservedImageName = "scratch";
+const reservedNameCheck = tl.getPipelineFeature('EnableDockerReservedNameCheck');
+
 export function hasRegistryComponent(imageName: string): boolean {
     var periodIndex = imageName.indexOf("."),
         colonIndex = imageName.indexOf(":"),
@@ -164,9 +167,7 @@ export function getImageDigest(connection: ContainerConnection, imageName: strin
 }
 
 function pullImage(connection: ContainerConnection, imageName: string) {
-    let reservedNameCheck = tl.getPipelineFeature('EnableDockerReservedNameCheck');
     if (reservedNameCheck) {
-        const reservedImageName="scratch";
         if (imageName.toLowerCase() != reservedImageName) {
             pullImageReservedNameCheck(connection, imageName);
         }
@@ -177,10 +178,8 @@ function pullImage(connection: ContainerConnection, imageName: string) {
 
 function inspectImage(connection: ContainerConnection, imageName): any {
     try {
-        let reservedNameCheck = tl.getPipelineFeature('EnableDockerReservedNameCheck');
         let inspectObj = null;
         if (reservedNameCheck) {
-            const reservedImageName = "scratch";
             if (imageName.toLowerCase() != reservedImageName) {
                 inspectObj = inspectImageReservedName(connection, imageName);
             }
