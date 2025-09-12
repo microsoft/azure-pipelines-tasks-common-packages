@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-azure-arm-rest",
-    "version": "3.262.1",
+    "version": "3.263.0",
     "description": "Common Lib for Azure ARM REST apis",
     "repository": {
         "type": "git",
@@ -38,6 +38,6 @@
         "typescript": "^4.9.5"
     },
     "scripts": {
-        "build": "node ../build-scripts/downloadArchive.js https://vstsagenttools.blob.core.windows.net/tools/openssl/3.4.0/M252/openssl.zip ./openssl && node make.js"
+        "build": "node make.js"
     }
 }
