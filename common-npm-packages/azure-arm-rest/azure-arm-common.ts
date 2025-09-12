@@ -720,12 +720,24 @@ export class ApplicationTokenCredentials {
         return deferred.promise;
     }
 
+    private _getOpenSSLPath() {
+        if (tl.osType().match(/^Win/)) {
+            if (tl.getPipelineFeature("EnableOpenSSLVersion3_4_2")) {
+                return tl.which(path.join(__dirname, 'openssl3.4.2', 'openssl'));
+            } else {
+                return tl.which(path.join(__dirname, 'openssl3.4.0', 'openssl'));
+            }
+        } else {
+            return tl.which('openssl');
+        }
+    }
+
     /**
      * @deprecated ADAL related methods are deprecated and will be removed.
      * Use Use `getMSALToken(force?: boolean)` instead.
      */
     private _getSPNCertificateAuthorizationToken(): string {
-        var openSSLPath = tl.osType().match(/^Win/) ? tl.which(path.join(__dirname, 'openssl', 'openssl')) : tl.which('openssl');
+        var openSSLPath = this._getOpenSSLPath();
         var openSSLArgsArray = [
             "x509",
             "-sha1",
@@ -734,7 +746,7 @@ export class ApplicationTokenCredentials {
             this.certFilePath,
             "-fingerprint"
         ];
-
+        tl.debug(`The OpenSSL version is ${tl.execSync(openSSLPath, 'version')}`);
         var pemExecutionResult = tl.execSync(openSSLPath, openSSLArgsArray);
         var additionalHeaders = {
             "alg": "RS256",
