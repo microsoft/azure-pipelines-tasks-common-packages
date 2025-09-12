@@ -1,9 +1,10 @@
+import * as tl from 'azure-pipelines-task-lib/task';
 var path = require('path');
 var util = require('../build-scripts/util');
-
+var fs = require('fs');
 var buildPath = './_build'
 
-var opensslLatestVersion = process.env.EnableOpenSSLVersion3_4_2;
+var opensslLatestVersion = tl.getPipelineFeature('UseOpenSSLv3.4.2InAzureArmRest');
 var opensslDir;
 var opensslUrl;
 if (opensslLatestVersion) {
@@ -15,7 +16,6 @@ else {
 	opensslUrl = 'https://vstsagenttools.blob.core.windows.net/tools/openssl/3.4.0/M252/openssl.zip';
 }
 
-var fs = require('fs');
 if (!fs.existsSync(path.join(__dirname, opensslDir))) {
 	util.run(`node ../build-scripts/downloadArchive.js ${opensslUrl} ${opensslDir}`);
 }
