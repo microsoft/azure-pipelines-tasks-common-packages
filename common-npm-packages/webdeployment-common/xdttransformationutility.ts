@@ -107,7 +107,7 @@ export function specialXdtTransformation(rootFolder, transformConfig, sourceConf
             }
         }
         else {
-            transformXmlFile = path.join(rootFolder, transformConfig);
+            transformXmlFile = path.isAbsolute(transformConfig) ? transformConfig : path.join(rootFolder, transformConfig);
             transformXmlFiles[transformXmlFile.toLowerCase()] = transformXmlFile;
         }
 
