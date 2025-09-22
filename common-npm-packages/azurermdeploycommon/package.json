@@ -1,36 +1,36 @@
 {
-    "name": "azure-pipelines-tasks-azurermdeploycommon",
-    "version": "3.257",
-    "description": "Common Lib for Azure ARM REST apis",
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/microsoft/azure-pipelines-tasks-common-packages.git",
-        "directory": "common-npm-packages/azurermdeploycommon"
-    },
-    "author": "Microsoft Corporation",
-    "license": "MIT",
-    "bugs": {
-        "url": "https://github.com/microsoft/azure-pipelines-tasks-common-packages/issues"
-    },
-    "scripts": {
-        "build": "node ../build-scripts/downloadArchive.js https://vstsagenttools.blob.core.windows.net/tools/openssl/1.0.2/M138/openssl.zip ./openssl && node make.js"
-    },
-    "homepage": "https://github.com/microsoft/azure-pipelines-tasks-common-packages#readme",
-    "dependencies": {
-        "@types/mocha": "^5.2.7",
-        "@types/node": "^10.17.0",
-        "@types/q": "1.0.7",
-        "archiver": "2.1.1",
-        "azure-pipelines-task-lib": "^4.17.0",
-        "jsonwebtoken": "^9.0.2",
-        "ltx": "2.6.2",
-        "node-stream-zip": "1.7.0",
-        "q": "1.5.1",
-        "typed-rest-client": "^1.8.4",
-        "winreg": "1.2.2",
-        "xml2js": "0.6.2"
-    },
-    "devDependencies": {
-        "typescript": "4.0.2"
-    }
+   "name": "azure-pipelines-tasks-azurermdeploycommon",
+   "version": "3.257.0",
+   "description": "Common Lib for Azure ARM REST apis",
+   "repository": {
+      "type": "git",
+      "url": "git+https://github.com/microsoft/azure-pipelines-tasks-common-packages.git",
+      "directory": "common-npm-packages/azurermdeploycommon"
+   },
+   "author": "Microsoft Corporation",
+   "license": "MIT",
+   "bugs": {
+      "url": "https://github.com/microsoft/azure-pipelines-tasks-common-packages/issues"
+   },
+   "scripts": {
+      "build": "node ../build-scripts/downloadArchive.js https://vstsagenttools.blob.core.windows.net/tools/openssl/1.0.2/M138/openssl.zip ./openssl && node make.js"
+   },
+   "homepage": "https://github.com/microsoft/azure-pipelines-tasks-common-packages#readme",
+   "dependencies": {
+      "@types/mocha": "^5.2.7",
+      "@types/node": "^10.17.0",
+      "@types/q": "1.0.7",
+      "archiver": "2.1.1",
+      "azure-pipelines-task-lib": "^4.17.0",
+      "jsonwebtoken": "^9.0.2",
+      "ltx": "2.6.2",
+      "node-stream-zip": "1.7.0",
+      "q": "1.5.1",
+      "typed-rest-client": "^1.8.4",
+      "winreg": "1.2.2",
+      "xml2js": "0.6.2"
+   },
+   "devDependencies": {
+      "typescript": "4.0.2"
+   }
 }
