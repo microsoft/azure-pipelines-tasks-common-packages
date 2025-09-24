@@ -721,7 +721,7 @@ export function mockAzureARMResourcesTests() {
             "authorization": "Bearer DUMMY_ACCESS_TOKEN",
             "content-type": "application/json; charset=utf-8"
         }
-    }).get("/subscriptions/MOCK_SUBSCRIPTION_ID/resources?$filter=resourceType%20EQ%20%27Microsoft.Web%2Fsites%27%20AND%20name%20EQ%20%27g%C3%B6m-mig-fr%C3%A5n-omv%C3%A4rlden%27&api-version=2024-11-01")
+    }).get("/subscriptions/MOCK_SUBSCRIPTION_ID/resources?$filter=resourceType%20EQ%20%27Microsoft.Web%2Fsites%27%20AND%20name%20EQ%20%27g%C3%B6m-mig-fr%C3%A5n-omv%C3%A4rlden%27&api-version=2024-10-01")
     .reply(200, {
         value: [{
             id: "subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/microsoft.web/sites/göm-mig-från-omvär",
