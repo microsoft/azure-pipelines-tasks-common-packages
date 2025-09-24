@@ -22,12 +22,9 @@ util.cp(path.join('./Tests', 'package-lock.json'), path.join(buildPath, 'Tests')
 for (const version in openSSLUrls) {
     const openSSLDirectoryPath = path.join(__dirname, '_download', version);
     const opensslUrl = openSSLUrls[version];
-
-    if (!fs.existsSync(openSSLDirectoryPath)) {
-        downloadArchive(opensslUrl, openSSLDirectoryPath);
-    }
-
-    util.cp('-r', openSSLDirectoryPath, path.join(buildPath, version));
+    const targetPath = downloadArchive(opensslUrl, openSSLDirectoryPath);
+    util.mkdir(path.join(buildPath, version));
+    util.cp('-r', path.join(targetPath, '*'), path.join(buildPath, version));
 }
 
 util.cp('-r', 'Strings', buildPath);
