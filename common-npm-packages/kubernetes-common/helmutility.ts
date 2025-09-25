@@ -77,9 +77,12 @@ export async function getStableHelmVersion(): Promise<string> {
         responseArray.forEach(response => {
             if (response && response.tag_name) {
                 let currentHelmVerison = semver.clean(response.tag_name.toString());
-                if (currentHelmVerison) {
-                    if (currentHelmVerison.toString().indexOf('rc') == -1 && semver.gt(currentHelmVerison, latestHelmVersion)) {
-                        //If current helm version is not a pre release and is greater than latest helm version
+                 if (currentHelmVerison) {
+                        // Exclude any pre-release (alpha, beta, rc, etc.) and drafts.
+                        const isPreRelease = (response.prerelease === true) || !!semver.prerelease(currentHelmVerison);
+                        const isDraft = response.draft === true;
+                        if (!isPreRelease && !isDraft && semver.gt(currentHelmVerison, latestHelmVersion)) {
+                        // If current helm version is stable and greater than latest helm version
                         latestHelmVersion = currentHelmVerison;
                     }
                 }
