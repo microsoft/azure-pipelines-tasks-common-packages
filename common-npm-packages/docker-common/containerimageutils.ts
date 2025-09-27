@@ -3,6 +3,9 @@ import * as tl from "azure-pipelines-task-lib/task";
 import * as fs from 'fs';
 import ContainerConnection from "./containerconnection";
 
+const reservedImageName = "scratch";
+const reservedNameCheck = tl.getPipelineFeature('EnableDockerReservedNameCheck');
+
 export function hasRegistryComponent(imageName: string): boolean {
     var periodIndex = imageName.indexOf("."),
         colonIndex = imageName.indexOf(":"),
@@ -164,36 +167,26 @@ export function getImageDigest(connection: ContainerConnection, imageName: strin
 }
 
 function pullImage(connection: ContainerConnection, imageName: string) {
-    let pullCommand = connection.createCommand();
-    pullCommand.arg("pull");
-    pullCommand.arg(imageName);
-    let pullResult = pullCommand.execSync();
-
-    if (pullResult.stderr && pullResult.stderr != "") {
-        tl.debug(`An error was found pulling the image ${imageName}, the command output was ${pullResult.stderr}`);
+    if (reservedNameCheck) {
+        if (imageName.toLowerCase() != reservedImageName) {
+            pullImageReservedNameCheck(connection, imageName);
+        }
+    } else {
+        pullImageReservedNameCheck(connection, imageName);
     }
 }
 
 function inspectImage(connection: ContainerConnection, imageName): any {
     try {
-        let inspectCommand = connection.createCommand();
-        inspectCommand.arg("inspect");
-        inspectCommand.arg(imageName);
-        let inspectResult = inspectCommand.execSync();
-
-        if (inspectResult.stderr && inspectResult.stderr != "") {
-            tl.debug(`An error was found inspecting the image ${imageName}, the command output was ${inspectResult.stderr}`);
-            return null;
+        let inspectObj = null;
+        if (reservedNameCheck) {
+            if (imageName.toLowerCase() != reservedImageName) {
+                inspectObj = inspectImageReservedName(connection, imageName);
+            }
+        } else {
+            inspectObj = inspectImageReservedName(connection, imageName);
         }
-
-        let inspectObj = JSON.parse(inspectResult.stdout);
-
-        if (!inspectObj || inspectObj.length == 0) {
-            tl.debug(`Inspecting the image ${imageName} produced no results.`);
-            return null;
-        }
-
-        return inspectObj[0];
+        return inspectObj;
     } catch (error) {
         tl.debug(`An error ocurred running the inspect command: ${error.message}`);
         return null;
@@ -319,4 +312,32 @@ export function getBaseImageDetialsFromDockerFIle(dockerFileContentPath: string,
 export class baseImageDetails{
     name: string;
     digest: string ;
+}
+function pullImageReservedNameCheck(connection: ContainerConnection, imageName: string) {
+    let pullCommand = connection.createCommand();
+    pullCommand.arg("pull");
+    pullCommand.arg(imageName);
+    let pullResult = pullCommand.execSync();
+    if (pullResult.stderr && pullResult.stderr != "") {
+        tl.debug(`An error was found pulling the image ${imageName}, the command output was ${pullResult.stderr}`);
+    }
+}
+function inspectImageReservedName(connection: ContainerConnection, imageName): any {
+        let inspectCommand = connection.createCommand();
+        inspectCommand.arg("inspect");
+        inspectCommand.arg(imageName);
+        let inspectResult = inspectCommand.execSync();
+
+        if (inspectResult.stderr && inspectResult.stderr != "") {
+            tl.debug(`An error was found inspecting the image ${imageName}, the command output was ${inspectResult.stderr}`);
+            return null;
+        }
+
+        let inspectObj = JSON.parse(inspectResult.stdout);
+
+        if (!inspectObj || inspectObj.length == 0) {
+            tl.debug(`Inspecting the image ${imageName} produced no results.`);
+            return null;
+        }
+        return inspectObj[0];
 }

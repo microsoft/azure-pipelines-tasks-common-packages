@@ -23,29 +23,59 @@ const tmAnswers = {
     }
 }
 
-class AgentAPI {
-    downloadSecureFile() {
-        const rs = new Readable();
-        rs._read = () => {};
-        rs.push('data');
+function createMockStream(options: {
+    statusCode?: number;
+    statusMessage?: string;
+    contentType?: string;
+    data?: string;
+    emitError?: Error;
+} = {}) {
+    const {
+        statusCode = 200,
+        statusMessage = 'OK',
+        contentType = 'application/octet-stream',
+        data = 'data',
+        emitError,
+    } = options;
+
+    const rs = new Readable();
+    rs._read = () => {};
+    (rs as any).statusCode = statusCode;
+    (rs as any).statusMessage = statusMessage;
+    (rs as any).headers = { 'content-type': contentType };
+    
+    if (emitError) {
+        setTimeout(() => {
+            rs.emit('error', emitError);
+        }, 10);
+    } else {
+        if (data) rs.push(data);
         rs.push(null);
-        return rs;
     }
+    
+    return rs;
 }
 
-class WebApi {
-    getTaskAgentApi() {
-        return new Promise((resolve) => {
-            resolve(new AgentAPI());
-        });
+// Helper function to create a complete node API mock
+function createNodeApiMock(streamOptions?: Parameters<typeof createMockStream>[0]) {
+    class MockAgentAPI {
+        downloadSecureFile() {
+            return Promise.resolve(createMockStream(streamOptions));
+        }
     }
-}
 
-export const nodeapiMock = {
-    WebApi,
-    getPersonalAccessTokenHandler() {
-        return {} as IRequestHandler;
+    class MockWebApi {
+        getTaskAgentApi() {
+            return Promise.resolve(new MockAgentAPI());
+        }
     }
+
+    return {
+        WebApi: MockWebApi,
+        getPersonalAccessTokenHandler() {
+            return {} as IRequestHandler;
+        }
+    };
 }
 
 export const fsMock = {
@@ -105,6 +135,12 @@ describe("securefiles-common package suites", function() {
     });
 
     it("Check downloadSecureFile", async() => {
+        const nodeapiMock = createNodeApiMock({
+            statusCode: 200,
+            statusMessage: 'OK',
+            contentType: 'application/octet-stream'
+        });
+        
         registerMock("azure-devops-node-api", nodeapiMock);
         registerMock("fs", fsMock);
         const secureFiles = require("../securefiles-common");
@@ -126,5 +162,50 @@ describe("securefiles-common package suites", function() {
         const resolvedPath = secureFileHelpers.getSecureFileTempDownloadPath(secureFileId);
         const pseudoResolvedPath = tlClone.resolve(tlClone.getVariable("Agent.TempDirectory"), tlClone.getSecureFileName(secureFileId));
         strictEqual(resolvedPath, pseudoResolvedPath, `Resolved path "${resolvedPath}" should be equal to "${pseudoResolvedPath}"`);
+    });
+
+    it("Should handle HTTP error responses", async() => {
+        const errorNodeapiMock = createNodeApiMock({
+            statusCode: 500,
+            statusMessage: 'Internal Server Error',
+            contentType: 'application/json',
+            data: '',
+        });
+
+        registerMock("azure-devops-node-api", errorNodeapiMock);
+        registerMock("fs", fsMock);
+        const secureFiles = require("../securefiles-common");
+        const secureFileHelpers = new secureFiles.SecureFileHelpers();
+        
+        try {
+            await secureFileHelpers.downloadSecureFile(secureFileId);
+            throw new Error("Expected error was not thrown");
+        } catch (error) {
+            strictEqual(error.message.includes("HTTP 500"), true, "Should contain HTTP error status");
+            strictEqual(error.message.includes("Internal Server Error"), true, "Should contain HTTP error message");
+        }
+    });
+
+    it("Should handle stream errors during download", async() => {
+        const streamErrorNodeapiMock = createNodeApiMock({
+            statusCode: 200,
+            statusMessage: 'OK',
+            contentType: 'application/octet-stream',
+            emitError: new Error('Network connection lost')
+        });
+
+        registerMock("azure-devops-node-api", streamErrorNodeapiMock);
+        registerMock("fs", fsMock);
+
+        const secureFiles = require("../securefiles-common");
+        const secureFileHelpers = new secureFiles.SecureFileHelpers();
+        
+        try {
+            await secureFileHelpers.downloadSecureFile(secureFileId);
+            throw new Error("Expected error was not thrown");
+        } catch (error) {
+            strictEqual(error.message.includes("Failed to download secure file"), true, "Should handle stream errors");
+            strictEqual(error.message.includes("Network connection lost"), true, "Should include original error message");
+        }
     });
 });

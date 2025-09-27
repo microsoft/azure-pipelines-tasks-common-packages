@@ -5,6 +5,7 @@ import { ApplicationInsightsTests as ApplicationInsightsTestsWebTests } from "./
 import { ResourcesTests } from "./L0-azure-arm-resource-tests";
 import { AksServiceTests } from "./L0-azure-arm-aks-service-tests";
 import { AzureCliUtilityTests } from "./L0-azure-cli-utility-tests";
+import { OpenSSLCheck } from "./L0-azure-cli-openssl-check";
 
 const DEFAULT_TIMEOUT = 1000 * 20;
 
@@ -17,4 +18,5 @@ describe("AzureARMRestTests", function () {
     describe("Resources Tests", ResourcesTests.bind(ResourcesTests, DEFAULT_TIMEOUT));
     describe("AKS Tests", AksServiceTests.bind(AksServiceTests, DEFAULT_TIMEOUT));
     describe("Azure Cli Utility Tests", AzureCliUtilityTests.bind(AzureCliUtilityTests, DEFAULT_TIMEOUT));
+    describe("Azure Cli OpenSSL check", OpenSSLCheck.bind(OpenSSLCheck, DEFAULT_TIMEOUT));
 });
