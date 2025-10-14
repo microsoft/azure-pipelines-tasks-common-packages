@@ -121,7 +121,7 @@ export function findJavaHome(jdkVersion: string, jdkArch: string): string {
 
     const jdkShortVersion: string = getShortJavaVersion(jdkVersion);
     const jdkMajorVersion: number = coerce(jdkShortVersion).major;
-    // jdkArchitecture is either x64 or x86
+    // jdkArchitecture is either x64, x86 or arm64
     // envName for version 1.7 and x64 would be "JAVA_HOME_7_X64"
     var envName = "JAVA_HOME_" + jdkMajorVersion + "_" + jdkArch.toUpperCase();
     // MS-hosted runners set JAVA_HOME_<version>_arm64 variable for pre-installed ARM JDKs.
