@@ -128,10 +128,10 @@ export function findJavaHome(jdkVersion: string, jdkArch: string): string {
     // If JAVA_HOME_<version>_ARM64 is not found, search for JAVA_HOME_<version>_arm64.
     var arm64EnvName = "JAVA_HOME_" + jdkMajorVersion + "_" + jdkArch.toLowerCase();
     let discoveredJavaHome = tl.getVariable(envName);
-    if(!discoveredJavaHome){
+    if(!discoveredJavaHome && jdkArch.toLowerCase() === 'arm64'){
             // Using process.env to read the environment variable as taskLib.getVariable converts the name to upper case.
             discoveredJavaHome = process.env[arm64EnvName];
-        }
+    }
     if (!discoveredJavaHome) {
         if (isWindows) {
             discoveredJavaHome = readJavaHomeFromRegistry(jdkShortVersion, jdkArch);
