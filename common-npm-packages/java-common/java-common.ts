@@ -132,6 +132,7 @@ export function findJavaHome(jdkVersion: string, jdkArch: string): string {
         // Using process.env to read the environment variable as taskLib.getVariable converts the name to upper case.
         discoveredJavaHome = process.env[arm64EnvName];
     }
+    
     if (!discoveredJavaHome) {
         if (isWindows) {
             discoveredJavaHome = readJavaHomeFromRegistry(jdkShortVersion, jdkArch);
