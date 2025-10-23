@@ -61,7 +61,7 @@ function addBaseImageLabels(connection: ContainerConnection, labels: string[], d
         return;
     }
     addLabelWithValue("image.base.ref.name", baseImage.name, labels);
-    //first check if there is digest passed in ]Dockerfile
+    //first check if there is digest passed in Dockerfile
     if (!baseImage.digest) {
         baseImage.digest = containerUtils.getImageDigest(connection, baseImage.name);
     }
