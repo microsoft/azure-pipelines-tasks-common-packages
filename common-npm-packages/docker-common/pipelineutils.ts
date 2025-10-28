@@ -55,45 +55,19 @@ function addReleaseLabels(hostName: string, labels: string[], addPipelineData?: 
 
 function addBaseImageLabels(connection: ContainerConnection, labels: string[], dockerFilePath: string): void {
 
-    //Added Dynamic feature flag to fix getting digest image from docker file
-    let digestImageFromFileEnabled = tl.getPipelineFeature('UseDigestImageFromFile');
-
-    if (digestImageFromFileEnabled) {
-
-        // using getBaseImageDetialsFromDockerFIle method to fetch both image and imagedigest
-        const baseImage = containerUtils.getBaseImageDetialsFromDockerFIle(dockerFilePath, connection);
-        if (!baseImage.name) {
-            return;
-        }
-        addLabelWithValue("image.base.ref.name", baseImage.name, labels);
-        //first check if there is digest passed in ]Dockerfile
-        if (!baseImage.digest) {
-            baseImage.digest = containerUtils.getImageDigest(connection, baseImage.name);
-        }
-        //if there is no digest in Dockerfile, get digest using ImageName:tag
-        if (baseImage.digest) {
-            addLabelWithValue("image.base.digest", baseImage.digest, labels);
-        }
-
+    // using getBaseImageDetialsFromDockerFIle method to fetch both image and imagedigest
+    const baseImage = containerUtils.getBaseImageDetialsFromDockerFIle(dockerFilePath, connection);
+    if (!baseImage.name) {
+        return;
     }
-    else {
-        const baseImageName = containerUtils.getBaseImageNameFromDockerFile(dockerFilePath);
-        if (!baseImageName) {
-            return;
-        }
-        addLabelWithValue("image.base.ref.name", baseImageName, labels);
-
-        if (!connection) {
-            tl.debug("Image digest couldn't be extracted because no connection was found.");
-            return;
-        }
-
-        const baseImageDigest = containerUtils.getImageDigest(connection, baseImageName);
-
-        //if there is no digest in Dockerfile, get digest using ImageName:tag
-        if (baseImageDigest) {
-            addLabelWithValue("image.base.digest", baseImageDigest, labels);
-        }
+    addLabelWithValue("image.base.ref.name", baseImage.name, labels);
+    //first check if there is digest passed in Dockerfile
+    if (!baseImage.digest) {
+        baseImage.digest = containerUtils.getImageDigest(connection, baseImage.name);
+    }
+    //if there is no digest in Dockerfile, get digest using ImageName:tag
+    if (baseImage.digest) {
+        addLabelWithValue("image.base.digest", baseImage.digest, labels);
     }
 }
 
