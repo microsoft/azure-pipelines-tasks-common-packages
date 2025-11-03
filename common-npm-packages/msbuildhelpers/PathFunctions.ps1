@@ -354,7 +354,7 @@ function Get-VisualStudio {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateSet(15, 16, 17)]
+        [ValidateSet(15, 16, 17, 18)]
         [int]$MajorVersion)
 
     Trace-VstsEnteringInvocation $MyInvocation
