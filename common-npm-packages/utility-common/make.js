@@ -9,7 +9,8 @@ const toolPath = './tools';
 
 const zipUrls = {
     '7zip5': 'https://vstsagenttools.blob.core.windows.net/tools/7zip/5/7zip.zip',
-    '7zip24': 'https://vstsagenttools.blob.core.windows.net/tools/7zip/24.09/7zip.zip'
+    '7zip24': 'https://vstsagenttools.blob.core.windows.net/tools/7zip/24.09/7zip.zip',
+    '7zip25': 'https://vstsagenttools.blob.core.windows.net/tools/7zip/25.01/7zip.zip'
 };
 
 for (const [version, url] of Object.entries(zipUrls)) {

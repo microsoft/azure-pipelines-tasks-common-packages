@@ -11,6 +11,7 @@ util.cp(path.join(__dirname, 'package-lock.json'), buildPath);
 util.cp(path.join(__dirname, 'module.json'), buildPath);
 util.cp('-r', '7zip', buildPath);
 util.cp('-r', '7zip24', buildPath);
+util.cp('-r', '7zip25', buildPath);
 util.cp('-r', 'ctt', buildPath);
 util.cp('-r', 'MSDeploy', buildPath);
 util.cp('-r', 'node_modules', buildPath);
