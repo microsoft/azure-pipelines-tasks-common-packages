@@ -92,11 +92,8 @@ const extractUsing7zip = async (fromFile: string, toDir: string) => {
     if (tl.getPipelineFeature("Use7zV2501InWebDeploymentCommonPackage")) {
         win7zipLocation = path.join(__dirname, '7zip25/7zip/7z.exe');
     }
-    else if( tl.getPipelineFeature("Use7zV2409InWebDeploymentCommonPackage")) {
+    else{
         win7zipLocation =  path.join(__dirname, '7zip24/7zip/7z.exe');
-    }
-    else {
-        win7zipLocation = path.join(__dirname, '7zip/7zip/7z.exe');
     }
 
     tl.debug(`Using 7zip tool from ${win7zipLocation} for extracting`);
