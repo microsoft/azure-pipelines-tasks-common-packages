@@ -21,7 +21,7 @@ function Get-MSBuildPath {
         # Only attempt to find Microsoft.Build.Utilities.Core.dll from a VS 15 Willow install
         # when "15.0" or latest is specified. In 15.0, the method GetPathToBuildToolsFile(...)
         # has regressed. When it is called for a version that is not found, the latest version
-        # found is returned instead. Same for "16.0" and "17.0"
+        # found is returned instead. Same for versions 16 and later i.e.: "16.0", "17.0", and "18.0".
         [System.Reflection.Assembly]$msUtilities = $null
 
         if (($VersionNumber -ge 16 -or !$Version) -and # !$Version indicates "latest"
@@ -455,7 +455,7 @@ function Select-MSBuildPath {
         }
 
         $specificVersion = $PreferredVersion -and $PreferredVersion -ne 'latest'
-        $versions = '17.0', '16.0', '15.0', '14.0', '12.0', '4.0' | Where-Object { $_ -ne $PreferredVersion }
+        $versions = '18.0', '17.0', '16.0', '15.0', '14.0', '12.0', '4.0' | Where-Object { $_ -ne $PreferredVersion }
 
         # Look for a specific version of MSBuild.
         if ($specificVersion) {
