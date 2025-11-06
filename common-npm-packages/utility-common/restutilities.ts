@@ -1,6 +1,5 @@
 "use strict";
 
-var fs = require('fs');
 import * as tl from "azure-pipelines-task-lib/task";
 
 import httpClient = require("typed-rest-client/HttpClient");
@@ -57,11 +56,11 @@ export async function sendRequest(request: WebRequest, options?: WebRequestOptio
 
     let ignoreSslErrors: string = tl.getVariable("VSTS_ARM_REST_IGNORE_SSL_ERRORS");
     requestOptions.ignoreSslError = ignoreSslErrors && ignoreSslErrors.toLowerCase() == "true";
-    requestOptions.globalAgentOptions = options.httpGlobalAgentOptions;
-    requestOptions.socketTimeout = options.socketTimeout;
-    
+    requestOptions.globalAgentOptions = options?.httpGlobalAgentOptions;
+    requestOptions.socketTimeout = options?.socketTimeout;
+
     const httpCallbackClient = new httpClient.HttpClient(tl.getVariable("AZURE_HTTP_USER_AGENT"), null, requestOptions);
-    
+
     while (true) {
         try {
             let response: WebResponse = await sendRequestInternal(request, httpCallbackClient);

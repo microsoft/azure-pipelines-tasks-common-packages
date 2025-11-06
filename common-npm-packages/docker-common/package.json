@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-docker-common",
-    "version": "2.264.0",
+    "version": "2.265.0",
     "description": "Common Library for Azure Rest Calls",
     "repository": {
         "type": "git",

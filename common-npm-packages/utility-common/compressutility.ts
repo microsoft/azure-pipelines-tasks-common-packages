@@ -14,10 +14,11 @@ var xpSevenZipLocation: string;
 var winSevenZipLocation: string = getWinSevenZipLocation();
 
 function getWinSevenZipLocation(): string {
-    if (tl.getPipelineFeature("Use7zV2409InUtilityCommonPackage")) {
+    if (tl.getPipelineFeature("Use7zV2501InUtilityCommonPackage")) {
+        return path.join(__dirname, 'tools/7zip25/7z.exe');
+    }
+    else {
         return path.join(__dirname, 'tools/7zip24/7z.exe');
-    } else {
-        return path.join(__dirname, 'tools/7zip5/7z.exe');
     }
 }
 
