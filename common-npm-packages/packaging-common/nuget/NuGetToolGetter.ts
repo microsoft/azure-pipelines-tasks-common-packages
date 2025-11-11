@@ -151,14 +151,18 @@ function pathExistsAsFile(path: string) {
 // Based on code in Tasks\Common\MSBuildHelpers\msbuildhelpers.ts
 export async function getMSBuildVersionString(): Promise<string> {
     const msbuild2019Path = 'C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/MSBuild/Current/Bin/msbuild.exe';
-    const msbuild2022Path = 'C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/msbuild.exe';
+    const msbuild2022Path = 'C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/msbuild.exe';    
+    const msbuild2026Path = 'C:/Program Files/Microsoft Visual Studio/18/Enterprise/MSBuild/Current/Bin/msbuild.exe';
     
     let version: string;
     let path: string = taskLib.which('msbuild', false);
 
     // Hmmm... it's not on the path. Can we find it directly?
-    if (!path && (taskLib.osType() === 'Windows_NT'))  {
-        if (pathExistsAsFile(msbuild2022Path)) {
+    if (!path && (taskLib.osType() === 'Windows_NT'))  {        
+        if (pathExistsAsFile(msbuild2026Path)) {
+            taskLib.debug('Falling back to VS2026 install path');
+            path = msbuild2026Path;
+        } else if (pathExistsAsFile(msbuild2022Path)) {
             taskLib.debug('Falling back to VS2022 install path');
             path = msbuild2022Path;
         } else if (pathExistsAsFile(msbuild2019Path)) {
