@@ -12,8 +12,7 @@ const semver = require('semver');
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
 const helmToolName = 'helm';
-const helmAllReleasesUrl = 'https://api.github.com/repos/helm/helm/releases';
-const stableHelmVersion = 'v3.1.2';
+const helmLatestReleaseUrl = 'http://get.helm.sh/helm-latest-version';
 
 export async function getHelm(version?: string) {
     try {
@@ -70,27 +69,15 @@ function getHelmDownloadURL(version: string): string {
 }
 
 export async function getStableHelmVersion(): Promise<string> {
+    let latestHelmVersion = '';
     try {
-        const downloadPath = await toolLib.downloadTool(helmAllReleasesUrl);
-        const responseArray = JSON.parse(fs.readFileSync(downloadPath, 'utf8').toString().trim());
-        let latestHelmVersion = semver.clean(stableHelmVersion);
-        responseArray.forEach(response => {
-            if (response && response.tag_name) {
-                let currentHelmVerison = semver.clean(response.tag_name.toString());
-                if (currentHelmVerison) {
-                    if (currentHelmVerison.toString().indexOf('rc') == -1 && semver.gt(currentHelmVerison, latestHelmVersion)) {
-                        //If current helm version is not a pre release and is greater than latest helm version
-                        latestHelmVersion = currentHelmVerison;
-                    }
-                }
-            }
-        });
-        latestHelmVersion = "v" + latestHelmVersion;
+        const downloadPath = await toolLib.downloadTool(helmLatestReleaseUrl);
+        latestHelmVersion = fs.readFileSync(downloadPath, 'utf8').toString().trim();
         return latestHelmVersion;
     } catch (error) {
         let telemetry = {
             event: "HelmLatestNotKnown",
-            url: helmAllReleasesUrl,
+            url: helmLatestReleaseUrl,
             error: error
         };
         console.log("##vso[telemetry.publish area=%s;feature=%s]%s",
@@ -98,8 +85,8 @@ export async function getStableHelmVersion(): Promise<string> {
             "HelmInstaller",
             JSON.stringify(telemetry));
 
-        tl.warning(tl.loc('HelmLatestNotKnown', helmAllReleasesUrl, error, stableHelmVersion));
+        tl.error(tl.loc('HelmLatestNotKnown', helmLatestReleaseUrl, error));
     }
 
-    return stableHelmVersion;
+    return latestHelmVersion;
 }
