@@ -123,15 +123,14 @@ export function findJavaHome(jdkVersion: string, jdkArch: string): string {
     const jdkMajorVersion: number = coerce(jdkShortVersion).major;
     // jdkArchitecture is either x64, x86 or arm64
     // envName for version 1.7 and x64 would be "JAVA_HOME_7_X64"
-    var envName: string;
-    let discoveredJavaHome: string;
-    if(jdkArch.toLowerCase() === 'arm64'){
-         // For arm64, we use a different environment variable naming convention
-         envName = "JAVA_HOME_" + jdkMajorVersion + "_" + jdkArch.toLowerCase();
-         discoveredJavaHome = process.env[envName];
-    } else {
-        envName = "JAVA_HOME_" + jdkMajorVersion + "_" + jdkArch.toUpperCase();
-        discoveredJavaHome = tl.getVariable(envName);
+    var envName = "JAVA_HOME_" + jdkMajorVersion + "_" + jdkArch.toUpperCase();
+    // MS-hosted runners set JAVA_HOME_<version>_arm64 variable for pre-installed ARM JDKs.
+    // If JAVA_HOME_<version>_ARM64 is not found, search for JAVA_HOME_<version>_arm64.
+    var arm64EnvName = "JAVA_HOME_" + jdkMajorVersion + "_" + jdkArch.toLowerCase();
+    let discoveredJavaHome = tl.getVariable(envName);
+    if(!discoveredJavaHome && jdkArch.toLowerCase() === 'arm64'){
+        // Using process.env to read the environment variable as taskLib.getVariable converts the name to upper case.
+        discoveredJavaHome = process.env[arm64EnvName];
     }
 
     if (!discoveredJavaHome) {

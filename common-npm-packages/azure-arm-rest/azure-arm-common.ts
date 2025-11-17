@@ -564,22 +564,22 @@ export class ApplicationTokenCredentials {
             case AzureModels.Scheme.ManagedServiceIdentity:
                 tl.debug('Using ManagedIdentityCredential for MSI');
                 return new ManagedIdentityCredential(this.msiClientId);
-                
+
             case AzureModels.Scheme.WorkloadIdentityFederation:
                 tl.debug('Using WorkloadIdentityCredential for OIDC');
                 const federatedToken = await this.getFederatedToken();
                 const tokenFilePath = path.join(
-                    tl.getVariable('Agent.TempDirectory') || tl.getVariable('system.DefaultWorkingDirectory'), 
+                    tl.getVariable('Agent.TempDirectory') || tl.getVariable('system.DefaultWorkingDirectory'),
                     'token.jwt'
                 );
                 fs.writeFileSync(tokenFilePath, federatedToken);
-                
+
                 return new WorkloadIdentityCredential({
                     tenantId: this.tenantId,
                     clientId: this.clientId,
                     tokenFilePath: tokenFilePath
                 });
-                
+
             case AzureModels.Scheme.SPN:
             default:
                 tl.debug('Using specific credential for Service Principal');
@@ -720,7 +720,7 @@ export class ApplicationTokenCredentials {
         return deferred.promise;
     }
 
-    private _getOpenSSLPath() {
+    public getOpenSSLPath() {
         if (tl.osType().match(/^Win/)) {
             if (tl.getPipelineFeature("UseOpenSSLv3.4.2InAzureArmRest")) {
                 return tl.which(path.join(__dirname, 'openssl3.4.2', 'openssl'));
@@ -737,7 +737,7 @@ export class ApplicationTokenCredentials {
      * Use Use `getMSALToken(force?: boolean)` instead.
      */
     private _getSPNCertificateAuthorizationToken(): string {
-        var openSSLPath = this._getOpenSSLPath();
+        var openSSLPath = this.getOpenSSLPath();
         var openSSLArgsArray = [
             "x509",
             "-sha1",
