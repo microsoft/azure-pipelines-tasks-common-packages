@@ -14,6 +14,6 @@ foreach ($version in @('', 'latest')) {
     # Assert.
     Assert-AreEqual -Expected 'Some resolved location' -Actual $actual
 
-    $expectedCallCount = if ($env:MSBUILDHELPERS_ENABLE_TELEMETRY -eq "true") { 6 } else { 3 }
+    $expectedCallCount = if ($env:MSBUILDHELPERS_ENABLE_TELEMETRY -eq "true") { 4 } else { 2 }
     Assert-WasCalled Get-MSBuildPath -Times $expectedCallCount
 }
