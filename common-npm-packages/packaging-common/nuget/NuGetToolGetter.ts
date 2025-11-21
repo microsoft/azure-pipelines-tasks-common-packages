@@ -152,13 +152,17 @@ function pathExistsAsFile(path: string) {
 export async function getMSBuildVersionString(): Promise<string> {
     const msbuild2019Path = 'C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/MSBuild/Current/Bin/msbuild.exe';
     const msbuild2022Path = 'C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/msbuild.exe';
+    const msbuild18Path = 'C:/Program Files/Microsoft Visual Studio/18/Enterprise/MSBuild/Current/Bin/msbuild.exe';
     
     let version: string;
     let path: string = taskLib.which('msbuild', false);
 
     // Hmmm... it's not on the path. Can we find it directly?
     if (!path && (taskLib.osType() === 'Windows_NT'))  {
-        if (pathExistsAsFile(msbuild2022Path)) {
+        if (pathExistsAsFile(msbuild18Path)) {
+            taskLib.debug('Falling back to VS 18 install path');
+            path = msbuild18Path;
+        } else if (pathExistsAsFile(msbuild2022Path)) {
             taskLib.debug('Falling back to VS2022 install path');
             path = msbuild2022Path;
         } else if (pathExistsAsFile(msbuild2019Path)) {
@@ -214,7 +218,7 @@ export async function resolveNuGetVersion() : Promise<string>
 {
     let nugetVersionToUse : string;
     const msbuildSemVer = await getMSBuildVersion();
-    // Default to 6.4.0 if we're using MSBuild 17.0.0 or higher
+    // Default to 6.4.0 if we're using MSBuild 17.0.0 or higher (including 18.0 for VS 2026)
     // Default to 5.9.3 if we're using MSBuild 16.11.0 or higher, older MSBuild versions are not supported
     // Default to 4.9.6 if we're using MSBuild older than 16.11.0
     if (msbuildSemVer && semver.gte(msbuildSemVer, '17.0.0')) {
