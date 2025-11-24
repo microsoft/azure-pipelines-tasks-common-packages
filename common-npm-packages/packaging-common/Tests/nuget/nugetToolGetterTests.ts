@@ -113,6 +113,6 @@ export function nugettoolgetter() {
         let msbuildVersion : string = await ngToolGetterMock.getMSBuildVersionString();
         assert.equal(msbuildVersion, "18.0.0.0");
         let nugetVersion = await ngToolGetterMock.resolveNuGetVersion();
-        assert.equal(nugetVersion, "6.4.0");
+        assert.equal(nugetVersion, "7.0.0");
     });
 }

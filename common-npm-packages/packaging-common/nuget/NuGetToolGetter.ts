@@ -218,10 +218,14 @@ export async function resolveNuGetVersion() : Promise<string>
 {
     let nugetVersionToUse : string;
     const msbuildSemVer = await getMSBuildVersion();
-    // Default to 6.4.0 if we're using MSBuild 17.0.0 or higher (including 18.0 for VS 2026)
+    // Default to 7.0.0 if we're using MSBuild 18.0.0 or higher
+    // Default to 6.4.0 if we're using MSBuild 17.0.0 or higher
     // Default to 5.9.3 if we're using MSBuild 16.11.0 or higher, older MSBuild versions are not supported
     // Default to 4.9.6 if we're using MSBuild older than 16.11.0
-    if (msbuildSemVer && semver.gte(msbuildSemVer, '17.0.0')) {
+    if (msbuildSemVer && semver.gte(msbuildSemVer, '18.0.0')) {
+        taskLib.debug('Snapping to v7.0.0');
+        nugetVersionToUse = '7.0.0';
+    } else if (msbuildSemVer && semver.gte(msbuildSemVer, '17.0.0')) {
         taskLib.debug('Snapping to v6.4.0');
         nugetVersionToUse = '6.4.0';
     } else if (msbuildSemVer && semver.gte(msbuildSemVer, '16.11.0')) {
