@@ -98,4 +98,21 @@ export function nugettoolgetter() {
         let nugetVersion = await ngToolGetterMock.resolveNuGetVersion();
         assert.equal(nugetVersion, "6.4.0");
     });
+
+    it("Resolve correct nuget version based on msbuild 18.0", async() => {    
+        mocker.registerMock('../pe-parser', {
+            getFileVersionInfoAsync: function(msbuildPath) {
+                let result: VersionInfo = { strings: {} };
+                result.fileVersion = new VersionInfoVersion(18, 0, 0, 0);
+                result.productVersion = new VersionInfoVersion(18, 0, 0, 0);
+                result.strings['ProductVersion'] = "18.0.0.0";
+                return result;
+            }
+        });
+        let ngToolGetterMock = require("../../nuget/NuGetToolGetter");
+        let msbuildVersion : string = await ngToolGetterMock.getMSBuildVersionString();
+        assert.equal(msbuildVersion, "18.0.0.0");
+        let nugetVersion = await ngToolGetterMock.resolveNuGetVersion();
+        assert.equal(nugetVersion, "7.0.0");
+    });
 }
