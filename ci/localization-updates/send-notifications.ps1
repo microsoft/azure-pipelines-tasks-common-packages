@@ -28,16 +28,16 @@ function Send-Notification {
 
 $wikiLink = "[Wiki](https://mseng.visualstudio.com/AzureDevOps/_wiki/wikis/AzureDevOps.wiki/16150/Localization-update)"
 
+Write-Host "IsPRCreated: $IsPRCreated"
+Write-Host "PR_NUMBER: '$($env:PR_NUMBER)'"
+Write-Host "PR_LINK: '$($env:PR_LINK)'"
+Write-Host "RepoName: '$RepoName'"
+
 if ($IsPRCreated) {
     $pullRequestLink = "[PR $($env:PR_NUMBER)]($($env:PR_LINK))"
     $titleText = "Azure Pipelines $RepoName Localization update PR created - ID $($env:PR_NUMBER)"
     $messageText = "Created $RepoName Localization update PR. Please review and approve/merge $pullRequestLink. Related article in $wikiLink."
     $themeColor = "#FFFF00"
-
-    Write-Host "IsPRCreated: $IsPRCreated"
-    Write-Host "PR_NUMBER: '$($env:PR_NUMBER)'"
-    Write-Host "PR_LINK: '$($env:PR_LINK)'"
-    Write-Host "RepoName: '$RepoName'"
     
 }
 else {
