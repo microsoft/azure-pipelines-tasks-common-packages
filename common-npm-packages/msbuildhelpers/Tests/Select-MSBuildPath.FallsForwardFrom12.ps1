@@ -12,5 +12,8 @@ $actual = Select-MSBuildPath -Method 'Version' -Location '' -PreferredVersion '1
 
 # Assert.
 Assert-WasCalled Write-Warning
-Assert-WasCalled Get-MSBuildPath -Times 5
+
+$expectedCallCount = if ($env:MSBUILDHELPERS_ENABLE_TELEMETRY -eq "true") { 12 } else { 6 }
+Assert-WasCalled Get-MSBuildPath -Times $expectedCallCount
+
 Assert-AreEqual -Expected 'Some resolved location' -Actual $actual

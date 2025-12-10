@@ -2,7 +2,7 @@
   "name": "azure-pipelines-tasks-common-packages",
   "version": "1.0.0",
   "description": "Shared npm packages for azure pipelines tasks",
-  "main": "index.js",
+  "main": "make.js",
   "scripts": {
     "build": "npm install && cd common-npm-packages/build-scripts && npm install && cd ../.. && node make.js --build",
     "test": "node make.js --test",
@@ -12,18 +12,28 @@
     "type": "git",
     "url": "git+https://github.com/microsoft/azure-pipelines-tasks-common-packages.git"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Microsoft Corporation",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/microsoft/azure-pipelines-tasks-common-packages/issues"
   },
+  "engines": {
+    "node": ">=16.0.0"
+  },
   "homepage": "https://github.com/microsoft/azure-pipelines-tasks-common-packages#readme",
   "devDependencies": {
-    "minimist": "^1.2.6",
+    "@types/minimist": "^1.2.5",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^16.18.126",
+    "@types/shelljs": "^0.8.5",
     "mocha": "^10.5.1",
     "mocha-junit-reporter": "^2.2.0",
     "nyc": "^17.0.0",
-    "shelljs": "^0.8.5",
-    "@octokit/rest": "^16.43.2"
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@octokit/rest": "^22.0.0",
+    "minimist": "^1.2.6",
+    "shelljs": "^0.8.5"
   }
 }

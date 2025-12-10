@@ -7,6 +7,7 @@
         "authorityUrlCannotBeEmpty": "authority must be a non empty string.",
         "serviceConnectionIdCannotBeEmpty": "serviceConnectionId must be a non empty string.",
         "CouldNotFetchAccessTokenforAAD": "Could not fetch access token for AAD.",
+        "CouldNotFetchAccessTokenForAADRetryLimitExceeded": "Could not fetch access token for AAD. Retry limit exceeded.",
         "CouldNotFetchAccessTokenforAzureStatusCode": "Could not fetch access token for Azure. Status code: %s, status message: %s",
         "CouldNotFetchAccessTokenforMSIDueToMSINotConfiguredProperlyStatusCode": "Could not fetch access token for Managed Service Principal. Please configure Managed Service Identity (MSI) for virtual machine 'https://aka.ms/azure-msi-docs'. Status code: %s, status message: %s",
         "CouldNotFetchAccessTokenforMSIStatusCode": "Could not fetch access token for Managed Service Principal. Status code: %s, status message: %s",
@@ -98,7 +99,9 @@
         "DeploymentIDCannotBeNull": "Deployment ID cannot be null or empty.",
         "DeploymentDataEntityCannotBeNull": "Deployment data entity cannot be null or undefined.",
         "SiteExtensionInstalled": "Site extension '%s' installed.",
+        "SiteExtensionInstalledWithVersion": "Site extension '%s' with version '%s' installed successfully.",
         "FailedToInstallSiteExtension": "Failed to install site extension '%s'. Error: %s",
+        "FailedToInstallSiteExtensionWithVersion": "Failed to install site extension '%s' with version '%s'. Error: %s",
         "JobNameCannotBeNull": "Job name cannot be null or empty.",
         "SiteExtensionCannotBeNull": "Site extension name cannot be null or empty.",
         "TestNameCannotBeNull": "Test name cannot be null or undefined and it must be of type string.",
@@ -125,6 +128,7 @@
         "FailedToGetAllSiteExtensions": "Failed to get extension feed. Error: %s",
         "ExtensionAlreadyInstalled": "Extension '%s' already installed.",
         "InstallingSiteExtension": "Installing site Extension '%s'",
+        "InstallingSiteExtensionWithVersion": "Installing site extension '%s' with version '%s'",
         "FailedToGetResourceID": "Failed to get resource ID for resource type '%s' and resource name '%s'. Error: %s",
         "ContinousMonitoringEnabled": "Continuous Monitoring enabled for App Service '%s'.",
         "MultipleResourceGroupFoundForAppService": "Multiple resource group found for App Service '%s'.",
@@ -186,6 +190,9 @@
         "UpdatingAppServiceApplicationSettings": "Updating App Service Application settings. Data: %s",
         "UpdatingAppServiceConfigurationSettings": "Trying to update App Service Configuration settings. Data: %s",
         "VirtualApplicationDoesNotExist": "Virtual application doesn't exists : %s",
-        "CantDownloadClusterCredentials": "Cannot fetch the credentials for the cluster %s. Reason %s."
+        "CantDownloadClusterCredentials": "Failed to fetch credentials for the cluster %s. Reason %s. Make sure the service connection is assigned an appropriate Azure RBAC role: https://aka.ms/azdo-aks-rm-access.",
+        "KubernetesClusterResourceGroup": "Kubernetes cluster %s, resource group %s.",
+        "SettingAzureCloud": "Setting active cloud to: %s",
+        "lowerAzWarning": "%s version %s is out of date, the latest version is %s"
     }
 }

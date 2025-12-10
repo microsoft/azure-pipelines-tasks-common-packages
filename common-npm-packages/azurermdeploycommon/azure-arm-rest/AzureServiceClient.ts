@@ -1,4 +1,5 @@
 import tl = require('azure-pipelines-task-lib/task');
+
 import msRestAzure = require("./azure-arm-common");
 import webClient = require("./webClient");
 
@@ -144,7 +145,7 @@ export class ServiceClient {
                 || exceptionString.indexOf("unable to verify the first certificate") != -1
                 || exceptionString.indexOf("unable to get local issuer certificate") != -1) {
                     tl.warning(tl.loc('ASE_SSLIssueRecommendation'));
-            } 
+            }
 
             throw exception;
         }
@@ -261,7 +262,7 @@ export class ServiceClient {
     public getFormattedError(error: any): string {
         if(error && error.message) {
             if(error.statusCode) {
-                var errorMessage = typeof error.message.valueOf() == 'string' ? error.message 
+                var errorMessage = typeof error.message.valueOf() == 'string' ? error.message
                     : (error.message.Code || error.message.code) + " - " + (error.message.Message || error.message.message)
                 error.message = `${errorMessage} (CODE: ${error.statusCode})`
             }

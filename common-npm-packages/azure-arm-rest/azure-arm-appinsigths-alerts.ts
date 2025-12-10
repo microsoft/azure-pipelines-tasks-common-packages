@@ -1,14 +1,12 @@
-import msRestAzure = require('./azure-arm-common');
-import tl = require('azure-pipelines-task-lib/task');
-import util = require('util');
-import webClient = require('./webClient');
-import  { ServiceClient } from './AzureServiceClient';
-import { ToError } from './AzureServiceClientBase';
-import Model = require('./azureModels');
-import Q = require('q');
 import path = require('path');
+
+import tl = require('azure-pipelines-task-lib/task');
+
 import { AzureEndpoint, IAzureMetricAlertRequestBody } from './azureModels';
+import { ServiceClient } from './AzureServiceClient';
+import { ToError } from './AzureServiceClientBase';
 import { APIVersions } from './constants';
+import webClient = require('./webClient');
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 

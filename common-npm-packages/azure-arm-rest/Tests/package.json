@@ -4,14 +4,15 @@
   "description": "Test - Common Lib for Azure ARM REST apis",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/Microsoft/azure-pipelines-tasks.git"
+    "url": "git+https://github.com/microsoft/azure-pipelines-tasks-common-packages.git",
+    "directory": "common-npm-packages/azure-arm-rest/Tests"
   },
   "author": "Microsoft Corporation",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Microsoft/azure-pipelines-tasks/issues"
+    "url": "https://github.com/microsoft/azure-pipelines-tasks-common-packages/issues"
   },
-  "homepage": "https://github.com/Microsoft/azure-pipelines-tasks#readme",
+  "homepage": "https://github.com/microsoft/azure-pipelines-tasks-common-packages#readme",
   "devDependencies": {
     "nock": "^13.5.5"
   }

@@ -113,13 +113,18 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pr
 function escapeQuotes(additionalArguments: string): string {
     const parsedArgs = parseAdditionalArguments(additionalArguments);
     const separator = ",";
-
+    let commaSeperatedCSEnabled = tl.getPipelineFeature('CommaSeperatedConnectionString');
     const formattedArgs = parsedArgs.map(function (arg) {
         let formattedArg = '';
         let equalsSignEncountered = false;
         for (let i = 0; i < arg.length; i++) {
             const char = arg.charAt(i);
-            if (char == separator && equalsSignEncountered) {
+            var connectionStringCheck = new RegExp("\\bdata\\s*source\\s*=", "i");
+            let quotedStringCheck = (char == separator && equalsSignEncountered && ((formattedArg.startsWith("'") && formattedArg.endsWith("'")) || (formattedArg.startsWith('"') && formattedArg.endsWith('"'))));
+            let commaSeperatorCheck = commaSeperatedCSEnabled && connectionStringCheck.test(formattedArg) ? quotedStringCheck : (char == separator && equalsSignEncountered);
+            if (commaSeperatorCheck) {
+                let commaSeperatedCSEnabledTelemetry = ' {"CommaSeperatedConnectionStringFeatureFlagEnabled":"' + commaSeperatedCSEnabled + '"connectionStringCheck":"' + connectionStringCheck.test(formattedArg) + '"}';
+                tl.debug("formattedArg : " + formattedArg + commaSeperatedCSEnabledTelemetry);
                 equalsSignEncountered = false;
                 arg = arg.replace(formattedArg, escapeArg(formattedArg));
                 formattedArg = '';
@@ -127,10 +132,10 @@ function escapeQuotes(additionalArguments: string): string {
             }
             if (equalsSignEncountered) {
                 formattedArg += char;
-            } 
+            }
             if (char == '=') {
                 equalsSignEncountered = true;
-            } 
+            }
         };
 
         if (formattedArg.length > 0) {

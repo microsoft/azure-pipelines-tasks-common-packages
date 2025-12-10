@@ -1,8 +1,10 @@
+import path = require('path');
+
 import tl = require('azure-pipelines-task-lib/task');
+
 import msRestAzure = require('./azure-arm-common');
 import azureServiceClientBase = require('./AzureServiceClientBase');
 import depolymentsBase = require('./DeploymentsBase');
-import path = require('path');
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 

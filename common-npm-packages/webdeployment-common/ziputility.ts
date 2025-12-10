@@ -8,7 +8,7 @@ var archiver = require('archiver');
 
 const deleteDir = (path: string) => tl.exist(path) && tl.rmRF(path);
 
-const extractWindowsZip = async (fromFile: string, toDir: string, usePowerShell?: boolean) => {    
+const extractWindowsZip = async (fromFile: string, toDir: string, usePowerShell?: boolean) => {
     let forceUsePSUnzip: string = process.env['ADO_FORCE_USE_PSUNZIP'] || 'false'
     tl.debug(`ADO_FORCE_USE_PSUNZIP = '${forceUsePSUnzip}'`)
     if (forceUsePSUnzip.toLowerCase() === 'true') {
@@ -59,7 +59,7 @@ const extractUsingPowerShell = async (fromFile: string, toDir: string) => {
                         .arg('-NonInteractive')
                         .arg('-Command')
                         .arg(command);
-    
+
     let options = <tr.IExecOptions>{
         failOnStdErr: false,
         errStream: process.stdout,
@@ -87,8 +87,17 @@ const extractUsingPowerShell = async (fromFile: string, toDir: string) => {
 }
 
 const extractUsing7zip = async (fromFile: string, toDir: string) => {
-    tl.debug('Using 7zip tool for extracting');
-    var win7zipLocation = path.join(__dirname, '7zip/7zip/7z.exe');
+    let win7zipLocation: string;
+
+    if (tl.getPipelineFeature("Use7zV2501InWebDeploymentCommonPackage")) {
+        win7zipLocation = path.join(__dirname, '7zip25/7zip/7z.exe');
+    }
+    else{
+        win7zipLocation =  path.join(__dirname, '7zip24/7zip/7z.exe');
+    }
+
+    tl.debug(`Using 7zip tool from ${win7zipLocation} for extracting`);
+
     await tl.tool(win7zipLocation)
         .arg([ 'x', `-o${toDir}`, fromFile ])
         .exec();
@@ -104,14 +113,14 @@ const extractUsingUnzip = async (fromFile: string, toDir: string) => {
 
 export async function unzip(zipFileLocation: string, unzipDirLocation: string) {
     deleteDir(unzipDirLocation);
-    
+
     const isWin = tl.getPlatform() === tl.Platform.Windows;
     tl.debug('windows platform: ' + isWin);
 
-    tl.debug('extracting ' + zipFileLocation + ' to ' + unzipDirLocation);    
+    tl.debug('extracting ' + zipFileLocation + ' to ' + unzipDirLocation);
     if (isWin) {
         await extractWindowsZip(zipFileLocation, unzipDirLocation);
-    } 
+    }
     else{
         await extractUsingUnzip(zipFileLocation, unzipDirLocation);
     }

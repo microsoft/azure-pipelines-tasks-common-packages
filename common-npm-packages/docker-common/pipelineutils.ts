@@ -54,21 +54,20 @@ function addReleaseLabels(hostName: string, labels: string[], addPipelineData?: 
 }
 
 function addBaseImageLabels(connection: ContainerConnection, labels: string[], dockerFilePath: string): void {
-    const baseImageName = containerUtils.getBaseImageNameFromDockerFile(dockerFilePath);
-    if (!baseImageName) {
+
+    // using getBaseImageDetialsFromDockerFIle method to fetch both image and imagedigest
+    const baseImage = containerUtils.getBaseImageDetialsFromDockerFIle(dockerFilePath, connection);
+    if (!baseImage.name) {
         return;
     }
-
-    addLabelWithValue("image.base.ref.name", baseImageName, labels);
-
-    if (!connection) {
-        tl.debug("Image digest couldn't be extracted because no connection was found.");
-        return;
+    addLabelWithValue("image.base.ref.name", baseImage.name, labels);
+    //first check if there is digest passed in Dockerfile
+    if (!baseImage.digest) {
+        baseImage.digest = containerUtils.getImageDigest(connection, baseImage.name);
     }
-
-    const baseImageDigest = containerUtils.getImageDigest(connection, baseImageName);
-    if (baseImageDigest) {
-        addLabelWithValue("image.base.digest", baseImageDigest, labels);
+    //if there is no digest in Dockerfile, get digest using ImageName:tag
+    if (baseImage.digest) {
+        addLabelWithValue("image.base.digest", baseImage.digest, labels);
     }
 }
 

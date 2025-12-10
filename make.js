@@ -1,7 +1,9 @@
-const fs = require('fs');
-const path = require('path');
-const util = require('./common-npm-packages/build-scripts/util');
+const fs = require('node:fs');
+const path = require('node:path');
+
 const minimist = require('minimist');
+
+const util = require('./common-npm-packages/build-scripts/util.js');
 
 const ignoredFolders = ['build-scripts', '.git', '_download', 'node_modules'];
 const defaultTestSuite = 'L0';
@@ -11,7 +13,8 @@ const predefinedFlags = {
         'test'
     ],
     string: [
-        'suite'
+        'suite',
+        'packageName'
     ]
 };
 
@@ -21,10 +24,21 @@ const mochaReporterPath = path.join(__dirname, 'common-npm-packages', 'build-scr
 const coverageBaseNameJson = 'coverage-final.json';
 const summaryBaseName = 'coverage-summary.json';
 
+/**
+ * Prints a label for the package or section being processed.
+ * @param {string} name - The name of the package or section to print
+ */
 const printLabel = (name) => {
     console.log('\n----------------------------------');
     console.log(name);
     console.log('----------------------------------');
+}
+
+const installBuildScriptsDependencies = () => {
+    console.log('Installing dependencies for BuildScripts');
+    util.cd('common-npm-packages/build-scripts');
+    util.run('npm install');
+    util.cd(__dirname);
 }
 
 const buildPsTestHelpers = () => {
@@ -32,16 +46,21 @@ const buildPsTestHelpers = () => {
     util.cd('Tests');
     util.run('npm install');
     util.run(path.join('node_modules', '.bin', 'tsc'));
-    util.cd('..');
+    util.cd(__dirname);
 }
 
-if (options.build) {
+installBuildScriptsDependencies();
+
+if (options['build']) {
     buildPsTestHelpers();
 
     console.log('\nBuilding shared npm packages');
     util.cd('common-npm-packages');
+    const packageName = options['packageName'];
+
     fs.readdirSync('./', { encoding: 'utf-8' }).forEach(child => {
         if (fs.statSync(child).isDirectory() && !ignoredFolders.includes(child)) {
+            if (packageName && child !== packageName) return;
             printLabel(child);
 
             util.cd(child);
@@ -52,20 +71,22 @@ if (options.build) {
     });
 }
 
-if (options.test) {
+if (options['test']) {
     const gitkeepName = '.gitkeep';
     const junitPath = path.join(testResultsPath, 'junit');
     const coveragePath = path.join(testResultsPath, 'coverage');
-    process.env['SYSTEM_DEBUG'] = true;
+    process.env['SYSTEM_DEBUG'] = 'true';
     console.log('Testing shared npm packages');
     util.cd('common-npm-packages');
-    const suite = options.suite || defaultTestSuite;
+    const suite = options['suite'] || defaultTestSuite;
     let testsFailed = false;
     util.cleanFolder(testResultsPath, [gitkeepName]);
 
     const startPath = process.cwd();
+
     fs.readdirSync(startPath, { encoding: 'utf-8' }).forEach(child => {
         if (fs.statSync(child).isDirectory() && !ignoredFolders.includes(child)) {
+            if (options['packageName'] && child !== options['packageName']) return;
             printLabel(child);
             const buildPath = path.join(startPath, child, '_build');
 
@@ -86,7 +107,7 @@ if (options.test) {
                     console.log('No tests found for the package');
                 }
             } else {
-                throw new Error('Package has not been built');
+                throw new Error(`Package "${buildPath}" has not been built`);
             }
         }
     });

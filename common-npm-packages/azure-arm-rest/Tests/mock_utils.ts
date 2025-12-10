@@ -1,8 +1,9 @@
-import { AzureEndpoint, WebTest, Scheme } from '../azureModels';
-import { ApplicationInsightsWebTests } from '../azure-arm-appinsights-webtests';
-import * as querystring from "querystring";
-import { ApplicationTokenCredentials } from '../azure-arm-common';
+import * as querystring from 'querystring';
+
 export var nock = require('nock');
+
+import { AzureEndpoint } from '../azureModels';
+import { ApplicationTokenCredentials } from '../azure-arm-common';
 
 export function getMockEndpoint(scheme?: string, msiClientId?: string) {
     process.env["AZURE_HTTP_USER_AGENT"] = "TEST_AGENT";
@@ -33,9 +34,9 @@ export function getMockEndpoint(scheme?: string, msiClientId?: string) {
         grant_type: "client_credentials",
         client_secret: "MOCK_SPN_KEY"
     }))
-    .reply(200, { 
+    .reply(200, {
         access_token: "DUMMY_ACCESS_TOKEN"
-    }).persist(); 
+    }).persist();
 
     let apiVersion = "2018-02-01";
     let msiClientIdUrl =  msiClientId ? "&client_id=" + msiClientId : "";
@@ -46,7 +47,7 @@ export function getMockEndpoint(scheme?: string, msiClientId?: string) {
           }
     })
     .get("/oauth2/token?resource=https://management.azure.com/")
-    .reply(200, { 
+    .reply(200, {
         access_token: "DUMMY_ACCESS_TOKEN"
     }).persist();
 
@@ -105,8 +106,8 @@ export function mockAzureApplicationInsightsTests() {
             "content-type": "application/json; charset=utf-8"
         }
     }).get("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/microsoft.insights/components/MOCK_APP_INSIGHTS_NAME?api-version=2015-05-01")
-    .reply(200, { 
-        id: "subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/microsoft.insights/components/MOCK_APP_INSIGHTS_NAME", 
+    .reply(200, {
+        id: "subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/microsoft.insights/components/MOCK_APP_INSIGHTS_NAME",
         name: "MOCK_APP_INSIGHTS_NAME",
         type: "microsoft.insights/components",
         tags: {},
@@ -128,8 +129,8 @@ export function mockAzureApplicationInsightsTests() {
             "content-type": "application/json; charset=utf-8"
         }
     }).put("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/microsoft.insights/components/MOCK_APP_INSIGHTS_NAME?api-version=2015-05-01")
-    .reply(200, { 
-        id: "subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/microsoft.insights/components/MOCK_APP_INSIGHTS_NAME", 
+    .reply(200, {
+        id: "subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/microsoft.insights/components/MOCK_APP_INSIGHTS_NAME",
         name: "MOCK_APP_INSIGHTS_NAME",
         type: "microsoft.insights/components",
         tags: {},
@@ -328,12 +329,12 @@ export function mockAzureAppServiceTests() {
         }
     }).post("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.Web/sites/MOCK_APP_SERVICE_NAME/publishxml?api-version=2016-08-01")
     .reply(200,`<publishData>
-    <publishProfile profileName="MOCK_APP_SERVICE_NAME - Web Deploy" publishMethod="MSDeploy" 
-        publishUrl="MOCK_APP_SERVICE_NAME.scm.azurewebsites.net:443" msdeploySite="MOCK_APP_SERVICE_NAME" 
+    <publishProfile profileName="MOCK_APP_SERVICE_NAME - Web Deploy" publishMethod="MSDeploy"
+        publishUrl="MOCK_APP_SERVICE_NAME.scm.azurewebsites.net:443" msdeploySite="MOCK_APP_SERVICE_NAME"
         userName="$MOCK_APP_SERVICE_NAME" userPWD="MOCK_APP_SERVICE_MSDEPLOY_PASSWORD" destinationAppUrl="http://MOCK_APP_SERVICE_NAME.azurewebsites.net">
     </publishProfile>
     </publishData>`).persist();
-    
+
     nock('https://management.azure.com', {
         reqheaders: {
             "authorization": "Bearer DUMMY_ACCESS_TOKEN",
@@ -612,6 +613,18 @@ export function mockKuduServiceTests() {
     nock('http://FAIL_MOCK_SCM_WEBSITE').
     put('/api/siteextensions/MOCK_EXTENSION').reply(501, 'Internal error occured');
 
+    nock('http://MOCK_SCM_WEBSITE')
+        .put('/api/siteextensions/MOCK_EXTENSION', (body) => {
+            return body && typeof body === 'object' && body.version === '1.0.0';
+        })
+        .reply(200, { id: 'MOCK_EXT', title: 'MOCK_EXT', local_path: 'D:\\home\\Mock_Path', version: '1.0.0' });
+
+    nock('http://FAIL_MOCK_SCM_WEBSITE')
+        .put('/api/siteextensions/MOCK_EXTENSION', (body) => {
+            return body && typeof body === 'object' && body.version === '1.0.0';
+        })
+        .reply(501, 'Internal error occured');
+
     nock('http://MOCK_SCM_WEBSITE').
     get('/api/siteextensions?checkLatest=false').reply(200, [
         {id: "MOCK_EXT", title: "MOCK_EXT", local_path: "D:\\home\\Mock_Path"},
@@ -710,8 +723,8 @@ export function mockAzureARMResourcesTests() {
         }
     }).get("/subscriptions/MOCK_SUBSCRIPTION_ID/resources?$filter=resourceType%20EQ%20%27Microsoft.Web%2Fsites%27%20AND%20name%20EQ%20%27g%C3%B6m-mig-fr%C3%A5n-omv%C3%A4rlden%27&api-version=2016-07-01")
     .reply(200, {
-        value: [{ 
-            id: "subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/microsoft.web/sites/göm-mig-från-omvär", 
+        value: [{
+            id: "subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/microsoft.web/sites/göm-mig-från-omvär",
             name: "MOCK_APP_INSIGHTS_NAME",
             type: "microsoft.insights/components",
             tags: {},
@@ -728,11 +741,11 @@ export function mockAzureAksServiceTests() {
         }
     }).post("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.ContainerService/managedClusters/MOCK_CLUSTER/listClusterUserCredential?api-version=2024-05-01")
     .reply(200, {
-        kubeconfigs: [{ 
+        kubeconfigs: [{
             name: "clusterUser",
             value: "base46kubeconfig"
         },
-        { 
+        {
             name: "customUser",
             value: "base46kubeconfig"
         }]
@@ -745,10 +758,24 @@ export function mockAzureAksServiceTests() {
         }
     }).post("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.ContainerService/managedClusters/MOCK_CLUSTER/listClusterAdminCredential?api-version=2024-05-01")
     .reply(200, {
-        kubeconfigs: [{ 
+        kubeconfigs: [{
             name: "clusterAdmin",
             value: "base46kubeconfig"
         }]
      }).persist();
+
+     nock('https://management.azure.com', {
+        reqheaders: {
+            "authorization": "Bearer DUMMY_ACCESS_TOKEN",
+            "content-type": "application/json; charset=utf-8"
+        }
+    }).post("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.ContainerService/fleets/MOCK_FLEET/listCredentials?api-version=2024-04-01")
+    .reply(200, {
+        kubeconfigs: [{
+            name: "clusterAdmin",
+            value: "base46kubeconfig"
+        }]
+     }).persist();
+
 
 }

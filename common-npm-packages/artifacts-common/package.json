@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-artifacts-common",
-    "version": "2.245.1",
+    "version": "2.262.0",
     "description": "Azure Artifacts common code (for new authentication tasks)",
     "scripts": {
         "build": "cd ../build-scripts && npm install && cd ../artifacts-common && node make.js"
@@ -8,7 +8,8 @@
     "author": "Microsoft Corporation",
     "repository": {
         "type": "git",
-        "url": "https://github.com/microsoft/azure-pipelines-tasks-common-packages/tree/main/common-npm-packages/artifacts-common"
+        "url": "git+https://github.com/microsoft/azure-pipelines-tasks-common-packages.git",
+        "directory": "common-npm-packages/artifacts-common"
     },
     "license": "MIT",
     "dependencies": {

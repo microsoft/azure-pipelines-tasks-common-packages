@@ -3,6 +3,9 @@ import * as tl from "azure-pipelines-task-lib/task";
 import * as fs from 'fs';
 import ContainerConnection from "./containerconnection";
 
+const reservedImageName = "scratch";
+const reservedNameCheck = tl.getPipelineFeature('EnableDockerReservedNameCheck');
+
 export function hasRegistryComponent(imageName: string): boolean {
     var periodIndex = imageName.indexOf("."),
         colonIndex = imageName.indexOf(":"),
@@ -164,36 +167,26 @@ export function getImageDigest(connection: ContainerConnection, imageName: strin
 }
 
 function pullImage(connection: ContainerConnection, imageName: string) {
-    let pullCommand = connection.createCommand();
-    pullCommand.arg("pull");
-    pullCommand.arg(imageName);
-    let pullResult = pullCommand.execSync();
-
-    if (pullResult.stderr && pullResult.stderr != "") {
-        tl.debug(`An error was found pulling the image ${imageName}, the command output was ${pullResult.stderr}`);
+    if (reservedNameCheck) {
+        if (imageName.toLowerCase() != reservedImageName) {
+            pullImageReservedNameCheck(connection, imageName);
+        }
+    } else {
+        pullImageReservedNameCheck(connection, imageName);
     }
 }
 
 function inspectImage(connection: ContainerConnection, imageName): any {
     try {
-        let inspectCommand = connection.createCommand();
-        inspectCommand.arg("inspect");
-        inspectCommand.arg(imageName);
-        let inspectResult = inspectCommand.execSync();
-
-        if (inspectResult.stderr && inspectResult.stderr != "") {
-            tl.debug(`An error was found inspecting the image ${imageName}, the command output was ${inspectResult.stderr}`);
-            return null;
+        let inspectObj = null;
+        if (reservedNameCheck) {
+            if (imageName.toLowerCase() != reservedImageName) {
+                inspectObj = inspectImageReservedName(connection, imageName);
+            }
+        } else {
+            inspectObj = inspectImageReservedName(connection, imageName);
         }
-
-        let inspectObj = JSON.parse(inspectResult.stdout);
-
-        if (!inspectObj || inspectObj.length == 0) {
-            tl.debug(`Inspecting the image ${imageName} produced no results.`);
-            return null;
-        }
-
-        return inspectObj[0];
+        return inspectObj;
     } catch (error) {
         tl.debug(`An error ocurred running the inspect command: ${error.message}`);
         return null;
@@ -252,4 +245,99 @@ export function getImageIdFromBuildOutput(output: string): string {
     }
 
     return "";
+}
+export function getBaseImageDetialsFromDockerFIle(dockerFileContentPath: string, connection?: ContainerConnection):baseImageDetails {
+    // This method checks if there is FROM image@sha256:digest present in Dockerfile
+    // if matched it returns digest
+    // if not, it returns null
+
+    try {
+        var dockerFileContent = fs.readFileSync(dockerFileContentPath).toString();
+        if (!dockerFileContent || dockerFileContent == "") {
+            return null;
+        }
+        var lines = dockerFileContent.split(/[\r?\n]/);
+        var aliasToImageNameMapping: Map<string, string> = new Map<string, string>();
+        var baseImage = "";
+        const baseImageDetails = { name: "", digest: "" };
+
+        for (var i = 0; i < lines.length; i++) {
+            const currentLine = lines[i].trim();
+
+            if (!currentLine.toUpperCase().startsWith("FROM")) {
+                continue;
+            }
+            var nameComponents = currentLine.substring(4).toLowerCase().split(" as ");
+            var prospectImageName = nameComponents[0].trim();
+
+            if (nameComponents.length > 1) {
+                var alias = nameComponents[1].trim();
+
+                if (aliasToImageNameMapping.has(prospectImageName)) {
+                    aliasToImageNameMapping.set(alias, aliasToImageNameMapping.get(prospectImageName));
+                } else {
+                    aliasToImageNameMapping.set(alias, prospectImageName);
+                }
+
+                baseImage = aliasToImageNameMapping.get(alias);
+            } else {
+                baseImage = aliasToImageNameMapping.has(prospectImageName)
+                    ? aliasToImageNameMapping.get(prospectImageName)
+                    : prospectImageName;
+            }
+        }
+        baseImageDetails.name = baseImage.includes("$") ? null : sanityzeBaseImage(baseImage);// In this case the base image has an argument and we don't know what its real value is         
+
+        if (!connection) {
+            tl.debug("Image digest couldn't be extracted because no connection was found.");
+            return baseImageDetails;
+        }
+        else {
+            let baseImageData = baseImage.split('@');
+            if (baseImageData.length > 1) {
+                let digest = baseImageData[1].split(':');
+                if (digest.length > 1) {
+                    baseImageDetails.digest = digest[1];
+                }
+            } else {
+                baseImageDetails.digest = null;
+            }
+        }
+        return baseImageDetails;
+    } catch (error) {
+        tl.debug(`An error ocurred getting the base image details. ${error.message}`);
+        return null;
+    }
+}
+export class baseImageDetails{
+    name: string;
+    digest: string ;
+}
+function pullImageReservedNameCheck(connection: ContainerConnection, imageName: string) {
+    let pullCommand = connection.createCommand();
+    pullCommand.arg("pull");
+    pullCommand.arg(imageName);
+    let pullResult = pullCommand.execSync();
+    if (pullResult.stderr && pullResult.stderr != "") {
+        tl.debug(`An error was found pulling the image ${imageName}, the command output was ${pullResult.stderr}`);
+    }
+}
+function inspectImageReservedName(connection: ContainerConnection, imageName): any {
+        let inspectCommand = connection.createCommand();
+        inspectCommand.arg("inspect");
+        inspectCommand.arg(imageName);
+        let inspectResult = inspectCommand.execSync();
+
+        if (inspectResult.stderr && inspectResult.stderr != "") {
+            tl.debug(`An error was found inspecting the image ${imageName}, the command output was ${inspectResult.stderr}`);
+            return null;
+        }
+
+        let inspectObj = JSON.parse(inspectResult.stdout);
+
+        if (!inspectObj || inspectObj.length == 0) {
+            tl.debug(`Inspecting the image ${imageName} produced no results.`);
+            return null;
+        }
+        return inspectObj[0];
 }

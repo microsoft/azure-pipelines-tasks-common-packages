@@ -1,8 +1,19 @@
 import assert = require("assert");
+import sinon = require("sinon");
+import * as tl from "azure-pipelines-task-lib/task"; // Adjust the import path as needed
 import { getMSDeployCmdArgs, getWebDeployErrorCode } from "../msdeployutility";
 
 export function runGetMSDeployCmdArgsTests() {
+    let getPipelineFeatureStub: sinon.SinonStub;
 
+    before(() => {
+        getPipelineFeatureStub = sinon.stub(tl, "getPipelineFeature");
+        getPipelineFeatureStub.withArgs("CommaSeperatedConnectionString").returns(true); // or whatever value you want to mock
+    });
+
+    after(() => {
+        getPipelineFeatureStub.restore();
+    });
     it('Should produce default valid args', () => {
         const profile = createDefaultPublishProfile();
         const args = getMSDeployCmdArgs('package.zip', 'webapp_name', profile, true, false, true, null, null, null, true, false, false);
@@ -72,6 +83,36 @@ export function runGetMSDeployCmdArgsTests() {
         const args = getMSDeployCmdArgs('package.zip', 'webapp_name', profile, false, true, true, null, null, '-retryAttempts:11 -retryInterval:5000', false, false, true);
 
         checkParametersIfPresent(args, ['-retryAttempts:11', '-retryInterval:5000']);
+    });
+    it('Should CSstring encode correctly', () => {
+        const profile = createDefaultPublishProfile();
+        tl.getPipelineFeature("CommaSeperatedConnectionString");
+        const args = getMSDeployCmdArgs('package.zip', 'webapp_name', profile, false, true, true, null, null, '"-retryAttempts:11 -retryInterval:5000 -setParam:name=\'ConnectionString\',value=\'Encrypt=True;TrustServerCertificate=False;Data Source=some-sql-server.database.windows.net,1433;Initial Catalog=some-database;User Id=someuser;Password=somepassword;\'', false, false, true);
+        checkParametersIfPresent(args, ['-retryAttempts:11', '-retryInterval:5000', '-setParam:name="\"ConnectionString\"",value="\"Encrypt=True;TrustServerCertificate=False;Data Source=some-sql-server.database.windows.net,1433;Initial Catalog=some-database;User Id=someuser;Password=somepassword;\""']);
+        const CSstring = '-setParam:name="\\"ConnectionString\\"",value="\\"Encrypt=True;TrustServerCertificate=False;Data Source=some-sql-server.database.windows.net,1433;Initial Catalog=some-database;User Id=someuser;Password=somepassword;\\""';
+        assert.ok(args.includes(CSstring));
+    });
+    it('Should CSstring encode in-correctly', () => {
+        getPipelineFeatureStub.withArgs("CommaSeperatedConnectionString").returns(false);
+        const profile = createDefaultPublishProfile();
+        const args = getMSDeployCmdArgs('package.zip', 'webapp_name', profile, false, true, true, null, null, '"-retryAttempts:11 -retryInterval:5000 -setParam:name=\'ConnectionString\',value=\'Encrypt=True;TrustServerCertificate=False;Data Source=some-sql-server.database.windows.net,1433;Initial Catalog=some-database;User Id=someuser;Password=somepassword;\'', false, false, true);
+        const CSstring = '-setParam:name="ConnectionString",value="Encrypt=True;TrustServerCertificate=False;Data Source=some-sql-server.database.windows.net,1433;Initial Catalog=some-database;User Id=someuser;Password=somepassword;"';
+        assert.ok(!args.includes(CSstring));
+        checkParametersIfPresent(args, ['-retryAttempts:11', '-retryInterval:5000', '-setParam:name="\"ConnectionString\"",value="\"Encrypt=True;TrustServerCertificate=False;Data Source=some-sql-server.database.windows.net,1433;Initial Catalog=some-database;User Id=someuser;Password=somepassword;\""']);
+    });
+    it('Should encrypt skip directives correctly', () => {
+        getPipelineFeatureStub.withArgs("CommaSeperatedConnectionString").returns(true);
+        const profile = createDefaultPublishProfile();
+        const args = getMSDeployCmdArgs('package.zip', 'webapp_name', profile, false, true, true, null, null, '-skip:objectName=filePath,absolutePath="\\web\.config"', false, false, true);
+        const skipsubstring = '-skip:objectName=filePath,absolutePath="\\"\\web.config\\""';
+        checkParametersIfPresent(args, ['-skip:objectName=filePath,absolutePath="\\"\\web.config\\""']);
+        assert.ok(args.includes(skipsubstring));
+    });
+    it('Should encrypt skip directives in-correctly', () => {
+        getPipelineFeatureStub.withArgs("CommaSeperatedConnectionString").returns(true);
+        const profile = createDefaultPublishProfile();
+        const args = getMSDeployCmdArgs('package.zip', 'webapp_name', profile, false, true, true, null, null, '"-retryAttempts:11 -retryInterval:5000 -setParam:name=\'ConnectionString\',value=\'Encrypt=True;TrustServerCertificate=False;Data Source=some-sql-server.database.windows.net,1433;Initial Catalog=some-database;User Id=someuser;Password=somepassword;\' -skip:objectName=filePath data source,absolutePath="\\web\.config"', false, false, true);
+        assert.ok(!args.includes('-skip:objectName=filePath data source,absolutePath="\\web.config"'));
     });
 
     function checkParametersIfPresent(argumentString: string, argumentCheckArray: string[]): void {

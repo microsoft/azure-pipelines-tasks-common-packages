@@ -1,19 +1,21 @@
-import tl = require('azure-pipelines-task-lib/task');
-import Q = require('q');
-import querystring = require('querystring');
-import webClient = require("./webClient");
-import AzureModels = require("./azureModels");
-import constants = require('./constants');
-import path = require('path');
+import crypto = require('crypto');
 import fs = require('fs');
-import jwt = require('jsonwebtoken');
-import crypto = require("crypto");
+import path = require('path');
+import querystring = require('querystring');
+
 import { Mutex } from 'async-mutex';
+import { getHandlerFromToken, WebApi } from 'azure-devops-node-api';
+import tl = require('azure-pipelines-task-lib/task');
 import HttpsProxyAgent = require('https-proxy-agent');
 import fetch = require('node-fetch');
-import { getHandlerFromToken, WebApi } from "azure-devops-node-api";
-import { ITaskApi } from "azure-devops-node-api/TaskApi";
-import TaskAgentInterfaces = require("azure-devops-node-api/interfaces/TaskAgentInterfaces");
+import jwt = require('jsonwebtoken');
+import Q = require('q');
+
+import azCliUtility = require('./azCliUtility');
+import AzureModels = require('./azureModels');
+import constants = require('./constants');
+import webClient = require('./webClient');
+import { ManagedIdentityCredential, WorkloadIdentityCredential, ClientSecretCredential, ClientCertificateCredential } from "@azure/identity";
 
 // Important note! Since the msal v2.** doesn't work with Node 10, and we still need to support Node 10 execution handler, a dynamic msal loading was implemented.
 // Dynamic loading imposes restrictions on type validation when compiling TypeScript and we can't use it in this case.
@@ -22,10 +24,19 @@ import TaskAgentInterfaces = require("azure-devops-node-api/interfaces/TaskAgent
 
 /// Dynamic msal loading based on the node version
 const nodeVersion = parseInt(process.version.split('.')[0].replace('v', ''));
-const msalVer = nodeVersion < 16 ? "msalv1": "msalv2";
+let msalVer;
+if (tl.getPipelineFeature('EnableMsalV3')) {
+    msalVer = nodeVersion < 16 ? "msalv1": "msalv3";
+} else {
+    msalVer = nodeVersion < 16 ? "msalv1": "msalv2";
+}
+
+// Maximum backoff timeout for creating AAD token in milliseconds
+const MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT = 15000;
 
 tl.debug('Using ' + msalVer);
 const msal = require(msalVer);
+
 ///
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
@@ -49,6 +60,8 @@ export class ApplicationTokenCredentials {
     private token_deferred: Q.Promise<string>;
     private useMSAL: boolean;
     private msalInstance: any; //msal.ConfidentialClientApplication
+    private scopes: any;
+    private allowScopeLevelToken: boolean;
 
     private readonly tokenMutex: Mutex;
 
@@ -67,7 +80,9 @@ export class ApplicationTokenCredentials {
         certFilePath?: string,
         isADFSEnabled?: boolean,
         access_token?: string,
-        useMSAL?: boolean) {
+        useMSAL?: boolean,
+        allowScopeLevelToken?: boolean,
+        scopes?: any) {
 
         if (!Boolean(connectedServiceName) || typeof tenantId.valueOf() !== 'string') {
             throw new Error(tl.loc("serviceConnectionIdCannotBeEmpty"));
@@ -134,6 +149,8 @@ export class ApplicationTokenCredentials {
         this.accessToken = access_token;
 
         this.useMSAL = useMSAL;
+        this.scopes = scopes;
+        this.allowScopeLevelToken = allowScopeLevelToken || false;
         this.tokenMutex = new Mutex();
     }
 
@@ -207,7 +224,7 @@ export class ApplicationTokenCredentials {
         }
     }
 
-    private static async initOIDCToken(connection: WebApi, projectId: string, hub: string, planId: string, jobId: string, serviceConnectionId: string, retryCount: number, timeToWait: number): Promise<string> {
+    private static async initOIDCToken(connection: WebApi, projectId: string, hub: string, planId: string, jobId: string, serviceConnectionId: string, retryCount: number = 0, timeToWait: number = 2000): Promise<string> {
         let error: any;
         for (let i = retryCount > 0 ? retryCount : 3; i > 0; i--) {
             try {
@@ -218,11 +235,11 @@ export class ApplicationTokenCredentials {
                     return response.oidcToken;
                 }
             } catch (e: any) {
-                error = e;            
+                error = e;
             }
             await new Promise(r => setTimeout(r, timeToWait));
             tl.debug(`Retrying OIDC token fetch. Retries left: ${i}`);
-        } 
+        }
 
         let message = tl.loc('CouldNotFetchAccessTokenforAAD');
         if (error) {
@@ -301,6 +318,7 @@ export class ApplicationTokenCredentials {
     private async buildMSAL(): Promise<any> /*Promise<msal.ConfidentialClientApplication>*/ {
         // default configuration
         const authorityURL = (new URL(this.tenantId, this.authorityUrl)).toString();
+        const isDebug = tl.getVariable("system.debug") && tl.getVariable("system.debug").toLowerCase() === "true";
 
         const msalConfig: any /*msal.Configuration*/ = {
             auth: {
@@ -309,11 +327,11 @@ export class ApplicationTokenCredentials {
             },
             system: {
                 loggerOptions: {
-                    loggerCallback(loglevel, message, containsPii) {
-                        loglevel == msal.LogLevel.Error ? tl.error(message) : tl.debug(message);
+                    loggerCallback(loglevel, message, _) {
+                        loglevel === msal.LogLevel.Error ? tl.error(message) : tl.debug(message);
                     },
-                    piiLoggingEnabled: false,
-                    logLevel: msal.LogLevel.Info,
+                    piiLoggingEnabled: isDebug,
+                    logLevel: isDebug ? msal.LogLevel.Trace : msal.LogLevel.Info,
                 }
             }
         };
@@ -414,6 +432,7 @@ export class ApplicationTokenCredentials {
                     // thumbprint
                     const certEncoded = certFile.match(/-----BEGIN CERTIFICATE-----\s*([\s\S]+?)\s*-----END CERTIFICATE-----/i)[1];
                     const certDecoded = Buffer.from(certEncoded, "base64");
+                    // CodeQL [SM01510] External Dependency: Azure CLI generated certificates support only sha1 // CodeQL [SM04514] External Dependency: Azure CLI generated certificates support only sha1
                     const thumbprint = crypto.createHash("sha1").update(certDecoded).digest("hex").toUpperCase();
 
                     if (!thumbprint) {
@@ -446,18 +465,24 @@ export class ApplicationTokenCredentials {
     }
 
     public async getFederatedToken(): Promise<string> {
-        const projectId: string = tl.getVariable("System.TeamProjectId");
-        const hub: string = tl.getVariable("System.HostType");
+        const projectId: string = tl.getVariable('System.TeamProjectId');
+        const hub: string = tl.getVariable('System.HostType');
         const planId: string = tl.getVariable('System.PlanId');
         const jobId: string = tl.getVariable('System.JobId');
-        let uri = tl.getVariable("System.CollectionUri");
+        let uri = tl.getVariable('System.CollectionUri');
+
         if (!uri) {
-            uri = tl.getVariable("System.TeamFoundationServerUri");
+            uri = tl.getVariable('System.TeamFoundationServerUri');
         }
 
         const token = ApplicationTokenCredentials.getSystemAccessToken();
         const authHandler = getHandlerFromToken(token);
         const connection = new WebApi(uri, authHandler);
+
+        if (tl.getPipelineFeature("UseOIDCToken2InAzureArmRest")) {
+            return azCliUtility.initOIDCToken2(connection, projectId, hub, planId, jobId, this.connectedServiceName);
+        }
+
         const oidc_token: string = await ApplicationTokenCredentials.initOIDCToken(
             connection,
             projectId,
@@ -472,7 +497,7 @@ export class ApplicationTokenCredentials {
     }
 
     private async configureMSALWithOIDC(msalConfig: any /*msal.Configuration*/): Promise<any> /*Promise<msal.ConfidentialClientApplication>*/ {
-        tl.debug("MSAL - FederatedAccess - OIDC is used.");
+        tl.debug('MSAL - FederatedAccess - OIDC is used.');
 
         msalConfig.auth.clientAssertion = await this.getFederatedToken();
 
@@ -486,7 +511,6 @@ export class ApplicationTokenCredentials {
         if (force) {
             msalApp.clearCache();
         }
-
         try {
             const request: any /*msal.ClientCredentialRequest*/ = {
                 scopes: [this.activeDirectoryResourceId + "/.default"]
@@ -499,8 +523,8 @@ export class ApplicationTokenCredentials {
                 tl.debug(`MSAL - retrying getMSALToken - temporary error code: ${error.errorCode}`);
                 tl.debug(`MSAL - retrying getMSALToken - remaining attempts: ${retryCount}`);
 
-                await new Promise(r => setTimeout(r, retryWaitMS));
-                return await this.getMSALToken(force, (retryCount - 1), retryWaitMS);
+                await new Promise(r => setTimeout(r, Math.min(retryWaitMS, MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT)));
+                return await this.getMSALToken(force, (retryCount - 1), retryWaitMS * 2);
             }
 
             if (error.errorMessage && error.errorMessage.toString().startsWith("7000222")) {
@@ -513,6 +537,59 @@ export class ApplicationTokenCredentials {
             } else {
                 throw new Error(tl.loc('CouldNotFetchAccessTokenforAzureStatusCode', error.errorCode, error.errorMessage));
             }
+        }
+    }
+
+    public async acquireTokenForScope(scopeKind: string): Promise<string> {
+        tl.debug(`acquireTokenForScope called with scopeKind: ${scopeKind}`);
+        try {
+            if (this.allowScopeLevelToken && this.scopes && this.scopes[scopeKind]) {
+                tl.debug(`allowScopeLevelToken is enabled, using scope: ${this.scopes[scopeKind]}`);
+                const credential = await this.buildCredentialByScheme();
+                const tokenResponse = await credential.getToken(this.scopes[scopeKind]);
+                return tokenResponse.token;
+            } else {
+                tl.debug(`allowScopeLevelToken is disabbled`);
+                return await this.getToken();
+            }
+        } catch (error) {
+            tl.debug(`acquireTokenForScopes - error: ${error}`);
+            throw new Error(tl.loc('CouldNotFetchAccessTokenforAzureStatusCode', error.errorCode, error.errorMessage));
+        }
+    }
+
+    private async buildCredentialByScheme(): Promise<any> {
+        tl.debug(`buildCredentialByScheme called. scheme = ${AzureModels.Scheme[this.scheme]}`);
+        switch (this.scheme) {
+            case AzureModels.Scheme.ManagedServiceIdentity:
+                tl.debug('Using ManagedIdentityCredential for MSI');
+                return new ManagedIdentityCredential(this.msiClientId);
+
+            case AzureModels.Scheme.WorkloadIdentityFederation:
+                tl.debug('Using WorkloadIdentityCredential for OIDC');
+                const federatedToken = await this.getFederatedToken();
+                const tokenFilePath = path.join(
+                    tl.getVariable('Agent.TempDirectory') || tl.getVariable('system.DefaultWorkingDirectory'),
+                    'token.jwt'
+                );
+                fs.writeFileSync(tokenFilePath, federatedToken);
+
+                return new WorkloadIdentityCredential({
+                    tenantId: this.tenantId,
+                    clientId: this.clientId,
+                    tokenFilePath: tokenFilePath
+                });
+
+            case AzureModels.Scheme.SPN:
+            default:
+                tl.debug('Using specific credential for Service Principal');
+                if (this.authType === constants.AzureServicePrinicipalAuthentications.servicePrincipalKey) {
+                    tl.debug('Using ClientSecretCredential for key-based SPN');
+                    return new ClientSecretCredential(this.tenantId, this.clientId, this.secret);
+                } else {
+                    tl.debug('Using ClientCertificateCredential for certificate-based SPN');
+                    return new ClientCertificateCredential(this.tenantId, this.clientId, this.certFilePath);
+                }
         }
     }
 
@@ -571,7 +648,7 @@ export class ApplicationTokenCredentials {
 
         let webRequestOptions: webClient.WebRequestOptions = {
             retriableErrorCodes: null,
-            retriableStatusCodes: [400, 408, 409, 500, 502, 503, 504],
+            retriableStatusCodes: [400, 408, 409, 429, 500, 502, 503, 504],
             retryCount: null,
             retryIntervalInSeconds: null,
             retryRequestTimedout: null
@@ -617,7 +694,7 @@ export class ApplicationTokenCredentials {
 
         let webRequestOptions: webClient.WebRequestOptions = {
             retriableErrorCodes: null,
-            retriableStatusCodes: [400, 403, 408, 409, 500, 502, 503, 504],
+            retriableStatusCodes: [400, 403, 408, 409, 429, 500, 502, 503, 504],
             retryCount: null,
             retryIntervalInSeconds: null,
             retryRequestTimedout: null
@@ -643,12 +720,24 @@ export class ApplicationTokenCredentials {
         return deferred.promise;
     }
 
+    public getOpenSSLPath() {
+        if (tl.osType().match(/^Win/)) {
+            if (tl.getPipelineFeature("UseOpenSSLv3.4.2InAzureArmRest")) {
+                return tl.which(path.join(__dirname, 'openssl3.4.2', 'openssl'));
+            } else {
+                return tl.which(path.join(__dirname, 'openssl3.4.0', 'openssl'));
+            }
+        } else {
+            return tl.which('openssl');
+        }
+    }
+
     /**
      * @deprecated ADAL related methods are deprecated and will be removed.
      * Use Use `getMSALToken(force?: boolean)` instead.
      */
     private _getSPNCertificateAuthorizationToken(): string {
-        var openSSLPath = tl.osType().match(/^Win/) ? tl.which(path.join(__dirname, 'openssl', 'openssl')) : tl.which('openssl');
+        var openSSLPath = this.getOpenSSLPath();
         var openSSLArgsArray = [
             "x509",
             "-sha1",
@@ -657,7 +746,7 @@ export class ApplicationTokenCredentials {
             this.certFilePath,
             "-fingerprint"
         ];
-
+        tl.debug(`The OpenSSL version is ${tl.execSync(openSSLPath, 'version')}`);
         var pemExecutionResult = tl.execSync(openSSLPath, openSSLArgsArray);
         var additionalHeaders = {
             "alg": "RS256",

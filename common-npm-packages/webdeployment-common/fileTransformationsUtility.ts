@@ -140,7 +140,7 @@ export function enhancedFileTransformations(isFolderBasedDeployment: boolean, xm
                 console.log(tl.loc("XDTTransformationsappliedsuccessfully"));
             }
             else {
-                tl.error(tl.loc('FailedToApplySpecialTransformationReason1'));
+                tl.warning(tl.loc('FailedToApplySpecialTransformationReason1'));
             }
         }
     }
@@ -161,13 +161,17 @@ export function enhancedFileTransformations(isFolderBasedDeployment: boolean, xm
     }
 
     isSubstitutionApplied = true;
+    let InputErrors = tl.getBoolInput('errorOnInvalidSubstitution', false);
     if(jsonTargetFiles.length > 0)
     {
         isSubstitutionApplied = jsonSubstitutionUtility.jsonVariableSubstitution(folderPath, jsonTargetFiles, true);
         if(isSubstitutionApplied) {
             console.log(tl.loc('JSONvariablesubstitutionappliedsuccessfully'));
         }
-        else {
+        else if(InputErrors) {
+            throw Error(tl.loc('FailedToApplyJSONvariablesubstitutionReason1'));
+        }
+        else{
             tl.error(tl.loc('FailedToApplyJSONvariablesubstitutionReason1'));
         }
     }

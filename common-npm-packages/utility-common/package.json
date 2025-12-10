@@ -1,10 +1,11 @@
 {
     "name": "azure-pipelines-tasks-utility-common",
-    "version": "3.246.0",
+    "version": "3.266.0",
     "description": "Common Library for Azure Rest Calls",
     "repository": {
         "type": "git",
-        "url": "git+ssh://git@github.com/Microsoft/azure-pipelines-tasks.git"
+        "url": "git+https://github.com/microsoft/azure-pipelines-tasks-common-packages.git",
+        "directory": "common-npm-packages/utility-common"
     },
     "scripts": {
         "build": "node make.js",
@@ -13,14 +14,14 @@
     "author": "Microsoft Corporation",
     "license": "MIT",
     "bugs": {
-        "url": "https://github.com/Microsoft/azure-pipelines-tasks/issues"
+        "url": "https://github.com/microsoft/azure-pipelines-tasks-common-packages/issues"
     },
-    "homepage": "https://github.com/Microsoft/azure-pipelines-tasks#readme",
+    "homepage": "https://github.com/microsoft/azure-pipelines-tasks-common-packages#readme",
     "dependencies": {
         "@types/node": "~16.11.39",
         "azure-pipelines-task-lib": "^4.11.0",
         "azure-pipelines-tool-lib": "^2.0.7",
-        "js-yaml": "3.13.1",
+        "js-yaml": "^3.14.2",
         "semver": "^5.7.2",
         "typed-rest-client": "2.1.0"
     },
