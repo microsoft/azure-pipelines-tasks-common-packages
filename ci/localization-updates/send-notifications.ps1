@@ -33,6 +33,12 @@ if ($IsPRCreated) {
     $titleText = "Azure Pipelines $RepoName Localization update PR created - ID $($env:PR_NUMBER)"
     $messageText = "Created $RepoName Localization update PR. Please review and approve/merge $pullRequestLink. Related article in $wikiLink."
     $themeColor = "#FFFF00"
+
+    Write-Host "IsPRCreated: $IsPRCreated"
+    Write-Host "PR_NUMBER: '$($env:PR_NUMBER)'"
+    Write-Host "PR_LINK: '$($env:PR_LINK)'"
+    Write-Host "RepoName: '$RepoName'"
+    
 }
 else {
     $buildUrl = "$env:SYSTEM_TEAMFOUNDATIONCOLLECTIONURI$env:SYSTEM_TEAMPROJECT/_build/results?buildId=$($env:BUILD_BUILDID)&_a=summary"
