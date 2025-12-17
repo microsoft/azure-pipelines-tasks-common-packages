@@ -92,4 +92,21 @@ export class NuGetExeXmlHelper implements INuGetXmlHelper {
         // short run, use execSync
         nugetTool.execSync();
     }
+
+    UpdatePackageSourceMappingKey(oldKey: string, newKey: string): void {
+        let xmlString = fs.readFileSync(this._nugetConfigPath).toString();
+        if (xmlString.charCodeAt(0) === 0xFEFF) {
+            xmlString = xmlString.substr(1);
+        }
+        const regex = new RegExp(`(<packageSource\\s+key\\s*=\\s*["'])${this._escapeRegExp(oldKey)}(["'])`, 'g');
+        const updatedXmlString = xmlString.replace(regex, `$1${newKey}$2`);
+        if (xmlString !== updatedXmlString) {
+            tl.debug(`Updating packageSourceMapping key from '${oldKey}' to '${newKey}'`);
+            fs.writeFileSync(this._nugetConfigPath, updatedXmlString);
+        }
+    }
+
+    private _escapeRegExp(string: string): string {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
 }

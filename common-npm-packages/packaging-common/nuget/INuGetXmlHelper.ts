@@ -8,4 +8,6 @@ export interface INuGetXmlHelper {
     RemoveSourceFromNuGetConfig(name: string): void;
 
     SetApiKeyInNuGetConfig(source: string, apiKey: string): void;
+
+    UpdatePackageSourceMappingKey(oldKey: string, newKey: string): void;
 }
