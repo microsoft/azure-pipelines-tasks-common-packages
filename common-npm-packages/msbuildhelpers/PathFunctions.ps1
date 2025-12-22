@@ -557,11 +557,11 @@ function Select-MSBuildPath {
             }
         }
 
-        # Error. Not found. Throw to ensure task fails immediately.
+        # Error. Not found.
         if ($specificVersion) {
-            throw (Get-VstsLocString -Key 'MSB_MSBuildNotFoundVersion0Architecture1' -ArgumentList $PreferredVersion, $Architecture)
+            Write-Error (Get-VstsLocString -Key 'MSB_MSBuildNotFoundVersion0Architecture1' -ArgumentList $PreferredVersion, $Architecture)
         } else {
-            throw (Get-VstsLocString -Key 'MSB_MSBuildNotFound')
+            Write-Error (Get-VstsLocString -Key 'MSB_MSBuildNotFound')
         }
     } finally {
         Trace-VstsLeavingInvocation $MyInvocation
