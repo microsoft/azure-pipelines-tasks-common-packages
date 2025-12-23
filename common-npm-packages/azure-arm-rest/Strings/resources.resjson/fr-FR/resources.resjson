@@ -181,7 +181,7 @@
   "loc.messages.MysqlServerNameCannotBeEmpty": "Le nom du serveur MySQL ne doit pas avoir une valeur null.",
   "loc.messages.FirewallRuleNameCannotBeNull": "Le nom de la règle de pare-feu ne doit pas avoir une valeur null.",
   "loc.messages.RenameLockedFilesEnabled": "Le renommage des fichiers verrouillés est activé pour App Service.",
-  "loc.messages.StorageAccountDoesNotExist": "Échec de l’obtention du compte de stockage Azure nommé %s.",
+  "loc.messages.StorageAccountDoesNotExist": "Échec de l'obtention du compte de stockage Azure nommé %s.",
   "loc.messages.UpdatedAppServiceApplicationSettings": "Mise à jour effectuée des paramètres d'application d'App Service et des paramètres d'application de Kudu.",
   "loc.messages.UpdatedAppServiceConfigurationSettings": "Mise à jour effectuée des paramètres de configuration d'App Service.",
   "loc.messages.UpdatingAppServiceApplicationSettings": "Mise à jour des paramètres de l'application App Service. Des données",
