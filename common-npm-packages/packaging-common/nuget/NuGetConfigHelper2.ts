@@ -98,11 +98,13 @@ export class NuGetConfigHelper2 {
                     // https://github.com/NuGet/Home/issues/7517
                     // https://github.com/NuGet/Home/issues/7524
                     // so working around this by prefixing source with string
+                    const oldFeedName = source.feedName;
                     tl.debug('Prefixing internal source feed name ' + source.feedName + ' with feed-');
                     source.feedName = 'feed-' + source.feedName;
 
                     // Re-adding source with creds
                     this.addSourceWithUsernamePasswordToTempNuGetConfig(source, "VssSessionToken", this.authInfo.internalAuthInfo.accessToken);
+                    this.updatePackageSourceMappingKey(oldFeedName, source.feedName);
                 }
             }
             // Source is external
@@ -197,6 +199,11 @@ export class NuGetConfigHelper2 {
     private setApiKeyForSourceInTempNuGetConfig(source: IPackageSource, apiKey: string)
     {
         this.nugetXmlHelper.SetApiKeyInNuGetConfig(source.feedName, apiKey);
+    }
+
+    private updatePackageSourceMappingKey(oldKey: string, newKey: string)
+    {
+        this.nugetXmlHelper.UpdatePackageSourceMappingKey(oldKey, newKey);
     }
 
     private convertToIPackageSource(source: auth.IPackageSourceBase): IPackageSource {
