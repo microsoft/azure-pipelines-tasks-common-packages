@@ -15,10 +15,10 @@ var winSevenZipLocation: string = getWinSevenZipLocation();
 
 function getWinSevenZipLocation(): string {
     if (tl.getPipelineFeature("Use7zV2501InUtilityCommonPackage")) {
-        return path.join(__dirname, 'tools/7zip25/7z.exe');
+        return path.join(__dirname, 'tools/7zip25/7zip/7z.exe');
     }
     else {
-        return path.join(__dirname, 'tools/7zip24/7z.exe');
+        return path.join(__dirname, 'tools/7zip24/7zip/7z.exe');
     }
 }
 
