@@ -181,7 +181,7 @@
   "loc.messages.MysqlServerNameCannotBeEmpty": "El nombre del servidor MySQL no puede ser un valor null.",
   "loc.messages.FirewallRuleNameCannotBeNull": "El nombre de la regla de firewall no puede ser un valor null.",
   "loc.messages.RenameLockedFilesEnabled": "La opción Cambiar nombre de archivos bloqueados está habilitada para la instancia de App Service.",
-  "loc.messages.StorageAccountDoesNotExist": "No se pudo obtener la cuenta de almacenamiento de Azure con el nombre %s.",
+  "loc.messages.StorageAccountDoesNotExist": "No se ha podido obtener la cuenta de Azure Storage con el nombre %s.",
   "loc.messages.UpdatedAppServiceApplicationSettings": "Se han actualizado la configuración de aplicación de App Service y la configuración de aplicación de Kudu.",
   "loc.messages.UpdatedAppServiceConfigurationSettings": "Se han actualizado los valores de configuración de App Service.",
   "loc.messages.UpdatingAppServiceApplicationSettings": "Actualizando la configuración de aplicación de App Service. Datos: %s",
