@@ -62,7 +62,7 @@ stages:
         repoType: 'gitHub'
         prSourceBranchPrefix: 'Localize'
         gitHubPatVariable: '$(GitHubPAT)'
-        isAutoCompletePrSelected: false
+        isAutoCompletePrSelected: true
         gitHubPrMergeMethod: 'squash'
         isDeletePrSourceBranchSelected: false
       env:
