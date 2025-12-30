@@ -35,6 +35,13 @@ jobs:
       npm run test
     displayName: Test Common Npm packages
 
+  - task: PowerShell@2
+    displayName: 'Validate Localization Keys'
+    inputs:
+      filePath: 'collect-tl-loc-args.ps1'
+      arguments: '-CI -FailOnMissing'
+      pwsh: true
+
   - task: PublishTestResults@2
     displayName: Publish JUnit Results
     inputs:
