@@ -104,15 +104,13 @@ export class NuGetConfigHelper2 {
                     // https://github.com/NuGet/Home/issues/7524
                     // so working around this by prefixing source with string
                      
-                    // so working around this by prefixing source with string
                     tl.debug('Prefixing internal source feed name ' + source.feedName + ' with feed-');
 
-                  // NEW: remember mapping (original → prefixed) for later synchronization
+                  // mapping (original → prefixed)
                     const originalKey = source.feedName;
                     const prefixedKey = 'feed-' + originalKey;
                     this.internalSourceKeyMap.set(originalKey, prefixedKey);
 
-                     // existing prefixing
                      source.feedName = prefixedKey;
 
                     // Re-adding source with creds
