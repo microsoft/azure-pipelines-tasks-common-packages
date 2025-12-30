@@ -128,6 +128,7 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
                 else {
                     deferred.reject(tl.loc('CouldNotFetchAccessTokenforMSIDueToACRNotConfiguredProperlyStatusCode', response.statusCode, response.statusMessage));
                 }
+
             },
             (error) => {
                 deferred.reject(error)
