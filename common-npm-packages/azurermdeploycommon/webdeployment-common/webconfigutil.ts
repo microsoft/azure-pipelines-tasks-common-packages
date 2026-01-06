@@ -94,15 +94,15 @@ export function addWebConfigFile(folderPath: any, webConfigParameters, rootDirec
                     selectedAppTypeParams['DJANGO_SETTINGS_MODULE'] = getDjangoSettingsFile(folderPath);
                 }
             } else if(appType == 'Go') {
-                if (util.isNullOrUndefined(webConfigParameters['GoExeFileName'])
-                        || util.isNullOrUndefined(webConfigParameters['GoExeFileName'].value) 
+                if (webConfigParameters['GoExeFileName'] === null || webConfigParameters['GoExeFileName'] === undefined
+                        || webConfigParameters['GoExeFileName'].value === null || webConfigParameters['GoExeFileName'].value === undefined 
                         || webConfigParameters['GoExeFileName'].value.length <=0) {
                     throw Error(tl.loc('GoExeNameNotPresent'));
                 }
                 selectedAppTypeParams['GoExeFilePath'] = rootDirectoryPath + "\\" + webConfigParameters['GoExeFileName'].value;
             } else if(appType == 'java_springboot') {
-                if (util.isNullOrUndefined(webConfigParameters['JAR_PATH'])
-                || util.isNullOrUndefined(webConfigParameters['JAR_PATH'].value) 
+                if (webConfigParameters['JAR_PATH'] === null || webConfigParameters['JAR_PATH'] === undefined
+                || webConfigParameters['JAR_PATH'].value === null || webConfigParameters['JAR_PATH'].value === undefined 
                 || webConfigParameters['JAR_PATH'].value.length <= 0) {
                     throw Error(tl.loc('JarPathNotPresent'));
                 }
