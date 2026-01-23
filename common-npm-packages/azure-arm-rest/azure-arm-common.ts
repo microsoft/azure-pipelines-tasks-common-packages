@@ -15,11 +15,10 @@ import azCliUtility = require('./azCliUtility');
 import AzureModels = require('./azureModels');
 import constants = require('./constants');
 import webClient = require('./webClient');
-import { ManagedIdentityCredential, WorkloadIdentityCredential, ClientSecretCredential, ClientCertificateCredential } from "@azure/identity";
 
-// Important note! Since the msal v2.** doesn't work with Node 10, and we still need to support Node 10 execution handler, a dynamic msal loading was implemented.
+// Important note! Since the msal v2.** and @azure/identity don't work with Node 10, and we still need to support Node 10 execution handler, a dynamic loading was implemented.
 // Dynamic loading imposes restrictions on type validation when compiling TypeScript and we can't use it in this case.
-// For this reason, all msal types were temporarily replaced with 'any' type.
+// For this reason, all msal types and @azure/identity types were temporarily replaced with 'any' type.
 // When the support for Node 10 is dropped, the types should be restored and the dynamic loading should be removed.
 
 /// Dynamic msal loading based on the node version
@@ -36,6 +35,14 @@ const MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT = 15000;
 
 tl.debug('Using ' + msalVer);
 const msal = require(msalVer);
+
+/// Dynamic @azure/identity loading based on the node version
+/// The @azure/identity package depends on @azure/msal-node which uses modern JavaScript features like optional chaining
+/// that are not supported in Node 10. We only load it when running on Node 14+.
+let azureIdentity: any;
+if (nodeVersion >= 16) {
+    azureIdentity = require("@azure/identity");
+}
 
 ///
 
@@ -560,10 +567,15 @@ export class ApplicationTokenCredentials {
 
     private async buildCredentialByScheme(): Promise<any> {
         tl.debug(`buildCredentialByScheme called. scheme = ${AzureModels.Scheme[this.scheme]}`);
+        
+        if (!azureIdentity) {
+            throw new Error(`@azure/identity is not supported on Node ${nodeVersion}. Please use Node 16 or higher for this authentication scheme.`);
+        }
+
         switch (this.scheme) {
             case AzureModels.Scheme.ManagedServiceIdentity:
                 tl.debug('Using ManagedIdentityCredential for MSI');
-                return new ManagedIdentityCredential(this.msiClientId);
+                return new azureIdentity.ManagedIdentityCredential(this.msiClientId);
 
             case AzureModels.Scheme.WorkloadIdentityFederation:
                 tl.debug('Using WorkloadIdentityCredential for OIDC');
@@ -574,7 +586,7 @@ export class ApplicationTokenCredentials {
                 );
                 fs.writeFileSync(tokenFilePath, federatedToken);
 
-                return new WorkloadIdentityCredential({
+                return new azureIdentity.WorkloadIdentityCredential({
                     tenantId: this.tenantId,
                     clientId: this.clientId,
                     tokenFilePath: tokenFilePath
@@ -585,10 +597,10 @@ export class ApplicationTokenCredentials {
                 tl.debug('Using specific credential for Service Principal');
                 if (this.authType === constants.AzureServicePrinicipalAuthentications.servicePrincipalKey) {
                     tl.debug('Using ClientSecretCredential for key-based SPN');
-                    return new ClientSecretCredential(this.tenantId, this.clientId, this.secret);
+                    return new azureIdentity.ClientSecretCredential(this.tenantId, this.clientId, this.secret);
                 } else {
                     tl.debug('Using ClientCertificateCredential for certificate-based SPN');
-                    return new ClientCertificateCredential(this.tenantId, this.clientId, this.certFilePath);
+                    return new azureIdentity.ClientCertificateCredential(this.tenantId, this.clientId, this.certFilePath);
                 }
         }
     }
