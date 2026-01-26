@@ -118,7 +118,15 @@ export class AzureAppServiceUtility {
         }
     }
 
-    public async getKuduService(): Promise<Kudu> {     
+    /**
+     * Gets a Kudu service client for deployments.
+     * @param warmupInstanceId Optional instance ID for SPN auth to pin all requests to a single instance (ARRAffinity cookie)
+     */
+    public async getKuduService(warmupInstanceId?: string): Promise<Kudu> {     
+        // Build cookie if warmupInstanceId is provided (for SPN to pin to specific instance)
+        const cookie = warmupInstanceId  
+            ? [`ARRAffinity=${warmupInstanceId}`, `ARRAffinitySameSite=${warmupInstanceId}`]  
+            : undefined;
 
         const publishingCredentials = await this._appService.getPublishingCredentials();
         const scmUri = publishingCredentials.properties["scmUri"];
@@ -128,7 +136,32 @@ export class AzureAppServiceUtility {
         }
 
         const authHeader = await this.getKuduAuthHeader(publishingCredentials);
-        return new Kudu(publishingCredentials.properties["scmUri"], authHeader);        
+        // For publish profile, don't pass cookie - it will be captured from response
+        return new Kudu(publishingCredentials.properties["scmUri"], authHeader, cookie);        
+    }
+
+    /**
+     * Gets the first available instance ID for warmup cookie pinning.
+     * Used with SPN authentication to ensure all requests go to the same instance.
+     * Sorts instances by name and picks the first one (similar to az-cli behavior).
+     * @returns Instance ID string, or undefined if not available
+     */
+    public async getWarmupInstanceId(): Promise<string | undefined> {
+        try {
+            const instances = await this._appService.getAppServiceInstances();
+            if (instances?.value?.length > 0) {
+                // Sort by name and pick the first one (consistent with az-cli)
+                const sortedInstances = instances.value.sort((a, b) => a.name.localeCompare(b.name));
+                const instanceId = sortedInstances[0].name;
+                tl.debug(`Got warmup instance ID: ${instanceId}`);
+                return instanceId;
+            }
+            tl.debug('No instances found for warmup');
+            return undefined;
+        } catch (error) {
+            tl.debug(`Failed to get instances for warmup: ${error}`);
+            return undefined;
+        }
     }
 
     private async getKuduAuthHeader(publishingCredentials: any): Promise<string> {

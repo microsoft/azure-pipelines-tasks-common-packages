@@ -10,9 +10,13 @@ export class KuduServiceManagementClient {
     private _authHeader: string;
     private _cookie: string[];
 
-    constructor(scmUri: string, authHeader: string) {
+    constructor(scmUri: string, authHeader: string, cookie?: string[]) {
         this._authHeader = authHeader;
         this._scmUri = scmUri;
+        if (cookie) {
+            this._cookie = cookie;
+            tl.debug(`initialized with affinity cookie ${JSON.stringify(this._cookie)}`);
+        }
     }
 
     public async beginRequest(request: webClient.WebRequest, reqOptions?: webClient.WebRequestOptions, contentType?: string): Promise<webClient.WebResponse> {
@@ -30,6 +34,7 @@ export class KuduServiceManagementClient {
         while(retryCount >= 0) {
             try {
                 let httpResponse = await webClient.sendRequest(request, reqOptions);
+                // Capture cookie from response if not already set
                 if(httpResponse.headers['set-cookie'] && !this._cookie) {
                     this._cookie = httpResponse.headers['set-cookie'];
                     tl.debug(`loaded affinity cookie ${JSON.stringify(this._cookie)}`);
@@ -75,8 +80,44 @@ export class KuduServiceManagementClient {
 export class Kudu {
     private _client: KuduServiceManagementClient;
 
-    constructor(scmUri: string, authHeader: string) {
-        this._client = new KuduServiceManagementClient(scmUri, authHeader);
+    constructor(scmUri: string, authHeader: string, cookie?: string[]) {
+        this._client = new KuduServiceManagementClient(scmUri, authHeader, cookie);
+    }
+
+    /**
+     * Warms up the Kudu service using the dedicated warmup endpoint.
+     * Uses /api/deployments?warmup=true with retry logic.
+     */
+    public async warmup(): Promise<void> {
+        var httpRequest = new webClient.WebRequest();
+        httpRequest.method = 'GET';
+        httpRequest.uri = this._client.getRequestUri(`/api/deployments`, ['warmup=true']);
+
+        const maxRetries = 3;
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                tl.debug(`Kudu warmup attempt ${attempt}/${maxRetries}`);
+                let webRequestOptions: webClient.WebRequestOptions = {
+                    retriableErrorCodes: [],
+                    retriableStatusCodes: [],
+                    retryCount: 0,
+                    retryRequestTimedout: false
+                };
+                var response = await this._client.beginRequest(httpRequest, webRequestOptions);
+
+                if (response.statusCode >= 200 && response.statusCode < 300) {
+                    tl.debug('Kudu warmup successful');
+                    return;
+                }
+
+                tl.debug(`Kudu warmup returned status ${response.statusCode}`);
+            } catch (error) {
+                tl.debug(`Kudu warmup attempt ${attempt} failed: ${error}`);
+            }
+        }
+
+        tl.debug('Kudu warmup failed after all retries, proceeding without warmup');
     }
 
     public async updateDeployment(requestBody: any): Promise<string> {
