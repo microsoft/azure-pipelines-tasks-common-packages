@@ -61,10 +61,10 @@ export function advancedFileTransformations(isFolderBasedDeployment: boolean, ta
             if(transformationRules.length > 0) {
                 transformationRules.forEach(function(rule) {
                     var args = ParameterParser.parse(rule);
-                    if(Object.keys(args).length < 2 || !args["transform"] || !args["xml"]) {
+                    if(!args["transform"] || !args["xml"]) {
                         tl.error(tl.loc("MissingArgumentsforXMLTransformation"));
                     }
-                    else if(Object.keys(args).length > 2) {
+                    else if(args["transform"] && args["xml"] && args["result"]) {
                         isTransformationApplied = xdtTransformationUtility.specialXdtTransformation(folderPath, args["transform"].value, args["xml"].value, args["result"].value) && isTransformationApplied;
                     }
                     else {
