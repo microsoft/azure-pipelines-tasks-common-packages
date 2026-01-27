@@ -269,7 +269,7 @@ export class NuGetConfigHelper2 {
     }
 
     
-private convertToIPackageSource(source: auth.IPackageSourceBase): IPackageSource {    
+    private convertToIPackageSource(source: auth.IPackageSourceBase): IPackageSource {    
         const uppercaseUri = source.feedUri.toUpperCase();
         const isInternal = this.authInfo.internalAuthInfo ? this.authInfo.internalAuthInfo.uriPrefixes.some(prefix => uppercaseUri.indexOf(prefix.toUpperCase()) === 0) : false;
 
