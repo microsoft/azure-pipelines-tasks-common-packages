@@ -25,7 +25,7 @@
         "azure-pipelines-task-lib": "^5.2.4"
     },
     "devDependencies": {
-        "@types/sinon": "^4.3.3",
+        "@types/sinon": "^17.0.3",
         "sinon": "^19.0.2",
         "typescript": "^4.9.5"
     }
