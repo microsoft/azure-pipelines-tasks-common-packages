@@ -771,20 +771,21 @@ export class Kudu {
     public async warmup(): Promise<void> {
         var httpRequest = new webClient.WebRequest();
         httpRequest.method = 'GET';
-        httpRequest.uri = this._client.getRequestUri(`/api/deployments`, ['warmup=true']);
+        httpRequest.uri = this.client.getRequestUri(`/api/deployments`, ['warmup=true']);
 
         const maxRetries = 5;
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 tl.debug(`Kudu warmup attempt ${attempt}/${maxRetries}`);
-                let webRequestOptions: webClient.WebRequestOptions = {
-                    retriableErrorCodes: [],
-                    retriableStatusCodes: [],
+                var reqOptions: webClient.WebRequestOptions = {
+                    retriableErrorCodes: ["ETIMEDOUT"],
+                    retriableStatusCodes: [503],
                     retryCount: 1,
-                    retryRequestTimedout: false
+                    retryIntervalInSeconds: 5,
+                    retryRequestTimedout: true
                 };
-                var response = await this._client.beginRequest(httpRequest, webRequestOptions);
+                var response = await this.client.beginRequest(httpRequest, reqOptions);
 
                 if (response.statusCode >= 200 && response.statusCode < 300) {
                     tl.debug('Kudu warmup successful');

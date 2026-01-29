@@ -127,7 +127,7 @@ export class AzureAppServiceUtility {
      */
     public async getWarmupInstanceId(): Promise<string | undefined> {
         try {
-            const instances = await this._appService.getAppServiceInstances();
+            const instances = await this._appService._getAppServiceInstances();
             if (instances?.value?.length > 0) {
                 // Sort by name and pick the first one (consistent with az-cli)
                 const sortedInstances = instances.value.sort((a, b) => a.name.localeCompare(b.name));
