@@ -358,5 +358,10 @@ export class AzureAppServiceUtility {
 
         return filteredProperties;
     }
+
+    // Method to get app service instances
+    public async getAppserviceInstances(): Promise<any> {
+        return await this._appService._getAppServiceInstances();
+    }
 }
 

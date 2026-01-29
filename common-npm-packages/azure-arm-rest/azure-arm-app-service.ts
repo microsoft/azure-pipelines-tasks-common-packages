@@ -944,7 +944,7 @@ export class AzureAppService {
         }
     }
 
-    public async getAppServiceInstances(): Promise<any> {
+    public async _getAppServiceInstances(): Promise<any> {
         try {
             var slotUrl: string = !!this._slot ? `/slots/${this._slot}` : '';
             var httpRequest = new webClient.WebRequest();
@@ -953,7 +953,7 @@ export class AzureAppService {
             {
                 '{resourceGroupName}': this._resourceGroup,
                 '{name}': this._name,
-            }, null, '2016-08-01');
+            }, null, '2025-03-01');
 
             var response = await this._client.beginRequest(httpRequest);
             if (response.statusCode != 200) {
@@ -963,7 +963,7 @@ export class AzureAppService {
             return response.body;
         }
         catch(error) {
-            throw Error("Failed to get app service instances " + this._getFormattedName() + ".\n" + this._client.getFormattedError(error));
+            throw Error(tl.loc('FailedToGetAppServiceInstances', this._getFormattedName(), this._client.getFormattedError(error)));
         }
     }
  }
