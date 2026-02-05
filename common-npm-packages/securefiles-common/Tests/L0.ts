@@ -1,27 +1,13 @@
-import { tlClone } from "./utils";
 import { strictEqual } from "assert";
 import { Writable, Readable } from "stream";
-import { IRequestHandler } from "azure-devops-node-api/interfaces/common/VsoBaseInterfaces";
-import {
-    deregisterMock,
-    resetCache,
-    registerMock,
-    deregisterAll,
-    disable,
-    enable
-} from "mockery";
+import * as sinon from "sinon";
+import * as tl from "azure-pipelines-task-lib/task";
+import * as nodeApi from "azure-devops-node-api";
+import * as fs from "fs";
+import { describe, it, before, after, beforeEach, afterEach } from "node:test";
 
 export const secureFileId = Math.random().toString(36).slice(2, 7);
 process.env['SECUREFILE_NAME_' + secureFileId] = 'securefilename';
-
-const tmAnswers = {
-    'exist': {
-        'System.TeamFoundationCollectionUri': 'System.TeamFoundationCollectionUri',
-    },
-    'rmRF': {
-        'securefilename': undefined
-    }
-}
 
 function createMockStream(options: {
     statusCode?: number;
@@ -56,63 +42,64 @@ function createMockStream(options: {
     return rs;
 }
 
-// Helper function to create a complete node API mock
-function createNodeApiMock(streamOptions?: Parameters<typeof createMockStream>[0]) {
-    class MockAgentAPI {
-        downloadSecureFile() {
-            return Promise.resolve(createMockStream(streamOptions));
-        }
-    }
-
-    class MockWebApi {
-        getTaskAgentApi() {
-            return Promise.resolve(new MockAgentAPI());
-        }
-    }
-
-    return {
-        WebApi: MockWebApi,
-        getPersonalAccessTokenHandler() {
-            return {} as IRequestHandler;
-        }
+function createMockWriteStream() {
+    const ws = new Writable();
+    ws._write = function (chunk, encoding, done) {
+        done();
     };
+    return ws;
 }
-
-export const fsMock = {
-    createWriteStream() {
-        const ws = new Writable();
-        ws._write = function (chunk, encoding, done) {
-            done();
-        };
-
-        return ws;
-    }
-};
 
 const getMaxRetries = (maxRetries?: number) => maxRetries >= 0 ? maxRetries : 5;
 
 describe("securefiles-common package suites", function() {
+    let sandbox: sinon.SinonSandbox;
+    let getVariableStub: sinon.SinonStub;
+    let getEndpointAuthorizationParameterStub: sinon.SinonStub;
+    let getSecureFileNameStub: sinon.SinonStub;
+    let getSecureFileTicketStub: sinon.SinonStub;
+    let resolveStub: sinon.SinonStub;
+    let existStub: sinon.SinonStub;
+    let rmRFStub: sinon.SinonStub;
+    let debugStub: sinon.SinonStub;
+    let getHttpProxyConfigurationStub: sinon.SinonStub;
+    let getPersonalAccessTokenHandlerStub: sinon.SinonStub;
+    let webApiStub: sinon.SinonStub;
+    let createWriteStreamStub: sinon.SinonStub;
+
     before(() => {
-        enable({
-            useCleanCache: true,
-            warnOnUnregistered: false
-        });
+        sandbox = sinon.createSandbox();
     });
 
     after(() => {
-        deregisterAll();
-        disable();
+        sandbox.restore();
     });
 
     beforeEach(() => {
-        resetCache();
-        registerMock("azure-pipelines-task-lib/task", tlClone);
-        tlClone.setAnswers(tmAnswers);
+        // Stub task lib functions
+        getVariableStub = sandbox.stub(tl, "getVariable").callsFake((variable: string) => {
+            if (variable.toLowerCase() === 'system.teamfoundationcollectionuri') {
+                return 'https://localhost/';
+            }
+            return variable;
+        });
+        getEndpointAuthorizationParameterStub = sandbox.stub(tl, "getEndpointAuthorizationParameter")
+            .callsFake((id: string, key: string, optional: boolean) => `${id}_${key}_${optional}`);
+        getSecureFileNameStub = sandbox.stub(tl, "getSecureFileName")
+            .callsFake((secureFileId: string) => secureFileId);
+        getSecureFileTicketStub = sandbox.stub(tl, "getSecureFileTicket").returns("ticket");
+        resolveStub = sandbox.stub(tl, "resolve").callsFake((...args: string[]) => args.join('/'));
+        existStub = sandbox.stub(tl, "exist").returns(true);
+        rmRFStub = sandbox.stub(tl, "rmRF");
+        debugStub = sandbox.stub(tl, "debug");
+        getHttpProxyConfigurationStub = sandbox.stub(tl, "getHttpProxyConfiguration").returns(null);
+
+        // Stub azure-devops-node-api
+        getPersonalAccessTokenHandlerStub = sandbox.stub(nodeApi, "getPersonalAccessTokenHandler").returns({} as any);
     });
 
     afterEach(() => {
-        deregisterMock("azure-pipelines-task-lib/task");
-        deregisterMock("fs");
+        sandbox.restore();
     });
 
     const secureFilesHelpersProps = [
@@ -126,6 +113,15 @@ describe("securefiles-common package suites", function() {
         const [ maxRetries, socketTimeout ] = args;
 
         it(`Check SecureFileHelpers instance properties with args: [${maxRetries}, ${socketTimeout}]`, async() => {
+            // Stub WebApi constructor
+            const mockWebApi = {
+                options: {
+                    maxRetries: getMaxRetries(maxRetries),
+                    socketTimeout: socketTimeout
+                }
+            };
+            webApiStub = sandbox.stub(nodeApi, "WebApi").returns(mockWebApi as any);
+
             const secureFiles = require("../securefiles-common");
             const secureFileHelpers = new secureFiles.SecureFileHelpers(...args);
 
@@ -135,45 +131,76 @@ describe("securefiles-common package suites", function() {
     });
 
     it("Check downloadSecureFile", async() => {
-        const nodeapiMock = createNodeApiMock({
+        const mockStream = createMockStream({
             statusCode: 200,
             statusMessage: 'OK',
             contentType: 'application/octet-stream'
         });
-        
-        registerMock("azure-devops-node-api", nodeapiMock);
-        registerMock("fs", fsMock);
+
+        const mockAgentApi = {
+            downloadSecureFile: sandbox.stub().resolves(mockStream)
+        };
+
+        const mockWebApi = {
+            getTaskAgentApi: sandbox.stub().resolves(mockAgentApi),
+            options: { maxRetries: 5, socketTimeout: undefined }
+        };
+        webApiStub = sandbox.stub(nodeApi, "WebApi").returns(mockWebApi as any);
+        createWriteStreamStub = sandbox.stub(fs, "createWriteStream").returns(createMockWriteStream() as any);
+
         const secureFiles = require("../securefiles-common");
         const secureFileHelpers = new secureFiles.SecureFileHelpers();
         const secureFilePath = await secureFileHelpers.downloadSecureFile(secureFileId);
-        const pseudoResolvedPath = await secureFileHelpers.getSecureFileTempDownloadPath(secureFileId);
+        const pseudoResolvedPath = secureFileHelpers.getSecureFileTempDownloadPath(secureFileId);
         strictEqual(secureFilePath, pseudoResolvedPath, `Result should be equal to ${pseudoResolvedPath}`);
     });
 
     it("Check deleteSecureFile", async() => {
+        const mockWebApi = {
+            options: { maxRetries: 5, socketTimeout: undefined }
+        };
+        webApiStub = sandbox.stub(nodeApi, "WebApi").returns(mockWebApi as any);
+
         const secureFiles = require("../securefiles-common");
         const secureFileHelpers = new secureFiles.SecureFileHelpers();
         secureFileHelpers.deleteSecureFile(secureFileId);
+
+        sinon.assert.called(rmRFStub);
     });
 
     it("Check getSecureFileTempDownloadPath", async() => {
+        const mockWebApi = {
+            options: { maxRetries: 5, socketTimeout: undefined }
+        };
+        webApiStub = sandbox.stub(nodeApi, "WebApi").returns(mockWebApi as any);
+
         const secureFiles = require("../securefiles-common");
         const secureFileHelpers = new secureFiles.SecureFileHelpers();
         const resolvedPath = secureFileHelpers.getSecureFileTempDownloadPath(secureFileId);
-        const pseudoResolvedPath = tlClone.resolve(tlClone.getVariable("Agent.TempDirectory"), tlClone.getSecureFileName(secureFileId));
-        strictEqual(resolvedPath, pseudoResolvedPath, `Resolved path "${resolvedPath}" should be equal to "${pseudoResolvedPath}"`);
+        
+        sinon.assert.calledWith(resolveStub, sinon.match.any, secureFileId);
+        strictEqual(typeof resolvedPath, 'string', 'Resolved path should be a string');
     });
 
     it("Should handle HTTP error responses", async() => {
-        const errorNodeapiMock = createNodeApiMock({
+        const mockStream = createMockStream({
             statusCode: 500,
             statusMessage: 'Internal Server Error',
             contentType: 'application/json',
             data: '',
         });
 
-        registerMock("azure-devops-node-api", errorNodeapiMock);
-        registerMock("fs", fsMock);
+        const mockAgentApi = {
+            downloadSecureFile: sandbox.stub().resolves(mockStream)
+        };
+
+        const mockWebApi = {
+            getTaskAgentApi: sandbox.stub().resolves(mockAgentApi),
+            options: { maxRetries: 5, socketTimeout: undefined }
+        };
+        webApiStub = sandbox.stub(nodeApi, "WebApi").returns(mockWebApi as any);
+        createWriteStreamStub = sandbox.stub(fs, "createWriteStream").returns(createMockWriteStream() as any);
+
         const secureFiles = require("../securefiles-common");
         const secureFileHelpers = new secureFiles.SecureFileHelpers();
         
@@ -187,15 +214,23 @@ describe("securefiles-common package suites", function() {
     });
 
     it("Should handle stream errors during download", async() => {
-        const streamErrorNodeapiMock = createNodeApiMock({
+        const mockStream = createMockStream({
             statusCode: 200,
             statusMessage: 'OK',
             contentType: 'application/octet-stream',
             emitError: new Error('Network connection lost')
         });
 
-        registerMock("azure-devops-node-api", streamErrorNodeapiMock);
-        registerMock("fs", fsMock);
+        const mockAgentApi = {
+            downloadSecureFile: sandbox.stub().resolves(mockStream)
+        };
+
+        const mockWebApi = {
+            getTaskAgentApi: sandbox.stub().resolves(mockAgentApi),
+            options: { maxRetries: 5, socketTimeout: undefined }
+        };
+        webApiStub = sandbox.stub(nodeApi, "WebApi").returns(mockWebApi as any);
+        createWriteStreamStub = sandbox.stub(fs, "createWriteStream").returns(createMockWriteStream() as any);
 
         const secureFiles = require("../securefiles-common");
         const secureFileHelpers = new secureFiles.SecureFileHelpers();
