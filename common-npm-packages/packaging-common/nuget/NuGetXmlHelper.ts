@@ -58,6 +58,28 @@ export class NuGetXmlHelper implements INuGetXmlHelper {
         });
     }
 
+    public UpdatePackageSourceMappingKey(oldKey: string, newKey: string): void {
+        NuGetXmlHelper._updateXmlFile(this._nugetConfigPath, (xml: any): any => {
+            if (xml) {
+                NuGetXmlHelper._validateXmlIsConfiguration(xml);
+                
+                let xmlPackageSourceMappings = xml.getChildrenByFilter((child: any): boolean => {
+                    return typeof(child) === "object" &&
+                           child.getName().toLowerCase() === "packagesource" &&
+                           child.up().getName().toLowerCase() === "packagesourcemapping" &&
+                           child.attrs.key === oldKey;
+                }, true);
+
+                xmlPackageSourceMappings.forEach((xmlMapping: any): void => {
+                    tl.debug(`Updating packageSourceMapping key from '${oldKey}' to '${newKey}'`);
+                    xmlMapping.attrs.key = newKey;
+                });
+            }
+
+            return xml;
+        });
+    }
+
     private _addCredentialsToSource(xml: any, name: string, username: string, password: string): any {
         if (xml) {
             const xmlSourceCredentials = NuGetXmlHelper._getOrCreateLastElement(xml, "packageSourceCredentials");
