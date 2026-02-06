@@ -79,7 +79,7 @@ export function runL1XmlVarSubTests(this: Mocha.Suite): void {
 
     function readFile(path: string): string {
         const buffer = fs.readFileSync(path);
-        const encoding = detectFileEncoding(path, buffer)[0].toString();
+        const encoding = detectFileEncoding(path, buffer)[0].toString() as BufferEncoding;
         return buffer.toString(encoding).replace(/(?<!\r)[\n]+/gm, "\r\n");
     }
 }
