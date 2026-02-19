@@ -256,7 +256,7 @@ async function getLatestAzureModuleReleaseVersion(moduleName: string): Promise<s
         const lastestCliRelease = moduleName === "azure-powershell" ? response?.body?.filter(x => x?.tag_name?.match(/^v\d+\.\d+\.0/))?.[0] : response?.body?.[0];
         return lastestCliRelease?.tag_name
     } catch (err) {
-        tl.error(`Error checking Azure version: ${err.message}`);
+        tl.debug(`Error checking Azure version: ${err.message}. Hence skipping the check for latest version of ${moduleName}.`);
     }
 }
 
@@ -282,6 +282,6 @@ export async function validateAzModuleVersion(moduleName: string, currentVersion
             }
         }
     } catch (err) {
-        tl.error(`Error on validating Azure version: ${err.message}`);
+        tl.debug(`Error on validating Azure version: ${err.message}. Hence skipping the check for latest version of ${moduleName}.`);
     }
 }
