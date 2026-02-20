@@ -102,6 +102,8 @@ function Get-MSBuildPath {
                         $archValue = $archValues.GetValue(1) # DotNetFrameworkArchitecture.Bitness32
                     } elseif ($Architecture -eq 'x64') {
                         $archValue = $archValues.GetValue(2) # DotNetFrameworkArchitecture.Bitness64
+                    } elseif ($Architecture -eq 'arm64') {
+                        $archValue = $archValues.GetValue(2) # DotNetFrameworkArchitecture.Bitness64
                     } else {
                         $archValue = $archValues.GetValue(1) # DotNetFrameworkArchitecture.Bitness32
                     }
@@ -137,6 +139,8 @@ function Get-MSBuildPath {
                         if ($Architecture -eq "x86") {
                             $archValue = $archValues.GetValue(1) # DotNetFrameworkArchitecture.Bitness32
                         } elseif ($Architecture -eq "x64") {
+                            $archValue = $archValues.GetValue(2) # DotNetFrameworkArchitecture.Bitness64
+                        } elseif ($Architecture -eq "arm64") {
                             $archValue = $archValues.GetValue(2) # DotNetFrameworkArchitecture.Bitness64
                         } else {
                             $archValue = $archValues.GetValue(1) # DotNetFrameworkArchitecture.Bitness32
@@ -201,7 +205,11 @@ function Get-MSBuildPathV2 {
                 # DotNetFrameworkArchitecture.Bitness32
             } elseif ($Architecture -eq 'x64') {
                 $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild", $MsBuildDirectory, "Bin\amd64\MSBuild.exe");
-                # DotNetFrameworkArchitecture.Bitness64
+            } elseif ($Architecture -eq 'arm64') {
+                $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild", $MsBuildDirectory, "Bin\arm64\MSBuild.exe");
+                if (!(Test-Path -LiteralPath $msBuildPath -PathType Leaf)) {
+                    $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild", $MsBuildDirectory, "Bin\amd64\MSBuild.exe");
+                }
             } else {
                 $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild", $MsBuildDirectory, "Bin\MSBuild.exe");
                 # DotNetFrameworkArchitecture.Bitness32
@@ -267,6 +275,8 @@ function Get-MSBuildPathV2 {
                         $archValue = $archValues.GetValue(1) # DotNetFrameworkArchitecture.Bitness32
                     } elseif ($Architecture -eq 'x64') {
                         $archValue = $archValues.GetValue(2) # DotNetFrameworkArchitecture.Bitness64
+                    } elseif ($Architecture -eq 'arm64') {
+                        $archValue = $archValues.GetValue(2) # DotNetFrameworkArchitecture.Bitness64
                     } else {
                         $archValue = $archValues.GetValue(1) # DotNetFrameworkArchitecture.Bitness32
                     }
@@ -302,6 +312,8 @@ function Get-MSBuildPathV2 {
                         if ($Architecture -eq "x86") {
                             $archValue = $archValues.GetValue(1) # DotNetFrameworkArchitecture.Bitness32
                         } elseif ($Architecture -eq "x64") {
+                            $archValue = $archValues.GetValue(2) # DotNetFrameworkArchitecture.Bitness64
+                        } elseif ($Architecture -eq "arm64") {
                             $archValue = $archValues.GetValue(2) # DotNetFrameworkArchitecture.Bitness64
                         } else {
                             $archValue = $archValues.GetValue(1) # DotNetFrameworkArchitecture.Bitness32
