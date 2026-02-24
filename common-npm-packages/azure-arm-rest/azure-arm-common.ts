@@ -23,12 +23,7 @@ import webClient = require('./webClient');
 
 /// Dynamic msal loading based on the node version
 const nodeVersion = parseInt(process.version.split('.')[0].replace('v', ''));
-let msalVer;
-if (tl.getPipelineFeature('EnableMsalV3')) {
-    msalVer = nodeVersion < 16 ? "msalv1": "msalv3";
-} else {
-    msalVer = nodeVersion < 16 ? "msalv1": "msalv2";
-}
+const msalVer = nodeVersion < 16 ? "msalv1" : "msalv3";
 
 // Maximum backoff timeout for creating AAD token in milliseconds
 const MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT = 15000;
