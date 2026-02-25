@@ -208,7 +208,7 @@ function Get-MSBuildPathV2 {
             }
 
             if ($msBuildPath -and (Test-Path -LiteralPath $msBuildPath -PathType Leaf)) {
-                Write-Verbose "MSBuild: $msBuildPath"
+                Write-Verbose "MSBuild: $msBuildPath testing"
                 return $msBuildPath
             }
         }
