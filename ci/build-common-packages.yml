@@ -28,10 +28,9 @@ jobs:
       testRunner: JUnit
       testResultsFiles: '$(System.DefaultWorkingDirectory)/test-results/junit/*suite.xml'
 
-  - task: PublishCodeCoverageResults@1
+  - task: PublishCodeCoverageResults@2
     displayName: Publish Code Coverage Results
     inputs:
-      codeCoverageTool: Cobertura
       summaryFileLocation: $(System.DefaultWorkingDirectory)/test-results/*coverage.xml
 
   # For CI runs on master, automatically publish packages
