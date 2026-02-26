@@ -207,10 +207,6 @@ function Get-MSBuildPathV2 {
                 $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild", $MsBuildDirectory, "Bin\amd64\MSBuild.exe");
             } elseif ($Architecture -eq 'arm64') {
                 $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild", $MsBuildDirectory, "Bin\arm64\MSBuild.exe");
-                if (!(Test-Path -LiteralPath $msBuildPath -PathType Leaf)) {
-                    Write-Verbose (Get-VstsLocString -Key 'MSB_MSBuildArm64NotFoundFallingBackToAmd64' -ArgumentList $msBuildPath)
-                    $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild", $MsBuildDirectory, "Bin\amd64\MSBuild.exe");
-                }
             } else {
                 $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild", $MsBuildDirectory, "Bin\MSBuild.exe");
                 # DotNetFrameworkArchitecture.Bitness32
