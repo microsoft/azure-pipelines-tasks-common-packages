@@ -33,3 +33,22 @@ export function neutralizeCommandSubstitution(value: string | null | undefined):
     result = result.replace(/\$\(/g, '\\$(');
     return result;
 }
+
+/**
+ * Escapes ALL shell metacharacters in a string for safe use in unquoted shell
+ * contexts. Preserves $VAR and ${VAR} environment variable references while
+ * escaping every operator that could lead to command injection (CWE-78).
+ *
+ * Use this when single-quoting via shellQuote() is not suitable (e.g., when
+ * environment variable expansion must be preserved by the shell).
+ *
+ * @example
+ * escapeShellArg("file; rm -rf /")        // → "file\\; rm\\ -rf\\ /"
+ * escapeShellArg("-DPATH=$HOME/bin")       // → "-DPATH=$HOME/bin" (preserved)
+ * escapeShellArg("$(whoami)")              // → "\\$(whoami)"
+ */
+export function escapeShellArg(value: string | null | undefined): string | null | undefined {
+    // TODO: implement — this is a TDD stub that will cause tests to fail
+    if (!value) return value;
+    return value;
+}
