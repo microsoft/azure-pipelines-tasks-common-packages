@@ -1,5 +1,5 @@
 {
-    "name": "azure-pipelines-tasks-kubernetes-common",
+    "name": "azure-pipelines-tasks-k8s-common",
     "version": "2.270.1",
     "description": "Common Library for Kubernetes",
     "repository": {
