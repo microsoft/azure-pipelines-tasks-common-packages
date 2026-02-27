@@ -773,7 +773,7 @@ export class Kudu {
         httpRequest.method = 'GET';
         httpRequest.uri = this.client.getRequestUri(`/api/deployments`, ['warmup=true']);
 
-        const maxRetries = 5;
+        const maxRetries = 2;
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
@@ -781,7 +781,7 @@ export class Kudu {
                 var reqOptions: webClient.WebRequestOptions = {
                     retriableErrorCodes: ["ETIMEDOUT"],
                     retriableStatusCodes: [503],
-                    retryCount: 1,
+                    retryCount: 0, // No retries within this call, as we are already retrying the entire warmup call
                     retryIntervalInSeconds: 5,
                     retryRequestTimedout: true
                 };
