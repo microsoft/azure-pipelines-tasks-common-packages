@@ -734,10 +734,10 @@ export class ApplicationTokenCredentials {
 
     public getOpenSSLPath() {
         if (tl.osType().match(/^Win/)) {
-            if (tl.getPipelineFeature("UseOpenSSLv3.4.2InAzureArmRest")) {
-                return tl.which(path.join(__dirname, 'openssl3.4.2', 'openssl'));
+            if (tl.getPipelineFeature("UseLatestOpenSSLInAzureArmRest")) {
+                return tl.which(path.join(__dirname, 'openssl3.6.1', 'openssl'));
             } else {
-                return tl.which(path.join(__dirname, 'openssl3.4.0', 'openssl'));
+                return tl.which(path.join(__dirname, 'openssl3.4.2', 'openssl'));
             }
         } else {
             return tl.which('openssl');
