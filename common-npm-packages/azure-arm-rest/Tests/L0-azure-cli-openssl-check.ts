@@ -11,15 +11,15 @@ export function OpenSSLCheck() {
     }
 
     [{
-        openSSLVersion: '3.4.0',
+        openSSLVersion: '3.4.2',
         featureFlagValue: false
     }, {
-        openSSLVersion: '3.4.2',
+        openSSLVersion: '3.6.1',
         featureFlagValue: true
     }].forEach(({ openSSLVersion, featureFlagValue }) => {
         it(`azure-arm-rest check openssl path openssl${openSSLVersion}`, (done: Mocha.Done) => {
             process.env['SYSTEM_DEBUG'] = 'true';
-            process.env['DISTRIBUTEDTASK_TASKS_USEOPENSSLV3_4_2INAZUREARMREST'] = featureFlagValue.toString();
+            process.env['DISTRIBUTEDTASK_TASKS_USELATESTOPENSSLINAZUREARMREST'] = featureFlagValue.toString();
 
             const tr = new MockTestRunner(join(__dirname, 'azure-cli-openssl-tests.js'));
             const openSSLRelativePath = join(`openssl${openSSLVersion}`, 'openssl.exe');
