@@ -701,4 +701,4 @@ export class AzureAppService {
     public getName(): string {
         return this._name;
     }
- }
+}

@@ -118,7 +118,7 @@ export class AzureAppServiceUtility {
         }
     }
 
-    public async getKuduService(): Promise<Kudu> {     
+    public async getKuduService(): Promise<Kudu> {
 
         const publishingCredentials = await this._appService.getPublishingCredentials();
         const scmUri = publishingCredentials.properties["scmUri"];

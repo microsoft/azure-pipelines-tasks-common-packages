@@ -733,6 +733,89 @@ export function mockAzureARMResourcesTests() {
      }).persist();
 }
 
+export function mockAzureAppServiceUtilityTests() {
+    // Mock for getAppserviceInstances - success case with multiple instances
+    nock('https://management.azure.com', {
+        reqheaders: {
+            "authorization": "Bearer DUMMY_ACCESS_TOKEN",
+            "content-type": "application/json; charset=utf-8"
+        }
+    }).get("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.Web/sites/MOCK_APP_SERVICE_NAME/instances?api-version=2025-03-01")
+    .reply(200, {
+        value: [
+            { name: "instance-1", id: "/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.Web/sites/MOCK_APP_SERVICE_NAME/instances/instance-1" },
+            { name: "instance-2", id: "/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.Web/sites/MOCK_APP_SERVICE_NAME/instances/instance-2" },
+            { name: "instance-3", id: "/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.Web/sites/MOCK_APP_SERVICE_NAME/instances/instance-3" }
+        ]
+    }).persist();
+
+    // Mock for getAppserviceInstances - slot failure case
+    nock('https://management.azure.com', {
+        reqheaders: {
+            "authorization": "Bearer DUMMY_ACCESS_TOKEN",
+            "content-type": "application/json; charset=utf-8"
+        }
+    }).get("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.Web/sites/MOCK_APP_SERVICE_NAME/slots/MOCK_SLOT_NAME/instances?api-version=2025-03-01")
+    .reply(501, 'internal error occurred').persist();
+
+    // Mock for getAppserviceInstances - empty instances case
+    nock('https://management.azure.com', {
+        reqheaders: {
+            "authorization": "Bearer DUMMY_ACCESS_TOKEN",
+            "content-type": "application/json; charset=utf-8"
+        }
+    }).get("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.Web/sites/MOCK_APP_SERVICE_NAME_NO_INSTANCES/instances?api-version=2025-03-01")
+    .reply(200, {
+        value: []
+    }).persist();
+
+    // Mock for publishing credentials for MOCK_APP_SERVICE_NAME_NO_SCM (no scmUri)
+    nock('https://management.azure.com', {
+        reqheaders: {
+            "authorization": "Bearer DUMMY_ACCESS_TOKEN",
+            "content-type": "application/json; charset=utf-8"
+        }
+    }).post("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.Web/sites/MOCK_APP_SERVICE_NAME_NO_SCM/config/publishingcredentials/list?api-version=2016-08-01")
+    .reply(200, {
+        id: "/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/vincaAzureRG/providers/Microsoft.Web/sites/MOCK_APP_SERVICE_NAME_NO_SCM/publishingcredentials/$MOCK_APP_SERVICE_NAME_NO_SCM",
+        name: "MOCK_APP_SERVICE_NAME_NO_SCM",
+        type: "Microsoft.Web/sites",
+        kind: "app",
+        location: "South Central US",
+        properties: {
+            publishingUserName: "$MOCK_APP_SERVICE_NAME_NO_SCM",
+            publishingPassword: "MOCK_PASSWORD",
+            scmUri: ""
+        }
+    }).persist();
+
+    // Mock for SCM publishing credential policy check
+    nock('https://management.azure.com', {
+        reqheaders: {
+            "authorization": "Bearer DUMMY_ACCESS_TOKEN",
+            "content-type": "application/json; charset=utf-8"
+        }
+    }).get("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.Web/sites/MOCK_APP_SERVICE_NAME/basicPublishingCredentialsPolicies/scm?api-version=2022-03-01")
+    .reply(200, {
+        properties: {
+            allow: true
+        }
+    }).persist();
+
+    // Mock for SCM publishing credential policy check for no SCM app
+    nock('https://management.azure.com', {
+        reqheaders: {
+            "authorization": "Bearer DUMMY_ACCESS_TOKEN",
+            "content-type": "application/json; charset=utf-8"
+        }
+    }).get("/subscriptions/MOCK_SUBSCRIPTION_ID/resourceGroups/MOCK_RESOURCE_GROUP_NAME/providers/Microsoft.Web/sites/MOCK_APP_SERVICE_NAME_NO_SCM/basicPublishingCredentialsPolicies/scm?api-version=2022-03-01")
+    .reply(200, {
+        properties: {
+            allow: true
+        }
+    }).persist();
+}
+
 export function mockAzureAksServiceTests() {
     nock('https://management.azure.com', {
         reqheaders: {
