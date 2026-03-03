@@ -97,7 +97,15 @@ export class AzureAppServiceUtility {
         return physicalToVirtualPathMap.physicalPath;
     }
 
-    public async getKuduService(): Promise<Kudu> {
+    /**
+     * Gets a Kudu service client for deployments.
+     * @param warmupInstanceId Optional instance ID for SPN auth to pin all requests to a single instance (ARRAffinity cookie)
+     */
+    public async getKuduService(warmupInstanceId?: string): Promise<Kudu> {
+        // Build cookie if warmupInstanceId is provided (for SPN to pin to specific instance)
+        const cookie = warmupInstanceId  
+            ? [`ARRAffinity=${warmupInstanceId}`, `ARRAffinitySameSite=${warmupInstanceId}`]  
+            : undefined;
 
         const publishingCredentials = await this._appService.getPublishingCredentials();
         const scmUri = publishingCredentials.properties["scmUri"];
@@ -107,7 +115,8 @@ export class AzureAppServiceUtility {
         }
 
         const authHeader = await this.getKuduAuthHeader(publishingCredentials);
-        return new Kudu(publishingCredentials.properties["scmUri"], authHeader);
+        // For publish profile, don't pass cookie - it will be captured from response
+        return new Kudu(publishingCredentials.properties["scmUri"], authHeader, cookie);
     }
 
     private async getKuduAuthHeader(publishingCredentials: any): Promise<string> {
@@ -324,6 +333,11 @@ export class AzureAppServiceUtility {
         }
 
         return filteredProperties;
+    }
+
+    // Method to get app service instances
+    public async getAppserviceInstances(): Promise<any> {
+        return await this._appService._getAppServiceInstances();
     }
 }
 
