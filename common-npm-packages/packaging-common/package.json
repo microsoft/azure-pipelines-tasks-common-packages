@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-packaging-common",
-    "version": "3.270.0",
+    "version": "3.268.0",
     "description": "Azure Pipelines Packaging Tasks Common",
     "scripts": {
         "test": "mocha _build/Tests/L0.js",
@@ -29,7 +29,8 @@
         "mocha": "^10.7.3",
         "q": "^1.5.0",
         "semver": "^5.7.2",
-        "typed-rest-client": "2.1.0"
+        "typed-rest-client": "2.1.0",
+        "xml2js": "^0.6.2"
     },
     "devDependencies": {
         "typescript": "^4.9.5"
