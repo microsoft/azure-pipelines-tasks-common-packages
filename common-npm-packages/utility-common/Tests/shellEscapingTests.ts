@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { shellQuote, neutralizeCommandSubstitution } from "../shellEscaping";
+import { shellQuote, neutralizeCommandSubstitution, shellSplit } from "../shellEscaping";
 export function runShellQuoteTests() {
     // --- Null / empty handling ---
 
@@ -275,5 +275,101 @@ export function runNeutralizeCommandSubstitutionTests() {
             neutralizeCommandSubstitution("it's $(cmd)"),
             "it\\'s\\ \\$\\(cmd\\)"
         );
+    });
+}
+
+export function runShellSplitTests() {
+    // --- Basic splitting ---
+
+    it('splits simple space-separated tokens', () => {
+        assert.deepEqual(shellSplit('-user abcd -authType Cert'), ['-user', 'abcd', '-authType', 'Cert']);
+    });
+
+    it('returns single token for no-space input', () => {
+        assert.deepEqual(shellSplit('--flag=value'), ['--flag=value']);
+    });
+
+    it('returns empty array for empty string', () => {
+        assert.deepEqual(shellSplit(''), []);
+    });
+
+    it('ignores leading and trailing spaces', () => {
+        assert.deepEqual(shellSplit('  -a b  '), ['-a', 'b']);
+    });
+
+    it('handles multiple spaces between tokens', () => {
+        assert.deepEqual(shellSplit('-a   -b   -c'), ['-a', '-b', '-c']);
+    });
+
+    it('handles tabs as separators', () => {
+        assert.deepEqual(shellSplit('-a\t-b\t-c'), ['-a', '-b', '-c']);
+    });
+
+    // --- Single-quoted values ---
+
+    it('keeps single-quoted value with spaces as one token', () => {
+        assert.deepEqual(
+            shellSplit("-msg 'hello world' -flag true"),
+            ['-msg', 'hello world', '-flag', 'true']
+        );
+    });
+
+    it('strips single quotes from value', () => {
+        assert.deepEqual(shellSplit("'hello'"), ['hello']);
+    });
+
+    it('handles empty single-quoted string', () => {
+        assert.deepEqual(shellSplit("-msg '' -flag"), ['-msg', '', '-flag']);
+    });
+
+    // --- Double-quoted values ---
+
+    it('keeps double-quoted value with spaces as one token', () => {
+        assert.deepEqual(
+            shellSplit('-path "/opt/my dir/bin" -flag true'),
+            ['-path', '/opt/my dir/bin', '-flag', 'true']
+        );
+    });
+
+    it('strips double quotes from value', () => {
+        assert.deepEqual(shellSplit('"hello"'), ['hello']);
+    });
+
+    // --- Adjacent quoted and unquoted ---
+
+    it('joins adjacent quoted and unquoted segments into one token', () => {
+        assert.deepEqual(shellSplit("-prefix '$HOME'/subdir"), ['-prefix', '$HOME/subdir']);
+    });
+
+    // --- Combined shellSplit + neutralize for multi-param ---
+
+    it('split+neutralize: basic multi-param', () => {
+        const input = '-user abcd -authType Cert';
+        const safe = shellSplit(input).map(p => neutralizeCommandSubstitution(p)).join(' ');
+        assert.equal(safe, '-user abcd -authType Cert');
+    });
+
+    it('split+neutralize: quoted value with spaces preserved', () => {
+        const input = "-msg 'hello world' -flag true";
+        const safe = shellSplit(input).map(p => neutralizeCommandSubstitution(p)).join(' ');
+        assert.equal(safe, '-msg hello\\ world -flag true');
+    });
+
+    it('split+neutralize: injection in quoted value blocked', () => {
+        const input = "-user abcd -msg '$(whoami)' -authType Cert";
+        const safe = shellSplit(input).map(p => neutralizeCommandSubstitution(p)).join(' ');
+        assert.equal(safe, '-user abcd -msg \\$\\(whoami\\) -authType Cert');
+    });
+
+    it('split+neutralize: quote breakout injection blocked', () => {
+        const input = "-user abcd -msg '; rm -rf / #' -flag true";
+        const safe = shellSplit(input).map(p => neutralizeCommandSubstitution(p)).join(' ');
+        assert.equal(safe, '-user abcd -msg \\;\\ rm\\ -rf\\ /\\ \\# -flag true');
+    });
+
+    it('split+neutralize: env vars preserved', () => {
+        const input = '-user $USER -prefix $HOME/bin';
+        const safe = shellSplit(input).map(p => neutralizeCommandSubstitution(p)).join(' ');
+        assert.equal(safe, '-user $USER -prefix $HOME/bin');
     });
 }

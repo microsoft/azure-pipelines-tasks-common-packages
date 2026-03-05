@@ -108,11 +108,13 @@ const SHELL_META_CHARS = new Set([
  *   const cmd = `program ${neutralizeCommandSubstitution("-user abcd -authType Cert")}`;
  *   // → "program -user\ abcd\ -authType\ Cert"  (1 arg instead of 4)
  *
- *   // ✅ CORRECT — split first, neutralize each part:
- *   const params = userInput.split(' ').map(p => neutralizeCommandSubstitution(p)).join(' ');
+ *   // ✅ CORRECT — use shellSplit to respect quoted values, then neutralize each:
+ *   const params = shellSplit(userInput).map(p => neutralizeCommandSubstitution(p)).join(' ');
  *   const cmd = `program ${params}`;
- *   // → "program -user abcd -authType Cert"  (4 separate args ✅)
- *   // Injection in any individual param is still blocked.
+ *   // For "-user abcd -msg 'hello world'"
+ *   //   shellSplit → ["-user", "abcd", "-msg", "hello world"]
+ *   //   neutralize each → ["-user", "abcd", "-msg", "hello\ world"]
+ *   //   join → "-user abcd -msg hello\ world"  (4 args, space in value preserved ✅)
  */
 export function neutralizeCommandSubstitution(value: string | null | undefined): string | null | undefined {
     if (!value) return value;
@@ -123,4 +125,78 @@ export function neutralizeCommandSubstitution(value: string | null | undefined):
         if (SHELL_META_CHARS.has(match)) return '\\' + match;
         return match;
     });
+}
+
+// ---------------------------------------------------------------------------
+// shellSplit — quote-aware argument splitting
+// ---------------------------------------------------------------------------
+
+/**
+ * Splits a string into shell-style tokens, respecting single and double quotes.
+ * Quoted segments have their quotes stripped — the content is returned as-is,
+ * just like the shell would pass it to a program.
+ *
+ * Use this before neutralizeCommandSubstitution when the user provides a
+ * multi-parameter string where values may contain spaces inside quotes.
+ *
+ * @example
+ *   shellSplit("-user abcd -authType Cert")
+ *   // → ["-user", "abcd", "-authType", "Cert"]
+ *
+ *   shellSplit("-msg 'hello world' -flag true")
+ *   // → ["-msg", "hello world", "-flag", "true"]
+ *
+ *   shellSplit('-path "/opt/my dir/bin"')
+ *   // → ["-path", "/opt/my dir/bin"]
+ *
+ *   // Combined with neutralize for safe multi-param handling:
+ *   const safe = shellSplit(userInput).map(p => neutralizeCommandSubstitution(p)).join(' ');
+ */
+export function shellSplit(input: string): string[] {
+    const tokens: string[] = [];
+    let current = '';
+    let inToken = false;
+    let i = 0;
+
+    while (i < input.length) {
+        const ch = input[i];
+
+        if (ch === "'") {
+            // Single-quoted segment: consume until closing quote
+            inToken = true;
+            i++;
+            while (i < input.length && input[i] !== "'") {
+                current += input[i];
+                i++;
+            }
+            i++; // skip closing quote
+        } else if (ch === '"') {
+            // Double-quoted segment: consume until closing quote
+            inToken = true;
+            i++;
+            while (i < input.length && input[i] !== '"') {
+                current += input[i];
+                i++;
+            }
+            i++; // skip closing quote
+        } else if (ch === ' ' || ch === '\t') {
+            // Unquoted whitespace: token boundary
+            if (inToken) {
+                tokens.push(current);
+                current = '';
+                inToken = false;
+            }
+            i++;
+        } else {
+            inToken = true;
+            current += ch;
+            i++;
+        }
+    }
+
+    if (inToken) {
+        tokens.push(current);
+    }
+
+    return tokens;
 }
