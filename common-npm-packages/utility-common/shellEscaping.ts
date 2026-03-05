@@ -92,13 +92,27 @@ const SHELL_META_CHARS = new Set([
  *   - $VAR and ${VAR} environment variable references
  *   - All other characters (letters, digits, punctuation like / . - _ = : @)
  *
+ * Usage with a SINGLE value (one argument):
  * @example
- *   // Developer builds a command string:
- *   const cmd = `cmake ${neutralizeCommandSubstitution(userInput)}`;
- *   // For userInput = "-DPREFIX=$HOME/bin"   → "-DPREFIX=$HOME/bin"  ($HOME expands ✅)
- *   // For userInput = "$(whoami)"            → "\$\(whoami\)"        (blocked ✅)
- *   // For userInput = "'; rm -rf / #"        → "\'\;\ rm\ -rf\ /\ \#" (blocked ✅)
- *   // For userInput = "it's here"            → "it\'s\ here"         (safe, single token ✅)
+ *   const cmd = `cmake -DPREFIX=${neutralizeCommandSubstitution(userValue)}`;
+ *   // userValue = "$HOME/bin"     → cmd = "cmake -DPREFIX=$HOME/bin"      ($HOME expands ✅)
+ *   // userValue = "$(whoami)"     → cmd = "cmake -DPREFIX=\$\(whoami\)"   (blocked ✅)
+ *   // userValue = "'; rm -rf / #" → cmd = "cmake -DPREFIX=\'\;\ rm\..." (blocked ✅)
+ *
+ * Usage with MULTIPLE parameters (space-separated argument string):
+ *   Spaces are escaped to keep each value as a single token, so a multi-param
+ *   string would be collapsed into one argument. To preserve argument boundaries,
+ *   split the string first and neutralize each part individually:
+ * @example
+ *   // ❌ WRONG — entire string becomes one argument:
+ *   const cmd = `program ${neutralizeCommandSubstitution("-user abcd -authType Cert")}`;
+ *   // → "program -user\ abcd\ -authType\ Cert"  (1 arg instead of 4)
+ *
+ *   // ✅ CORRECT — split first, neutralize each part:
+ *   const params = userInput.split(' ').map(p => neutralizeCommandSubstitution(p)).join(' ');
+ *   const cmd = `program ${params}`;
+ *   // → "program -user abcd -authType Cert"  (4 separate args ✅)
+ *   // Injection in any individual param is still blocked.
  */
 export function neutralizeCommandSubstitution(value: string | null | undefined): string | null | undefined {
     if (!value) return value;
