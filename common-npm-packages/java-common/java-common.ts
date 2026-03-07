@@ -117,39 +117,101 @@ function getShortJavaVersion(jdkVersion: string): string {
 }
 
 export function findJavaHome(jdkVersion: string, jdkArch: string): string {
+    // Normalize aarch64 to arm64 for backward compatibility
+    if (jdkArch.toLowerCase() === 'aarch64') {
+        jdkArch = 'arm64';
+    }
+
     tl.debug(tl.loc('LocateJVMBasedOnVersionAndArch', jdkVersion, jdkArch));
 
     const jdkShortVersion: string = getShortJavaVersion(jdkVersion);
     const jdkMajorVersion: number = coerce(jdkShortVersion).major;
-    // jdkArchitecture is either x64, x86 or arm64
-    // envName for version 1.7 and x64 would be "JAVA_HOME_7_X64"
-    var envName = "JAVA_HOME_" + jdkMajorVersion + "_" + jdkArch.toUpperCase();
-    // MS-hosted runners set JAVA_HOME_<version>_arm64 variable for pre-installed ARM JDKs.
-    // If JAVA_HOME_<version>_ARM64 is not found, search for JAVA_HOME_<version>_arm64.
-    var arm64EnvName = "JAVA_HOME_" + jdkMajorVersion + "_" + jdkArch.toLowerCase();
-    let discoveredJavaHome = tl.getVariable(envName);
-    if(!discoveredJavaHome && jdkArch.toLowerCase() === 'arm64'){
-        // Using process.env to read the environment variable as taskLib.getVariable converts the name to upper case.
-        discoveredJavaHome = process.env[arm64EnvName];
-    }
 
-    if (!discoveredJavaHome) {
-        if (isWindows) {
-            discoveredJavaHome = readJavaHomeFromRegistry(jdkShortVersion, jdkArch);
+    // For arm64, use dedicated search with AARCH64 fallback
+    if (jdkArch.toLowerCase() === 'arm64') {
+        const discoveredJavaHome: string | undefined = findArm64JavaHome(jdkMajorVersion);
+        if (discoveredJavaHome) {
+            return discoveredJavaHome;
         }
+    } else {
+        // jdkArchitecture is either x64 or x86
+        // envName for version 1.7 and x64 would be "JAVA_HOME_7_X64"
+        const envName: string = "JAVA_HOME_" + jdkMajorVersion + "_" + jdkArch.toUpperCase();
+        let discoveredJavaHome: string = tl.getVariable(envName);
 
-        if (!discoveredJavaHome) {
-            if (unsupportedVersions.indexOf(jdkMajorVersion.toString()) >= 0) {
-                // if jdk version is in unsupported versions list, warn and switch to 1.11 to avoid breaking builds
-                tl.warning(tl.loc('UnsupportedJdkWarning'));
-                return findJavaHome('11', jdkArch);
-            } else {
-                throw new Error(tl.loc('FailedToLocateSpecifiedJVM', envName));
-            }
+        if (discoveredJavaHome) {
+            return discoveredJavaHome;
         }
     }
 
-    return discoveredJavaHome;
+    // Fallback: try Windows registry for x86/x64
+    if (isWindows && jdkArch.toLowerCase() !== 'arm64') {
+        const registryJavaHome: string = readJavaHomeFromRegistry(getShortJavaVersion(jdkVersion), jdkArch);
+        if (registryJavaHome) {
+            return registryJavaHome;
+        }
+    }
+
+    if (unsupportedVersions.indexOf(jdkMajorVersion.toString()) >= 0) {
+        // if jdk version is in unsupported versions list, warn and switch to 1.11 to avoid breaking builds
+        tl.warning(tl.loc('UnsupportedJdkWarning'));
+        return findJavaHome('11', jdkArch);
+    } else {
+        const envName: string = "JAVA_HOME_" + jdkMajorVersion + "_" + jdkArch.toUpperCase();
+        throw new Error(tl.loc('FailedToLocateSpecifiedJVM', envName));
+    }
+}
+
+/**
+ * Searches for pre-installed ARM64 Java, with fallback to AARCH64 variants.
+ * Search order:
+ *   1. JAVA_HOME_<ver>_ARM64 via tl.getVariable (case-insensitive)
+ *   2. JAVA_HOME_<ver>_arm64 via process.env (case-sensitive)
+ *   3. JAVA_HOME_<ver>_AARCH64 via tl.getVariable (case-insensitive)
+ *   4. JAVA_HOME_<ver>_aarch64 via process.env (case-sensitive)
+ * @param jdkMajorVersion Major version number of the JDK
+ * @returns The JAVA_HOME path if found, undefined otherwise
+ */
+function findArm64JavaHome(jdkMajorVersion: number): string | undefined {
+    // Check JAVA_HOME with uppercase architecture: e.g. JAVA_HOME_21_ARM64
+    // tl.getVariable is case-insensitive — covers ARM64, Arm64, arm64, etc.
+    const javaHomeUpperCase: string = `JAVA_HOME_${jdkMajorVersion}_ARM64`;
+    let javaHome: string | undefined = tl.getVariable(javaHomeUpperCase);
+    if (javaHome) {
+        tl.debug(tl.loc('JavaHomeResolvedFrom', javaHomeUpperCase, javaHome));
+        return javaHome;
+    }
+
+    // process.env is case-sensitive on Linux/macOS.
+    // Check JAVA_HOME with exact lowercase architecture: e.g. JAVA_HOME_21_arm64
+    const javaHomeLowerCaseArch: string = `JAVA_HOME_${jdkMajorVersion}_arm64`;
+    javaHome = process.env[javaHomeLowerCaseArch];
+    if (javaHome) {
+        tl.debug(tl.loc('JavaHomeResolvedFrom', javaHomeLowerCaseArch, javaHome));
+        return javaHome;
+    }
+
+    // For arm64, fall back to checking aarch64 variants
+    tl.debug(tl.loc('JavaHomeArm64NotFound', javaHomeUpperCase));
+
+    // Check JAVA_HOME with AARCH64: e.g. JAVA_HOME_21_AARCH64
+    // tl.getVariable is case-insensitive — covers AARCH64, Aarch64, aarch64, etc.
+    const javaHomeAarch64UpperCase: string = `JAVA_HOME_${jdkMajorVersion}_AARCH64`;
+    javaHome = tl.getVariable(javaHomeAarch64UpperCase);
+    if (javaHome) {
+        tl.debug(tl.loc('JavaHomeResolvedFrom', javaHomeAarch64UpperCase, javaHome));
+        return javaHome;
+    }
+
+    // Check JAVA_HOME with exact lowercase aarch64 via process.env: e.g. JAVA_HOME_21_aarch64
+    const javaHomeAarch64LowerCase: string = `JAVA_HOME_${jdkMajorVersion}_aarch64`;
+    javaHome = process.env[javaHomeAarch64LowerCase];
+    if (javaHome) {
+        tl.debug(tl.loc('JavaHomeResolvedFrom', javaHomeAarch64LowerCase, javaHome));
+        return javaHome;
+    }
+
+    return undefined;
 }
 
 export function publishJavaTelemetry(taskName: string, javaTelemetryData) {
