@@ -1,12 +1,10 @@
 # This Yaml Document has been converted by ESAI Yaml Pipeline Conversion Tool.
 # This pipeline will be extended to the OneESPT template
-trigger:
-- main
-- releases/*
+# PR validation pipeline - build and test only, no publishing
+trigger: none
 variables:
 - name: skipBuildTagsForGitHubPullRequests
   value: true
-- group: npm-tokens
 resources:
   repositories:
   - repository: 1ESPipelineTemplates
@@ -32,7 +30,7 @@ extends:
     - ES365AIMigrationTooling
     stages:
     - stage: 'BuildCommonNpmWin'
-      displayName: 'Windows - Build & Publish Common Npm packages'
+      displayName: 'Windows - Build Common Npm packages'
       dependsOn: []
       pool:
         name: 1ES-ABTT-Shared-Pool
@@ -40,7 +38,10 @@ extends:
         os: windows
       condition: succeeded()
       jobs:
-      - template: /ci/build-common-packages.yml@self
+      - job: BuildCommonNpmPackages
+        displayName: Build Common Npm Packages
+        steps:
+        - template: /ci/build-common-packages.yml@self
 
     - stage: 'BuildCommonNpmUbuntu'
       displayName: 'Ubuntu - Build Common Npm packages'
@@ -51,7 +52,10 @@ extends:
         os: linux
       condition: succeeded()
       jobs:
-      - template: /ci/build-common-packages.yml@self
+      - job: BuildCommonNpmPackages
+        displayName: Build Common Npm Packages
+        steps:
+        - template: /ci/build-common-packages.yml@self
 
     - stage: 'BuildCommonNpmMac'
       displayName: 'MacOS - Build Common Npm packages'
@@ -62,4 +66,7 @@ extends:
         os: macOS
       condition: succeeded()
       jobs:
-      - template: /ci/build-common-packages.yml@self
+      - job: BuildCommonNpmPackages
+        displayName: Build Common Npm Packages
+        steps:
+        - template: /ci/build-common-packages.yml@self
