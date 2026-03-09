@@ -126,16 +126,34 @@ export function findJavaHome(jdkVersion: string, jdkArch: string): string {
     const jdkShortVersion: string = getShortJavaVersion(jdkVersion);
     const jdkMajorVersion: number = coerce(jdkShortVersion).major;
 
+    const javaHomeUpperCase: string = `JAVA_HOME_${jdkMajorVersion}_${jdkArch.toUpperCase()}`;
+    let discoveredJavaHome: string = tl.getVariable(javaHomeUpperCase);
+    if (discoveredJavaHome) {
+        tl.debug(tl.loc('JavaHomeResolvedFrom', javaHomeUpperCase, discoveredJavaHome));
+        return discoveredJavaHome;
+    }
+
+    const javaHomeLowerCaseArch: string = `JAVA_HOME_${jdkMajorVersion}_${jdkArch.toLowerCase()}`;
+    discoveredJavaHome = process.env[javaHomeLowerCaseArch];
+    if (discoveredJavaHome) {
+        tl.debug(tl.loc('JavaHomeResolvedFrom', javaHomeLowerCaseArch, discoveredJavaHome));
+        return discoveredJavaHome;
+    }
+
     if (jdkArch.toLowerCase() === 'arm64') {
-        const discoveredJavaHome: string | undefined = findArm64JavaHome(jdkMajorVersion);
+        tl.debug(tl.loc('JavaHomeArm64NotFound', javaHomeUpperCase));
+
+        const javaHomeAarch64UpperCase: string = `JAVA_HOME_${jdkMajorVersion}_AARCH64`;
+        discoveredJavaHome = tl.getVariable(javaHomeAarch64UpperCase);
         if (discoveredJavaHome) {
+            tl.debug(tl.loc('JavaHomeResolvedFrom', javaHomeAarch64UpperCase, discoveredJavaHome));
             return discoveredJavaHome;
         }
-    } else {
-        const envName: string = "JAVA_HOME_" + jdkMajorVersion + "_" + jdkArch.toUpperCase();
-        let discoveredJavaHome: string = tl.getVariable(envName);
 
+        const javaHomeAarch64LowerCase: string = `JAVA_HOME_${jdkMajorVersion}_aarch64`;
+        discoveredJavaHome = process.env[javaHomeAarch64LowerCase];
         if (discoveredJavaHome) {
+            tl.debug(tl.loc('JavaHomeResolvedFrom', javaHomeAarch64LowerCase, discoveredJavaHome));
             return discoveredJavaHome;
         }
     }
@@ -152,43 +170,8 @@ export function findJavaHome(jdkVersion: string, jdkArch: string): string {
         tl.warning(tl.loc('UnsupportedJdkWarning'));
         return findJavaHome('11', jdkArch);
     } else {
-        const envName: string = "JAVA_HOME_" + jdkMajorVersion + "_" + jdkArch.toUpperCase();
-        throw new Error(tl.loc('FailedToLocateSpecifiedJVM', envName));
+        throw new Error(tl.loc('FailedToLocateSpecifiedJVM', javaHomeUpperCase));
     }
-}
-
-function findArm64JavaHome(jdkMajorVersion: number): string | undefined {
-    const javaHomeUpperCase: string = `JAVA_HOME_${jdkMajorVersion}_ARM64`;
-    let javaHome: string | undefined = tl.getVariable(javaHomeUpperCase);
-    if (javaHome) {
-        tl.debug(tl.loc('JavaHomeResolvedFrom', javaHomeUpperCase, javaHome));
-        return javaHome;
-    }
-
-    const javaHomeLowerCaseArch: string = `JAVA_HOME_${jdkMajorVersion}_arm64`;
-    javaHome = process.env[javaHomeLowerCaseArch];
-    if (javaHome) {
-        tl.debug(tl.loc('JavaHomeResolvedFrom', javaHomeLowerCaseArch, javaHome));
-        return javaHome;
-    }
-
-    tl.debug(tl.loc('JavaHomeArm64NotFound', javaHomeUpperCase));
-
-    const javaHomeAarch64UpperCase: string = `JAVA_HOME_${jdkMajorVersion}_AARCH64`;
-    javaHome = tl.getVariable(javaHomeAarch64UpperCase);
-    if (javaHome) {
-        tl.debug(tl.loc('JavaHomeResolvedFrom', javaHomeAarch64UpperCase, javaHome));
-        return javaHome;
-    }
-
-    const javaHomeAarch64LowerCase: string = `JAVA_HOME_${jdkMajorVersion}_aarch64`;
-    javaHome = process.env[javaHomeAarch64LowerCase];
-    if (javaHome) {
-        tl.debug(tl.loc('JavaHomeResolvedFrom', javaHomeAarch64LowerCase, javaHome));
-        return javaHome;
-    }
-
-    return undefined;
 }
 
 export function publishJavaTelemetry(taskName: string, javaTelemetryData) {
