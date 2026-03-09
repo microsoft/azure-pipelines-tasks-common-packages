@@ -102,6 +102,8 @@ function Get-MSBuildPath {
                         $archValue = $archValues.GetValue(1) # DotNetFrameworkArchitecture.Bitness32
                     } elseif ($Architecture -eq 'x64') {
                         $archValue = $archValues.GetValue(2) # DotNetFrameworkArchitecture.Bitness64
+                    } elseif ($Architecture -eq 'arm64') {
+                        $archValue = $archValues.GetValue(2) # DotNetFrameworkArchitecture.Bitness64
                     } else {
                         $archValue = $archValues.GetValue(1) # DotNetFrameworkArchitecture.Bitness32
                     }
@@ -137,6 +139,8 @@ function Get-MSBuildPath {
                         if ($Architecture -eq "x86") {
                             $archValue = $archValues.GetValue(1) # DotNetFrameworkArchitecture.Bitness32
                         } elseif ($Architecture -eq "x64") {
+                            $archValue = $archValues.GetValue(2) # DotNetFrameworkArchitecture.Bitness64
+                        } elseif ($Architecture -eq "arm64") {
                             $archValue = $archValues.GetValue(2) # DotNetFrameworkArchitecture.Bitness64
                         } else {
                             $archValue = $archValues.GetValue(1) # DotNetFrameworkArchitecture.Bitness32
@@ -201,7 +205,8 @@ function Get-MSBuildPathV2 {
                 # DotNetFrameworkArchitecture.Bitness32
             } elseif ($Architecture -eq 'x64') {
                 $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild", $MsBuildDirectory, "Bin\amd64\MSBuild.exe");
-                # DotNetFrameworkArchitecture.Bitness64
+            } elseif ($Architecture -eq 'arm64') {
+                $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild", $MsBuildDirectory, "Bin\arm64\MSBuild.exe");
             } else {
                 $msBuildPath = [System.IO.Path]::Combine($specifiedStudio.installationPath, "MSBuild", $MsBuildDirectory, "Bin\MSBuild.exe");
                 # DotNetFrameworkArchitecture.Bitness32
@@ -267,6 +272,8 @@ function Get-MSBuildPathV2 {
                         $archValue = $archValues.GetValue(1) # DotNetFrameworkArchitecture.Bitness32
                     } elseif ($Architecture -eq 'x64') {
                         $archValue = $archValues.GetValue(2) # DotNetFrameworkArchitecture.Bitness64
+                    } elseif ($Architecture -eq 'arm64') {
+                        $archValue = $archValues.GetValue(2) # DotNetFrameworkArchitecture.Bitness64
                     } else {
                         $archValue = $archValues.GetValue(1) # DotNetFrameworkArchitecture.Bitness32
                     }
@@ -302,6 +309,8 @@ function Get-MSBuildPathV2 {
                         if ($Architecture -eq "x86") {
                             $archValue = $archValues.GetValue(1) # DotNetFrameworkArchitecture.Bitness32
                         } elseif ($Architecture -eq "x64") {
+                            $archValue = $archValues.GetValue(2) # DotNetFrameworkArchitecture.Bitness64
+                        } elseif ($Architecture -eq "arm64") {
                             $archValue = $archValues.GetValue(2) # DotNetFrameworkArchitecture.Bitness64
                         } else {
                             $archValue = $archValues.GetValue(1) # DotNetFrameworkArchitecture.Bitness32
@@ -423,6 +432,10 @@ function Select-MSBuildPath {
 
     $featureFlags = Get-FeatureFlags
 
+    # Use V2 path resolution when explicitly enabled via feature flag, or when arm64 is
+    # requested (V1 lacks ARM64 enum support and would incorrectly return the amd64 path).
+    $preferV2PathResolution = $featureFlags.useGetMSBuildPathV2 -or $Architecture -eq 'arm64'
+
     $selectMSBuildPathTelemetry = [PSCustomObject]@{
         PreferredVersion = $PreferredVersion
         LookedUpVersion = ""
@@ -459,7 +472,7 @@ function Select-MSBuildPath {
 
         # Look for a specific version of MSBuild.
         if ($specificVersion) {
-            if($featureFlags.enableTelemetry) {
+            if($featureFlags.enableTelemetry -or $preferV2PathResolution) {
                 $pathFromGetMSBuildPathV2 = $null
                 try {
                     $selectMSBuildPathTelemetry.LookedUpVersion = $PreferredVersion
@@ -472,7 +485,7 @@ function Select-MSBuildPath {
 
                 EmitTelemetry -TelemetryPayload $selectMSBuildPathTelemetry -TaskName "MSBuildHelpers"
 
-                if($featureFlags.useGetMSBuildPathV2 -and $pathFromGetMSBuildPathV2) {
+                if($preferV2PathResolution -and $pathFromGetMSBuildPathV2) {
                     Write-Debug "Returning path from GetMSBuildPathV2"
                     return $pathFromGetMSBuildPathV2
                 }
@@ -488,7 +501,7 @@ function Select-MSBuildPath {
 
         # Look for the latest version of MSBuild.
         foreach ($version in $versions) {
-            if($featureFlags.enableTelemetry) {
+            if($featureFlags.enableTelemetry -or $preferV2PathResolution) {
                 $pathFromGetMSBuildPathV2 = $null
                 try {
                     $selectMSBuildPathTelemetry.LookedUpVersion = $version
@@ -501,7 +514,7 @@ function Select-MSBuildPath {
 
                 EmitTelemetry -TelemetryPayload $selectMSBuildPathTelemetry -TaskName "MSBuildHelpers"
                 
-                if($featureFlags.useGetMSBuildPathV2 -and $pathFromGetMSBuildPathV2) {
+                if($preferV2PathResolution -and $pathFromGetMSBuildPathV2) {
                     # Warn falling back.
                     if ($specificVersion) {
                         Write-Warning (Get-VstsLocString -Key 'MSB_UnableToFindMSBuildVersion0Architecture1FallbackVersion2' -ArgumentList $PreferredVersion, $Architecture, $version)
