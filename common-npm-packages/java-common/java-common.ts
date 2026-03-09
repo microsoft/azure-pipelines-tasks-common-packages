@@ -117,7 +117,7 @@ function getShortJavaVersion(jdkVersion: string): string {
 }
 
 export function findJavaHome(jdkVersion: string, jdkArch: string): string {
-    // If input is provided as aarch64 consider as arm64 and follow the same process to lookup JAVA_HOME variable
+    // Normalize aarch64 input to arm64 for consistent variable lookup
     if (jdkArch.toLowerCase() === 'aarch64') {
         jdkArch = 'arm64';
     }
@@ -127,13 +127,13 @@ export function findJavaHome(jdkVersion: string, jdkArch: string): string {
     const jdkShortVersion: string = getShortJavaVersion(jdkVersion);
     const jdkMajorVersion: number = coerce(jdkShortVersion).major;
 
-    // Look up JAVA_HOME using the requested JDK Version and Architecture
+    // Try resolving JAVA_HOME from pipeline variables or environment
     let discoveredJavaHome: string = resolveJavaHomeFromVariable(jdkMajorVersion, jdkArch);
     if (discoveredJavaHome) {
         return discoveredJavaHome;
     }
 
-    // For arm64 input check also for AARCH64 variants since some hosted agents define JAVA_HOME with that suffix
+    // For arm64 also check AARCH64 variants since some agents define JAVA_HOME_<ver>_AARCH64
     if (jdkArch.toLowerCase() === 'arm64') {
         tl.debug(tl.loc('JavaHomeArm64NotFound', `JAVA_HOME_${jdkMajorVersion}_ARM64`));
         discoveredJavaHome = resolveJavaHomeFromVariable(jdkMajorVersion, 'AARCH64');
@@ -142,7 +142,9 @@ export function findJavaHome(jdkVersion: string, jdkArch: string): string {
         }
     }
 
-    // Lookup Windows registry for x86 and x64 only if lookup from resolveJavaHomeFromVariable() fails.
+    // Windows registry fallback for x86/x64 only.
+    // The HKLM\SOFTWARE\JavaSoft registry key is written by traditional JDK installers
+    // and only contains x86/x64 entries. ARM64 JDK installations use environment variables instead.
     if (isWindows && jdkArch.toLowerCase() !== 'arm64') {
         const registryJavaHome: string = readJavaHomeFromRegistry(getShortJavaVersion(jdkVersion), jdkArch);
         if (registryJavaHome) {
@@ -159,7 +161,11 @@ export function findJavaHome(jdkVersion: string, jdkArch: string): string {
     }
 }
 
-// Checks for JAVA_HOME_<JDKVERSION>_<ARCH> 
+/**
+ * Resolves JAVA_HOME by checking both uppercase and lowercase arch variants.
+ * tl.getVariable checks JAVA_HOME_<ver>_<ARCH> (case-insensitive).
+ * process.env checks JAVA_HOME_<ver>_<arch> (case-sensitive, lowercase).
+ */
 function resolveJavaHomeFromVariable(jdkMajorVersion: number, arch: string): string | undefined {
     const javaHomeUpperCase: string = `JAVA_HOME_${jdkMajorVersion}_${arch.toUpperCase()}`;
     let javaHome: string | undefined = tl.getVariable(javaHomeUpperCase);
