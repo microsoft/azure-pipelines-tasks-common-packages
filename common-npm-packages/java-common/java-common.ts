@@ -117,6 +117,7 @@ function getShortJavaVersion(jdkVersion: string): string {
 }
 
 export function findJavaHome(jdkVersion: string, jdkArch: string): string {
+    // If input is provided as aarch64 consider as arm64 and follow the same process to lookup JAVA_HOME variable
     if (jdkArch.toLowerCase() === 'aarch64') {
         jdkArch = 'arm64';
     }
@@ -126,38 +127,22 @@ export function findJavaHome(jdkVersion: string, jdkArch: string): string {
     const jdkShortVersion: string = getShortJavaVersion(jdkVersion);
     const jdkMajorVersion: number = coerce(jdkShortVersion).major;
 
-    const javaHomeUpperCase: string = `JAVA_HOME_${jdkMajorVersion}_${jdkArch.toUpperCase()}`;
-    let discoveredJavaHome: string = tl.getVariable(javaHomeUpperCase);
+    // Look up JAVA_HOME using the requested JDK Version and Architecture
+    let discoveredJavaHome: string = resolveJavaHomeFromVariable(jdkMajorVersion, jdkArch);
     if (discoveredJavaHome) {
-        tl.debug(tl.loc('JavaHomeResolvedFrom', javaHomeUpperCase, discoveredJavaHome));
         return discoveredJavaHome;
     }
 
-    const javaHomeLowerCaseArch: string = `JAVA_HOME_${jdkMajorVersion}_${jdkArch.toLowerCase()}`;
-    discoveredJavaHome = process.env[javaHomeLowerCaseArch];
-    if (discoveredJavaHome) {
-        tl.debug(tl.loc('JavaHomeResolvedFrom', javaHomeLowerCaseArch, discoveredJavaHome));
-        return discoveredJavaHome;
-    }
-
+    // For arm64 input check also for AARCH64 variants since some hosted agents define JAVA_HOME with that suffix
     if (jdkArch.toLowerCase() === 'arm64') {
-        tl.debug(tl.loc('JavaHomeArm64NotFound', javaHomeUpperCase));
-
-        const javaHomeAarch64UpperCase: string = `JAVA_HOME_${jdkMajorVersion}_AARCH64`;
-        discoveredJavaHome = tl.getVariable(javaHomeAarch64UpperCase);
+        tl.debug(tl.loc('JavaHomeArm64NotFound', `JAVA_HOME_${jdkMajorVersion}_ARM64`));
+        discoveredJavaHome = resolveJavaHomeFromVariable(jdkMajorVersion, 'AARCH64');
         if (discoveredJavaHome) {
-            tl.debug(tl.loc('JavaHomeResolvedFrom', javaHomeAarch64UpperCase, discoveredJavaHome));
-            return discoveredJavaHome;
-        }
-
-        const javaHomeAarch64LowerCase: string = `JAVA_HOME_${jdkMajorVersion}_aarch64`;
-        discoveredJavaHome = process.env[javaHomeAarch64LowerCase];
-        if (discoveredJavaHome) {
-            tl.debug(tl.loc('JavaHomeResolvedFrom', javaHomeAarch64LowerCase, discoveredJavaHome));
             return discoveredJavaHome;
         }
     }
 
+    // Lookup Windows registry for x86 and x64 only if lookup from resolveJavaHomeFromVariable() fails.
     if (isWindows && jdkArch.toLowerCase() !== 'arm64') {
         const registryJavaHome: string = readJavaHomeFromRegistry(getShortJavaVersion(jdkVersion), jdkArch);
         if (registryJavaHome) {
@@ -170,8 +155,27 @@ export function findJavaHome(jdkVersion: string, jdkArch: string): string {
         tl.warning(tl.loc('UnsupportedJdkWarning'));
         return findJavaHome('11', jdkArch);
     } else {
-        throw new Error(tl.loc('FailedToLocateSpecifiedJVM', javaHomeUpperCase));
+        throw new Error(tl.loc('FailedToLocateSpecifiedJVM', `JAVA_HOME_${jdkMajorVersion}_${jdkArch.toUpperCase()}`));
     }
+}
+
+// Checks for JAVA_HOME_<JDKVERSION>_<ARCH> 
+function resolveJavaHomeFromVariable(jdkMajorVersion: number, arch: string): string | undefined {
+    const javaHomeUpperCase: string = `JAVA_HOME_${jdkMajorVersion}_${arch.toUpperCase()}`;
+    let javaHome: string | undefined = tl.getVariable(javaHomeUpperCase);
+    if (javaHome) {
+        console.log(tl.loc('JavaHomeResolvedFrom', javaHomeUpperCase, javaHome));
+        return javaHome;
+    }
+
+    const javaHomeLowerCaseArch: string = `JAVA_HOME_${jdkMajorVersion}_${arch.toLowerCase()}`;
+    javaHome = process.env[javaHomeLowerCaseArch];
+    if (javaHome) {
+        console.log(tl.loc('JavaHomeResolvedFrom', javaHomeLowerCaseArch, javaHome));
+        return javaHome;
+    }
+
+    return undefined;
 }
 
 export function publishJavaTelemetry(taskName: string, javaTelemetryData) {
