@@ -40,7 +40,19 @@ extends:
         os: windows
       condition: succeeded()
       jobs:
-      - template: /ci/build-common-packages.yml@self
+      - job: BuildCommonNpmPackages
+        displayName: Build Common Npm Packages
+        steps:
+        - template: /ci/build-common-packages.yml@self
+
+        # For CI runs on main, automatically publish packages
+        - bash: npm run publish
+          condition: and(succeeded(), in(variables['build.reason'], 'IndividualCI', 'BatchedCI', 'Manual'), eq(variables['Agent.OS'], 'Windows_NT'))
+          env:
+            NPM_TOKEN: $(npm-automation.token)
+            GH_TOKEN: $(gh-automation.token)
+          displayName: Publish packages (Only Windows)
+          enabled: true
 
     - stage: 'BuildCommonNpmUbuntu'
       displayName: 'Ubuntu - Build Common Npm packages'
@@ -51,7 +63,10 @@ extends:
         os: linux
       condition: succeeded()
       jobs:
-      - template: /ci/build-common-packages.yml@self
+      - job: BuildCommonNpmPackages
+        displayName: Build Common Npm Packages
+        steps:
+        - template: /ci/build-common-packages.yml@self
 
     - stage: 'BuildCommonNpmMac'
       displayName: 'MacOS - Build Common Npm packages'
@@ -62,4 +77,7 @@ extends:
         os: macOS
       condition: succeeded()
       jobs:
-      - template: /ci/build-common-packages.yml@self
+      - job: BuildCommonNpmPackages
+        displayName: Build Common Npm Packages
+        steps:
+        - template: /ci/build-common-packages.yml@self
