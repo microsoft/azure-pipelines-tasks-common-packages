@@ -117,39 +117,71 @@ function getShortJavaVersion(jdkVersion: string): string {
 }
 
 export function findJavaHome(jdkVersion: string, jdkArch: string): string {
+    // Normalize aarch64 input to arm64 for consistent variable lookup
+    if (jdkArch.toLowerCase() === 'aarch64') {
+        jdkArch = 'arm64';
+    }
+
     tl.debug(tl.loc('LocateJVMBasedOnVersionAndArch', jdkVersion, jdkArch));
 
     const jdkShortVersion: string = getShortJavaVersion(jdkVersion);
     const jdkMajorVersion: number = coerce(jdkShortVersion).major;
-    // jdkArchitecture is either x64, x86 or arm64
-    // envName for version 1.7 and x64 would be "JAVA_HOME_7_X64"
-    var envName = "JAVA_HOME_" + jdkMajorVersion + "_" + jdkArch.toUpperCase();
-    // MS-hosted runners set JAVA_HOME_<version>_arm64 variable for pre-installed ARM JDKs.
-    // If JAVA_HOME_<version>_ARM64 is not found, search for JAVA_HOME_<version>_arm64.
-    var arm64EnvName = "JAVA_HOME_" + jdkMajorVersion + "_" + jdkArch.toLowerCase();
-    let discoveredJavaHome = tl.getVariable(envName);
-    if(!discoveredJavaHome && jdkArch.toLowerCase() === 'arm64'){
-        // Using process.env to read the environment variable as taskLib.getVariable converts the name to upper case.
-        discoveredJavaHome = process.env[arm64EnvName];
+
+    // Try resolving JAVA_HOME from pipeline variables or environment
+    let discoveredJavaHome: string = resolveJavaHomeFromVariable(jdkMajorVersion, jdkArch);
+    if (discoveredJavaHome) {
+        return discoveredJavaHome;
     }
 
-    if (!discoveredJavaHome) {
-        if (isWindows) {
-            discoveredJavaHome = readJavaHomeFromRegistry(jdkShortVersion, jdkArch);
-        }
-
-        if (!discoveredJavaHome) {
-            if (unsupportedVersions.indexOf(jdkMajorVersion.toString()) >= 0) {
-                // if jdk version is in unsupported versions list, warn and switch to 1.11 to avoid breaking builds
-                tl.warning(tl.loc('UnsupportedJdkWarning'));
-                return findJavaHome('11', jdkArch);
-            } else {
-                throw new Error(tl.loc('FailedToLocateSpecifiedJVM', envName));
-            }
+    // For arm64 also check AARCH64 variants since some agents define JAVA_HOME_<ver>_AARCH64
+    if (jdkArch.toLowerCase() === 'arm64') {
+        tl.debug(tl.loc('JavaHomeArm64NotFound', `JAVA_HOME_${jdkMajorVersion}_ARM64`));
+        discoveredJavaHome = resolveJavaHomeFromVariable(jdkMajorVersion, 'AARCH64');
+        if (discoveredJavaHome) {
+            return discoveredJavaHome;
         }
     }
 
-    return discoveredJavaHome;
+    // Windows registry fallback for x86/x64 only.
+    // The HKLM\SOFTWARE\JavaSoft registry key is written by traditional JDK installers
+    // and only contains x86/x64 entries. ARM64 JDK installations use environment variables instead.
+    if (isWindows && jdkArch.toLowerCase() !== 'arm64') {
+        const registryJavaHome: string = readJavaHomeFromRegistry(getShortJavaVersion(jdkVersion), jdkArch);
+        if (registryJavaHome) {
+            return registryJavaHome;
+        }
+    }
+
+    if (unsupportedVersions.indexOf(jdkMajorVersion.toString()) >= 0) {
+        // if jdk version is in unsupported versions list, warn and switch to 1.11 to avoid breaking builds
+        tl.warning(tl.loc('UnsupportedJdkWarning'));
+        return findJavaHome('11', jdkArch);
+    } else {
+        throw new Error(tl.loc('FailedToLocateSpecifiedJVM', `JAVA_HOME_${jdkMajorVersion}_${jdkArch.toUpperCase()}`));
+    }
+}
+
+/**
+ * Resolves JAVA_HOME by checking both uppercase and lowercase arch variants.
+ * tl.getVariable checks JAVA_HOME_<ver>_<ARCH> (case-insensitive).
+ * process.env checks JAVA_HOME_<ver>_<arch> (case-sensitive, lowercase).
+ */
+function resolveJavaHomeFromVariable(jdkMajorVersion: number, arch: string): string | undefined {
+    const javaHomeUpperCase: string = `JAVA_HOME_${jdkMajorVersion}_${arch.toUpperCase()}`;
+    let javaHome: string | undefined = tl.getVariable(javaHomeUpperCase);
+    if (javaHome) {
+        console.log(tl.loc('JavaHomeResolvedFrom', javaHomeUpperCase, javaHome));
+        return javaHome;
+    }
+
+    const javaHomeLowerCaseArch: string = `JAVA_HOME_${jdkMajorVersion}_${arch.toLowerCase()}`;
+    javaHome = process.env[javaHomeLowerCaseArch];
+    if (javaHome) {
+        console.log(tl.loc('JavaHomeResolvedFrom', javaHomeLowerCaseArch, javaHome));
+        return javaHome;
+    }
+
+    return undefined;
 }
 
 export function publishJavaTelemetry(taskName: string, javaTelemetryData) {
