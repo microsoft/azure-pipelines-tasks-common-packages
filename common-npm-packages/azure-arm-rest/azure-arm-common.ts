@@ -23,12 +23,7 @@ import webClient = require('./webClient');
 
 /// Dynamic msal loading based on the node version
 const nodeVersion = parseInt(process.version.split('.')[0].replace('v', ''));
-let msalVer;
-if (tl.getPipelineFeature('EnableMsalV3')) {
-    msalVer = nodeVersion < 16 ? "msalv1": "msalv3";
-} else {
-    msalVer = nodeVersion < 16 ? "msalv1": "msalv2";
-}
+const msalVer = nodeVersion < 16 ? "msalv1" : "msalv3";
 
 // Maximum backoff timeout for creating AAD token in milliseconds
 const MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT = 15000;
@@ -734,10 +729,10 @@ export class ApplicationTokenCredentials {
 
     public getOpenSSLPath() {
         if (tl.osType().match(/^Win/)) {
-            if (tl.getPipelineFeature("UseOpenSSLv3.4.2InAzureArmRest")) {
-                return tl.which(path.join(__dirname, 'openssl3.4.2', 'openssl'));
+            if (tl.getPipelineFeature("UseLatestOpenSSLInAzureArmRest")) {
+                return tl.which(path.join(__dirname, 'openssl3.6.1', 'openssl'));
             } else {
-                return tl.which(path.join(__dirname, 'openssl3.4.0', 'openssl'));
+                return tl.which(path.join(__dirname, 'openssl3.4.2', 'openssl'));
             }
         } else {
             return tl.which('openssl');
