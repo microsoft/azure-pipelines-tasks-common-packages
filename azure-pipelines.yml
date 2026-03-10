@@ -1,10 +1,12 @@
 # This Yaml Document has been converted by ESAI Yaml Pipeline Conversion Tool.
 # This pipeline will be extended to the OneESPT template
-# PR validation pipeline - build and test only, no publishing
-trigger: none
+trigger:
+- main
+- releases/*
 variables:
 - name: skipBuildTagsForGitHubPullRequests
   value: true
+- group: npm-tokens
 resources:
   repositories:
   - repository: 1ESPipelineTemplates
@@ -30,7 +32,7 @@ extends:
     - ES365AIMigrationTooling
     stages:
     - stage: 'BuildCommonNpmWin'
-      displayName: 'Windows - Build Common Npm packages'
+      displayName: 'Windows - Build & Publish Common Npm packages'
       dependsOn: []
       pool:
         name: 1ES-ABTT-Shared-Pool
@@ -42,6 +44,15 @@ extends:
         displayName: Build Common Npm Packages
         steps:
         - template: /ci/build-common-packages.yml@self
+
+        # For CI runs on main, automatically publish packages
+        - bash: npm run publish
+          condition: and(succeeded(), in(variables['build.reason'], 'IndividualCI', 'BatchedCI', 'Manual'), eq(variables['Agent.OS'], 'Windows_NT'))
+          env:
+            NPM_TOKEN: $(npm-automation.token)
+            GH_TOKEN: $(gh-automation.token)
+          displayName: Publish packages (Only Windows)
+          enabled: true
 
     - stage: 'BuildCommonNpmUbuntu'
       displayName: 'Ubuntu - Build Common Npm packages'
