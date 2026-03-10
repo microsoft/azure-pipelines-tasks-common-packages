@@ -16,14 +16,18 @@
     "dependencies": {
         "@azure/identity": "^3.4.2",
         "@azure/storage-blob": "12.17.0",
-        "artifact-engine": "^1.5.5",
-        "azure-pipelines-task-lib": "^4.8.2",
+        "artifact-engine": "^1.263.0",
+        "azure-pipelines-task-lib": "^5.2.8",
         "globalthis": "^1.0.3",
         "q": "1.4.1"
     },
     "devDependencies": {
         "@types/node": "^10.17.60",
         "typescript": "^5.1.6"
+    },
+    "overrides": {
+        "qs": "^6.15.0",
+        "minimatch": "^10.2.4"
     },
     "scripts": {
         "build": "cd ../build-scripts && npm install && cd ../az-blobstorage-provider && node make.js"
