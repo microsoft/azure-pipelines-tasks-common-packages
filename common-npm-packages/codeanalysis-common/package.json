@@ -9,9 +9,9 @@
     },
     "dependencies": {
         "@types/node": "^10.17.0",
-        "azure-pipelines-task-lib": "^4.17.0",
-        "glob": "7.1.0",
-        "mocha": "^10.5.1",
+        "azure-pipelines-task-lib": "^5.2.8",
+        "glob": "^13.0.6",
+        "mocha": "^11.7.5",
         "rewire": "^6.0.0",
         "sinon": "^14.0.0",
         "xml2js": "^0.6.2"
@@ -20,6 +20,9 @@
         "@types/mocha": "^5.2.6",
         "typescript": "4.0.2"
     },
+    "overrides": {
+        "minimatch": "^10.2.4"
+    }, 
     "main": "VSTS Tasks Code Analysis",
     "scripts": {
         "build": "cd ../build-scripts && npm install && cd ../codeanalysis-common && node make.js --build",
