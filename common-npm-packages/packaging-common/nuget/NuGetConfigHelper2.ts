@@ -10,6 +10,7 @@ import * as ngToolRunner from "./NuGetToolRunner2";
 import { NuGetExeXmlHelper } from "./NuGetExeXmlHelper";
 import { NuGetXmlHelper } from "./NuGetXmlHelper";
 import * as ngutil from "./Utility";
+import * as xml2js from "xml2js";
 
 // NuGetConfigHelper2 handles authenticated scenarios where the user selects a source from the UI or from a service connection.
 // It is used by the NuGetCommand >= v2.0.0 and DotNetCoreCLI >= v2.0.0
@@ -20,6 +21,10 @@ export class NuGetConfigHelper2 {
     public tempNugetConfigPath = undefined;
     private nugetXmlHelper: INuGetXmlHelper;
     private rootNuGetFiles: Array<string>;
+    
+     // Tracks original → prefixed (feed-*) keys for internal sources
+    private internalSourceKeyMap: Map<string, string> = new Map<string, string>();
+
 
     constructor(
         private nugetPath: string,
@@ -98,8 +103,15 @@ export class NuGetConfigHelper2 {
                     // https://github.com/NuGet/Home/issues/7517
                     // https://github.com/NuGet/Home/issues/7524
                     // so working around this by prefixing source with string
+                     
                     tl.debug('Prefixing internal source feed name ' + source.feedName + ' with feed-');
-                    source.feedName = 'feed-' + source.feedName;
+
+                  // mapping (original → prefixed)
+                    const originalKey = source.feedName;
+                    const prefixedKey = 'feed-' + originalKey;
+                    this.internalSourceKeyMap.set(originalKey, prefixedKey);
+
+                     source.feedName = prefixedKey;
 
                     // Re-adding source with creds
                     this.addSourceWithUsernamePasswordToTempNuGetConfig(source, "VssSessionToken", this.authInfo.internalAuthInfo.accessToken);
@@ -144,6 +156,13 @@ export class NuGetConfigHelper2 {
                 }
             }
         });
+        
+        try {
+            if (this.tempNugetConfigPath) {
+                this.syncPackageSourceMappingKeys(this.tempNugetConfigPath, this.internalSourceKeyMap);
+            }
+        } catch (e) { tl.warning(`PSM-Sync: error: ${(e as Error)?.message}`); }
+
     }
 
     private getTempNuGetConfigPath(): string {
@@ -151,6 +170,56 @@ export class NuGetConfigHelper2 {
         const tempNuGetConfigFileName = "tempNuGet_" + tl.getVariable("build.buildId") + ".config";
         return path.join(tempNuGetConfigBaseDir, "Nuget", tempNuGetConfigFileName);
     }
+
+    private async syncPackageSourceMappingKeys(
+    tempConfigPath: string,
+    originalToPrefixed: Map<string, string>
+    ): Promise<void> {
+    if (!tempConfigPath || originalToPrefixed.size === 0) { return; }
+    if (!fs.existsSync(tempConfigPath)) { tl.debug(`temp config file not found: ${tempConfigPath}`); return; }
+
+    const xmlText = fs.readFileSync(tempConfigPath, "utf8");
+    const parser = new xml2js.Parser({ explicitArray: true, preserveChildrenOrder: true });
+    const builder = new xml2js.Builder({ headless: false, xmldec: { version: "1.0", encoding: "utf-8" } });
+
+    const doc: any = await parser.parseStringPromise(xmlText);
+    const cfg = doc?.configuration;
+    if (!cfg) { tl.debug("no <configuration> node."); return; }
+
+    const psmArr = cfg.packageSourceMapping;
+    if (!Array.isArray(psmArr) || psmArr.length === 0) { tl.debug("no <packageSourceMapping>."); return; }
+
+    const psmNode = psmArr[0];
+    const psmSources = psmNode?.packageSource;
+    if (!Array.isArray(psmSources) || psmSources.length === 0) { tl.debug("no <packageSource> children."); return; }
+
+    let changed = false;
+    for (const src of psmSources) {
+        const a = src?.$;
+        if (!a || typeof a.key !== "string") { continue; }
+        const originalKey = a.key.trim();
+
+        // If this mapping key maps to an internal feed now prefixed, rewrite it.
+        const prefixedKey = originalToPrefixed.get(originalKey);
+        if (prefixedKey && originalKey !== prefixedKey) {
+            tl.debug(`PackageSourceMapping-Sync: key '${originalKey}' -> '${prefixedKey}'`);
+            a.key = prefixedKey;
+            changed = true;
+            continue;
+        }
+
+        // Already prefixed -> leave as-is (idempotent).
+        if (originalKey.startsWith("feed-")) { continue; }
+    }
+
+    if (changed) {
+        const outXml = builder.buildObject(doc);
+        fs.writeFileSync(tempConfigPath, outXml, "utf8");
+        tl.debug("synchronized mapping keys in temp nuget.config.");
+    } else {
+        tl.debug("no mapping-key changes needed.");
+    }
+}
 
     public getSourcesFromTempNuGetConfig(): IPackageSource[] {
         // load content of the user's nuget.config
@@ -199,7 +268,8 @@ export class NuGetConfigHelper2 {
         this.nugetXmlHelper.SetApiKeyInNuGetConfig(source.feedName, apiKey);
     }
 
-    private convertToIPackageSource(source: auth.IPackageSourceBase): IPackageSource {
+    
+    private convertToIPackageSource(source: auth.IPackageSourceBase): IPackageSource {    
         const uppercaseUri = source.feedUri.toUpperCase();
         const isInternal = this.authInfo.internalAuthInfo ? this.authInfo.internalAuthInfo.uriPrefixes.some(prefix => uppercaseUri.indexOf(prefix.toUpperCase()) === 0) : false;
 
