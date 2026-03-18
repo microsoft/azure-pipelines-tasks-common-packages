@@ -1,5 +1,5 @@
 {
-    "name": "hist",
+    "name": "azp-tasks-az-blobstorage-provider",
     "version": "3.272.0",
     "description": "Common Library to download blobs from azure storage",
     "repository": {
