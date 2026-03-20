@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-codeanalysis-common",
-    "version": "2.256.0",
+    "version": "2.272.0",
     "author": "Microsoft Corporation",
     "description": "Build with Gradle",
     "license": "MIT",
@@ -19,9 +19,6 @@
     "devDependencies": {
         "@types/mocha": "^5.2.6",
         "typescript": "4.0.2"
-    },
-    "overrides": {
-        "minimatch": "^10.2.4"
     }, 
     "main": "VSTS Tasks Code Analysis",
     "scripts": {
