@@ -248,7 +248,7 @@ export class ApplicationTokenCredentials {
             message += " " + error;
         }
 
-        return Promise.reject(message);
+        return Promise.reject(new Error(message));
     }
 
     private static getSystemAccessToken() : string {
