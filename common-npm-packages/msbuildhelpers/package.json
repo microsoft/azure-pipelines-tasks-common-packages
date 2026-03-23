@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-msbuildhelpers",
-    "version": "3.271.0",
+    "version": "3.272.0",
     "description": "Azure Pipelines tasks MSBuild helpers",
     "main": "msbuildhelpers.js",
     "scripts": {
@@ -19,10 +19,10 @@
     "homepage": "https://github.com/microsoft/azure-pipelines-tasks-common-packages#readme",
     "dependencies": {
         "@types/mocha": "^5.2.7",
-        "@types/node": "^10.17.0",
-        "azure-pipelines-task-lib": "^4.17.0"
+        "@types/node": "^25.5.0",
+        "azure-pipelines-task-lib": "5.2.8"
     },
     "devDependencies": {
-        "typescript": "4.0.2"
+        "typescript": "5.9.3"
     }
 }
