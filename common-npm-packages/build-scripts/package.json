@@ -3,5 +3,8 @@
   "devDependencies": {
     "shelljs": "^0.8.5",
     "sync-request": "^6.1.0"
+  },
+  "overrides": {
+    "qs": "^6.15.0"
   }
 }
