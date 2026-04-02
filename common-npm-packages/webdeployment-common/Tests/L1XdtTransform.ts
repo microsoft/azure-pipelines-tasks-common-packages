@@ -51,7 +51,7 @@ export function runL1XdtTransformTests(this: Mocha.Suite) {
     function readXmlFile(path: string): ltx.Element {
         const buffer = fs.readFileSync(path);
         const encoding = detectFileEncoding(path, buffer)[0].toString();
-        const xml = buffer.toString(encoding).replace( /(?<!\r)[\n]+/gm, "\r\n" );
+        const xml = buffer.toString(encoding as BufferEncoding).replace( /(?<!\r)[\n]+/gm, "\r\n" );
         return ltx.parse(xml);
     }
 }
