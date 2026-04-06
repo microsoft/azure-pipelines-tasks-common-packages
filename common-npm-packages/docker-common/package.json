@@ -19,7 +19,7 @@
         "@types/q": "1.5.4",
         "@types/uuid": "^8.3.0",
         "azure-pipelines-task-lib": "^5.2.8",
-        "azure-pipelines-tasks-azure-arm-rest": "3.271.2",
+        "azure-pipelines-tasks-azure-arm-rest": "^3.272.1",
         "del": "2.2.0",
         "q": "1.4.1"
     },
