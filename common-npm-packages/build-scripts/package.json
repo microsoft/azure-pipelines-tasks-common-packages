@@ -5,6 +5,7 @@
     "sync-request": "^6.1.0"
   },
   "overrides": {
-    "qs": "^6.15.0"
+    "qs": "^6.15.0",
+    "minimatch": "^10.2.5"
   }
 }
