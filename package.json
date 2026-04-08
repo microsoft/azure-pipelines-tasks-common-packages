@@ -35,5 +35,8 @@
     "@octokit/rest": "^22.0.0",
     "minimist": "^1.2.6",
     "shelljs": "^0.8.5"
+  },
+  "overrides": {
+    "serialize-javascript": "^7.0.4"
   }
 }
