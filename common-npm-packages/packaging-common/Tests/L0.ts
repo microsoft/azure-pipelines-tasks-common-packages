@@ -1,6 +1,7 @@
 import { npmcommon } from "./npm/npmL0";
 import { nugetcommon } from "./nuget/nugetL0";
 import { nugettoolgetter } from "./nuget/nugetToolGetterTests";
+import { artifactToolUtilities } from "./universal/artifactToolUtilitiesL0";
 import * as pkgLocationUtils from "../locationUtilities";
 import * as assert from "assert";
 
@@ -8,6 +9,7 @@ describe("packaging-common Task Suite", function() {
     describe("nuget common", nugetcommon);
     describe("nuget tool getter", nugettoolgetter);
     describe("npm common", npmcommon);
+    describe("artifact tool utilities", artifactToolUtilities);
 });
 
 describe("packaging-common locationUtilities Suite", function() {
