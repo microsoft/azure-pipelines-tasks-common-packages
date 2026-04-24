@@ -85,9 +85,9 @@ export async function getArtifactToolFromService(serviceUri: string, accessToken
         throw new Error(tl.loc("Error_UnexpectedErrorFailedToGetToolMetadata", artifactToolGetUrl.requestUrl));
     }
 
-    // When UPack.ArtifactToolCacheVersion is "true", all versions resolve to a single cache slot
-    // at <Agent.ToolsDirectory>/artifacttool/0.0.1/<arch>, avoiding version-specific directories.
-    const pinCacheVersion = (tl.getVariable("UPack.ArtifactToolCacheVersion") || "").toLowerCase() === "true";
+    // When UPack.EnableFixedArtifactToolLocation is "true", all versions resolve to a single cache slot
+    // at <Agent.ToolsDirectory>/artifacttool/0.0.1-latest/<arch>, avoiding version-specific directories.
+    const pinCacheVersion = (tl.getVariable("UPack.EnableFixedArtifactToolLocation") || "").toLowerCase() === "true";
     const cacheVersion = pinCacheVersion
         ? "0.0.1-latest"
         : artifactToolUri.result['version'];

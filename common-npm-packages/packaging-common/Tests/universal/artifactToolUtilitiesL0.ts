@@ -72,9 +72,9 @@ export function artifactToolUtilities() {
         return { mockToollib };
     }
 
-    it("uses pinned version when UPack.ArtifactToolCacheVersion is true", async () => {
+    it("uses pinned version when UPack.EnableFixedArtifactToolLocation is true", async () => {
         createMocks(
-            { "UPack.ArtifactToolCacheVersion": "true" },
+            { "UPack.EnableFixedArtifactToolLocation": "true" },
             { version: "0.2.542", uri: "https://example.com/artifacttool.zip" }
         );
 
@@ -84,9 +84,9 @@ export function artifactToolUtilities() {
         assert(result.includes("0.0.1-latest"), `Expected path to contain 0.0.1-latest, got: ${result}`);
     });
 
-    it("uses pinned version when UPack.ArtifactToolCacheVersion is True (case insensitive)", async () => {
+    it("uses pinned version when UPack.EnableFixedArtifactToolLocation is True (case insensitive)", async () => {
         createMocks(
-            { "UPack.ArtifactToolCacheVersion": "True" },
+            { "UPack.EnableFixedArtifactToolLocation": "True" },
             { version: "0.2.542", uri: "https://example.com/artifacttool.zip" }
         );
 
@@ -96,10 +96,10 @@ export function artifactToolUtilities() {
         assert(result.includes("0.0.1-latest"), `Expected path to contain 0.0.1-latest, got: ${result}`);
     });
 
-    it("uses server version when UPack.ArtifactToolCacheVersion is false", async () => {
+    it("uses server version when UPack.EnableFixedArtifactToolLocation is false", async () => {
         const serverVersion = "0.2.542";
         createMocks(
-            { "UPack.ArtifactToolCacheVersion": "false" },
+            { "UPack.EnableFixedArtifactToolLocation": "false" },
             { version: serverVersion, uri: "https://example.com/artifacttool.zip" }
         );
 
