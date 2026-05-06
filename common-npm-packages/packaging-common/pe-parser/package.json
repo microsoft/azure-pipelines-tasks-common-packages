@@ -16,7 +16,10 @@
     "q": "^1.4.1"
   },
   "devDependencies": {
-    "mocha": "^3.0.2",
+    "mocha": "^11.7.5",
     "typescript": "^1.8.10"
+  },
+  "overrides": {
+	    "serialize-javascript": "^7.0.4"
   }
 }

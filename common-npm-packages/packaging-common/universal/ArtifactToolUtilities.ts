@@ -85,7 +85,14 @@ export async function getArtifactToolFromService(serviceUri: string, accessToken
         throw new Error(tl.loc("Error_UnexpectedErrorFailedToGetToolMetadata", artifactToolGetUrl.requestUrl));
     }
 
-    let artifactToolPath = toollib.findLocalTool(toolName, artifactToolUri.result['version']);
+    // When UPack.EnableFixedArtifactToolLocation is "true", all versions resolve to a single cache slot
+    // at <Agent.ToolsDirectory>/artifacttool/0.0.1-latest/<arch>, avoiding version-specific directories.
+    const pinCacheVersion = (tl.getVariable("UPack.EnableFixedArtifactToolLocation") || "").toLowerCase() === "true";
+    const cacheVersion = pinCacheVersion
+        ? "0.0.1-latest"
+        : artifactToolUri.result['version'];
+
+    let artifactToolPath = toollib.findLocalTool(toolName, cacheVersion);
     if (!artifactToolPath) {
         tl.debug(tl.loc("Info_DownloadingArtifactTool", artifactToolUri.result['uri']));
 
@@ -94,7 +101,7 @@ export async function getArtifactToolFromService(serviceUri: string, accessToken
         tl.debug("Downloaded zipped artifact tool to " + zippedToolsDir);
         const unzippedToolsDir = await extractZip(zippedToolsDir);
 
-        artifactToolPath = await toollib.cacheDir(unzippedToolsDir, toolName, artifactToolUri.result['version']);
+        artifactToolPath = await toollib.cacheDir(unzippedToolsDir, toolName, cacheVersion);
     } else {
         tl.debug(tl.loc("Info_ResolvedToolFromCache", artifactToolPath));
     }
