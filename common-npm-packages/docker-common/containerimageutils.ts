@@ -4,7 +4,6 @@ import * as fs from 'fs';
 import ContainerConnection from "./containerconnection";
 
 const reservedImageName = "scratch";
-const reservedNameCheck = tl.getPipelineFeature('EnableDockerReservedNameCheck');
 
 export function hasRegistryComponent(imageName: string): boolean {
     var periodIndex = imageName.indexOf("."),
@@ -167,24 +166,16 @@ export function getImageDigest(connection: ContainerConnection, imageName: strin
 }
 
 function pullImage(connection: ContainerConnection, imageName: string) {
-    if (reservedNameCheck) {
-        if (imageName.toLowerCase() != reservedImageName) {
-            pullImageReservedNameCheck(connection, imageName);
-        }
-    } else {
-        pullImageReservedNameCheck(connection, imageName);
+    if (imageName.toLowerCase() != reservedImageName) {
+        runPullImageCommand(connection, imageName);
     }
 }
 
 function inspectImage(connection: ContainerConnection, imageName): any {
     try {
         let inspectObj = null;
-        if (reservedNameCheck) {
-            if (imageName.toLowerCase() != reservedImageName) {
-                inspectObj = inspectImageReservedName(connection, imageName);
-            }
-        } else {
-            inspectObj = inspectImageReservedName(connection, imageName);
+        if (imageName.toLowerCase() != reservedImageName) {
+            inspectObj = runInspectImageCommand(connection, imageName);
         }
         return inspectObj;
     } catch (error) {
@@ -313,7 +304,7 @@ export class baseImageDetails{
     name: string;
     digest: string ;
 }
-function pullImageReservedNameCheck(connection: ContainerConnection, imageName: string) {
+function runPullImageCommand(connection: ContainerConnection, imageName: string) {
     let pullCommand = connection.createCommand();
     pullCommand.arg("pull");
     pullCommand.arg(imageName);
@@ -322,7 +313,7 @@ function pullImageReservedNameCheck(connection: ContainerConnection, imageName: 
         tl.debug(`An error was found pulling the image ${imageName}, the command output was ${pullResult.stderr}`);
     }
 }
-function inspectImageReservedName(connection: ContainerConnection, imageName): any {
+function runInspectImageCommand(connection: ContainerConnection, imageName): any {
         let inspectCommand = connection.createCommand();
         inspectCommand.arg("inspect");
         inspectCommand.arg(imageName);
