@@ -13,7 +13,7 @@
         <Str Cat="Text">
           <Val><![CDATA[Could not retrieve token credentials for TFS/Azure Pipelines packaging.]]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
-            <Val><![CDATA[無法擷取權杖認證供 TFS/Azure Pipelines 封裝之用。]]></Val>
+            <Val><![CDATA[無法擷取 TFS/Azure Pipelines 封裝所需的 Token 認證。]]></Val>
           </Tgt>
         </Str>
         <Disp Icon="Str" />

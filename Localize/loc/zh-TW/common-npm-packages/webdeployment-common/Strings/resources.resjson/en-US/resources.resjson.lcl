@@ -187,7 +187,7 @@
         <Str Cat="Text">
           <Val><![CDATA[Substituting connectionString value for connectionString = %s with token value: %s ]]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
-            <Val><![CDATA[以權杖值 %s 取代 connectionString = %s 的 connectionString 值 ]]></Val>
+            <Val><![CDATA[以 Token 值 %s 取代 connectionString = %s 的 connectionString 值 ]]></Val>
           </Tgt>
         </Str>
         <Disp Icon="Str" />
@@ -277,7 +277,7 @@
         <Str Cat="Text">
           <Val><![CDATA[Updating value for key= %s with token value: %s]]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
-            <Val><![CDATA[正在使用權杖值 %s 為索引鍵= %s 更新值]]></Val>
+            <Val><![CDATA[正在使用 Token 值 %s 為索引鍵= %s 更新值]]></Val>
           </Tgt>
         </Str>
         <Disp Icon="Str" />
