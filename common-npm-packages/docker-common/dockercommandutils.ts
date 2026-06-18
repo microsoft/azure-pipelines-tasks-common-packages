@@ -6,6 +6,7 @@ import ContainerConnection from "./containerconnection";
 import * as pipelineUtils from "./pipelineutils";
 import * as path from "path";
 import * as crypto from "crypto";
+import { Writable } from "stream";
 
 const matchPatternForSize = new RegExp(/[\d\.]+/);
 const orgUrl = tl.getVariable('System.TeamFoundationCollectionUri');
@@ -43,7 +44,9 @@ export function build(connection: ContainerConnection, dockerFile: string, comma
         output += data;
     });
 
-    return connection.execCommand(command).then(() => {
+    // Use a sanitized output stream so that ##vso[] commands embedded in Docker
+    // build output cannot be interpreted by the agent (CVE fix for logging-command injection).
+    return connection.execCommand(command, sanitizedExecOptions).then(() => {
         // Return the std output of the command by calling the delegate
         onCommandOut(output);
     });
@@ -60,7 +63,8 @@ export function command(connection: ContainerConnection, dockerCommand: string, 
         output += data;
     });
 
-    return connection.execCommand(command).then(() => {
+    // Use a sanitized output stream to prevent logging-command injection.
+    return connection.execCommand(command, sanitizedExecOptions).then(() => {
         // Return the std output of the command by calling the delegate
         onCommandOut(output);
     });
@@ -78,7 +82,8 @@ export function push(connection: ContainerConnection, image: string, commandArgu
         output += data;
     });
 
-    return connection.execCommand(command).then(() => {
+    // Use a sanitized output stream to prevent logging-command injection.
+    return connection.execCommand(command, sanitizedExecOptions).then(() => {
         // Return the std output of the command by calling the delegate
         onCommandOut(image, output + "\n");
     });
@@ -96,7 +101,8 @@ export function start(connection: ContainerConnection, container: string, comman
         output += data;
     });
 
-    return connection.execCommand(command).then(() => {
+    // Use a sanitized output stream to prevent logging-command injection.
+    return connection.execCommand(command, sanitizedExecOptions).then(() => {
         // Return the std output of the command by calling the delegate
         onCommandOut(container, output + "\n");
     });
@@ -114,7 +120,8 @@ export function stop(connection: ContainerConnection, container: string, command
         output += data;
     });
 
-    return connection.execCommand(command).then(() => {
+    // Use a sanitized output stream to prevent logging-command injection.
+    return connection.execCommand(command, sanitizedExecOptions).then(() => {
         // Return the std output of the command by calling the delegate
         onCommandOut(container, output + "\n");
     });
@@ -432,3 +439,41 @@ function isBuildKitBuild(): boolean {
     const isBuildKitBuildValue = tl.getVariable("DOCKER_BUILDKIT");
     return isBuildKitBuildValue && Number(isBuildKitBuildValue) == 1;
 }
+
+// Matches ##vso[ at the start of a line (the prefix the agent uses to detect logging commands).
+// Case-insensitive because the agent accepts any casing.
+const vsoCommandPattern = /##vso\[/gi;
+
+/**
+ * Strips ##vso[ command prefixes from Docker output so that the Azure Pipelines
+ * agent does not interpret attacker-controlled Docker build output as logging
+ * commands (e.g. task.prependpath, task.setvariable).
+ *
+ * The replacement preserves the text for human readability while making it
+ * invisible to the agent's command parser.
+ */
+function sanitizeDockerOutput(data: string): string {
+    return data.replace(vsoCommandPattern, "#vso[");
+}
+
+/**
+ * Creates a Writable stream that sanitizes ##vso[] commands before forwarding
+ * data to the given destination stream. Used as the outStream / errStream option
+ * for ToolRunner.exec() so that Docker output is still visible in the build log
+ * but cannot inject agent commands.
+ */
+function createSanitizedOutputStream(destination: NodeJS.WritableStream): NodeJS.WritableStream {
+    return new Writable({
+        write(chunk: Buffer | string, encoding: BufferEncoding, callback: (error?: Error | null) => void): void {
+            const text = chunk.toString();
+            const sanitized = sanitizeDockerOutput(text);
+            destination.write(sanitized, 'utf8', callback);
+        }
+    });
+}
+
+// Exec options shared by all docker command functions to prevent logging-command injection.
+const sanitizedExecOptions = {
+    outStream: createSanitizedOutputStream(process.stdout),
+    errStream: createSanitizedOutputStream(process.stderr)
+};
