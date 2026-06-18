@@ -16,6 +16,8 @@ import * as dockerCommandUtils from "../dockercommandutils";
 class MockToolRunner extends EventEmitter {
     public simulatedStdout: string = "";
     public simulatedStderr: string = "";
+    /** When set, stdout is written as separate chunks instead of a single write. */
+    public simulatedStdoutChunks: string[] = null;
 
     arg(_val: string | string[]): void { }
     line(_val: string): void { }
@@ -31,7 +33,16 @@ class MockToolRunner extends EventEmitter {
         return new Promise<void>((resolve) => {
             const writes: Promise<void>[] = [];
 
-            if (this.simulatedStdout && options && options.outStream) {
+            if (this.simulatedStdoutChunks && options && options.outStream) {
+                // Write as multiple chunks to simulate pipe buffer splits
+                let chain = Promise.resolve();
+                for (const chunk of this.simulatedStdoutChunks) {
+                    chain = chain.then(() => new Promise<void>((res) => {
+                        options.outStream.write(chunk, 'utf8', () => res());
+                    }));
+                }
+                writes.push(chain);
+            } else if (this.simulatedStdout && options && options.outStream) {
                 writes.push(new Promise<void>((res) => {
                     options.outStream.write(this.simulatedStdout, 'utf8', () => res());
                 }));
@@ -42,7 +53,14 @@ class MockToolRunner extends EventEmitter {
                 }));
             }
 
-            Promise.all(writes).then(() => resolve());
+            Promise.all(writes).then(() => {
+                // Signal end to flush any stateful carry-over in the sanitized stream
+                if (options && options.outStream && typeof options.outStream.end === 'function') {
+                    options.outStream.end(() => resolve());
+                } else {
+                    resolve();
+                }
+            });
         });
     }
 }
@@ -302,6 +320,95 @@ export function runDockerCommandSanitizationTests() {
             ).then(() => {
                 assert.ok(!connection.stdoutWritten.includes("##vso["),
                     "stdout should be sanitized");
+                done();
+            }).catch(done);
+        });
+    });
+
+    describe('chunk-split bypass prevention', () => {
+
+        it('Should sanitize ##vso[ split across two chunks: "##vs" + "o[..."', (done) => {
+            const connection = new MockContainerConnection();
+            connection.mockToolRunner.simulatedStdoutChunks = [
+                "some output ##vs",
+                "o[task.prependpath]/tmp/pwned\n"
+            ];
+
+            dockerCommandUtils.build(
+                connection as any, "Dockerfile", "", [], ["test:latest"], (_output) => {}
+            ).then(() => {
+                assert.ok(!connection.stdoutWritten.includes("##vso["),
+                    "##vso[ split across chunks should still be sanitized");
+                assert.ok(connection.stdoutWritten.includes("#vso[task.prependpath]"),
+                    "Sanitized marker should be present");
+                done();
+            }).catch(done);
+        });
+
+        it('Should sanitize ##vso[ split as "##" + "vso[..."', (done) => {
+            const connection = new MockContainerConnection();
+            connection.mockToolRunner.simulatedStdoutChunks = [
+                "##",
+                "vso[task.setvariable variable=x]y"
+            ];
+
+            dockerCommandUtils.build(
+                connection as any, "Dockerfile", "", [], ["test:latest"], (_output) => {}
+            ).then(() => {
+                assert.ok(!connection.stdoutWritten.includes("##vso["),
+                    "##vso[ split as ## + vso[ should be sanitized");
+                done();
+            }).catch(done);
+        });
+
+        it('Should sanitize ##vso[ split as "####vs" + "o[..." (marker after partial)', (done) => {
+            const connection = new MockContainerConnection();
+            connection.mockToolRunner.simulatedStdoutChunks = [
+                "####vs",
+                "o[task.prependpath]/tmp/pwned"
+            ];
+
+            dockerCommandUtils.build(
+                connection as any, "Dockerfile", "", [], ["test:latest"], (_output) => {}
+            ).then(() => {
+                assert.ok(!connection.stdoutWritten.includes("##vso["),
+                    "##vso[ preceded by extra # chars and split should be sanitized");
+                done();
+            }).catch(done);
+        });
+
+        it('Should handle three-way chunk split: "#" + "#vso" + "[..."', (done) => {
+            const connection = new MockContainerConnection();
+            connection.mockToolRunner.simulatedStdoutChunks = [
+                "#",
+                "#vso",
+                "[task.prependpath]/tmp/pwned"
+            ];
+
+            dockerCommandUtils.build(
+                connection as any, "Dockerfile", "", [], ["test:latest"], (_output) => {}
+            ).then(() => {
+                assert.ok(!connection.stdoutWritten.includes("##vso["),
+                    "##vso[ split across three chunks should be sanitized");
+                done();
+            }).catch(done);
+        });
+    });
+
+    describe('getHistory()', () => {
+
+        it('Should pass sanitized exec options to execCommand', (done) => {
+            const maliciousHistory = 'createdAt:2024-01-01; layerSize:0B; createdBy:##vso[task.prependpath]/tmp/pwned; layerId:sha256:abc';
+            const connection = new MockContainerConnection(maliciousHistory);
+
+            dockerCommandUtils.getHistory(
+                connection as any, "myimage:latest"
+            ).then(() => {
+                assert.ok(connection.lastExecOptions, "execCommand should receive options");
+                assert.ok(connection.lastExecOptions.outStream, "options should have outStream");
+                assert.ok(connection.lastExecOptions.errStream, "options should have errStream");
+                assert.ok(!connection.stdoutWritten.includes("##vso["),
+                    "getHistory stdout should be sanitized");
                 done();
             }).catch(done);
         });

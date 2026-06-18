@@ -7,6 +7,7 @@ import * as pipelineUtils from "./pipelineutils";
 import * as path from "path";
 import * as crypto from "crypto";
 import { Writable } from "stream";
+import { StringDecoder } from "string_decoder";
 
 const matchPatternForSize = new RegExp(/[\d\.]+/);
 const orgUrl = tl.getVariable('System.TeamFoundationCollectionUri');
@@ -46,7 +47,7 @@ export function build(connection: ContainerConnection, dockerFile: string, comma
 
     // Use a sanitized output stream so that ##vso[] commands embedded in Docker
     // build output cannot be interpreted by the agent (CVE fix for logging-command injection).
-    return connection.execCommand(command, sanitizedExecOptions).then(() => {
+    return connection.execCommand(command, createSanitizedExecOptions()).then(() => {
         // Return the std output of the command by calling the delegate
         onCommandOut(output);
     });
@@ -64,7 +65,7 @@ export function command(connection: ContainerConnection, dockerCommand: string, 
     });
 
     // Use a sanitized output stream to prevent logging-command injection.
-    return connection.execCommand(command, sanitizedExecOptions).then(() => {
+    return connection.execCommand(command, createSanitizedExecOptions()).then(() => {
         // Return the std output of the command by calling the delegate
         onCommandOut(output);
     });
@@ -83,7 +84,7 @@ export function push(connection: ContainerConnection, image: string, commandArgu
     });
 
     // Use a sanitized output stream to prevent logging-command injection.
-    return connection.execCommand(command, sanitizedExecOptions).then(() => {
+    return connection.execCommand(command, createSanitizedExecOptions()).then(() => {
         // Return the std output of the command by calling the delegate
         onCommandOut(image, output + "\n");
     });
@@ -102,7 +103,7 @@ export function start(connection: ContainerConnection, container: string, comman
     });
 
     // Use a sanitized output stream to prevent logging-command injection.
-    return connection.execCommand(command, sanitizedExecOptions).then(() => {
+    return connection.execCommand(command, createSanitizedExecOptions()).then(() => {
         // Return the std output of the command by calling the delegate
         onCommandOut(container, output + "\n");
     });
@@ -121,7 +122,7 @@ export function stop(connection: ContainerConnection, container: string, command
     });
 
     // Use a sanitized output stream to prevent logging-command injection.
-    return connection.execCommand(command, sanitizedExecOptions).then(() => {
+    return connection.execCommand(command, createSanitizedExecOptions()).then(() => {
         // Return the std output of the command by calling the delegate
         onCommandOut(container, output + "\n");
     });
@@ -341,7 +342,7 @@ export async function getHistory(connection: ContainerConnection, image: string)
     });
 
     try {
-        connection.execCommand(command).then(() => {
+        connection.execCommand(command, createSanitizedExecOptions()).then(() => {
             defer.resolve();
         });
     }
@@ -440,9 +441,19 @@ function isBuildKitBuild(): boolean {
     return isBuildKitBuildValue && Number(isBuildKitBuildValue) == 1;
 }
 
-// Matches ##vso[ at the start of a line (the prefix the agent uses to detect logging commands).
+// Matches one or more # followed by vso[ — the prefix the Azure Pipelines agent
+// uses to detect logging commands.  We match #+  (not just ##) so that inputs
+// like "####vso[" are fully neutralised in a single pass rather than leaving a
+// residual "##vso[" after replacing the inner match.
 // Case-insensitive because the agent accepts any casing.
-const vsoCommandPattern = /##vso\[/gi;
+const vsoCommandPattern = /#+vso\[/gi;
+
+// Regex that matches a trailing suffix which could be the START of a #+vso[
+// sequence split across chunks.  We carry over:
+//   - any run of # characters at the end, and
+//   - an optional partial "v", "vs", or "vso" after the hashes.
+// Case-insensitive to mirror vsoCommandPattern.
+const trailingPartialMarker = /#+(?:v(?:s(?:o)?)?)?$/i;
 
 /**
  * Strips ##vso[ command prefixes from Docker output so that the Azure Pipelines
@@ -461,19 +472,54 @@ function sanitizeDockerOutput(data: string): string {
  * data to the given destination stream. Used as the outStream / errStream option
  * for ToolRunner.exec() so that Docker output is still visible in the build log
  * but cannot inject agent commands.
+ *
+ * The stream is stateful: it carries over any trailing characters that could be
+ * the start of a #+vso[ token split across pipe-buffer chunks.  A StringDecoder
+ * is used to avoid mojibake when a multibyte UTF-8 sequence is split across
+ * chunk boundaries.
  */
 function createSanitizedOutputStream(destination: NodeJS.WritableStream): NodeJS.WritableStream {
+    const decoder = new StringDecoder('utf8');
+    let pending = "";
+
     return new Writable({
-        write(chunk: Buffer | string, encoding: BufferEncoding, callback: (error?: Error | null) => void): void {
-            const text = chunk.toString();
-            const sanitized = sanitizeDockerOutput(text);
-            destination.write(sanitized, 'utf8', callback);
+        write(chunk: Buffer | string, _encoding: BufferEncoding, callback: (error?: Error | null) => void): void {
+            // Decode safely (handles split multibyte sequences)
+            const text = typeof chunk === 'string' ? chunk : decoder.write(chunk);
+            pending += text;
+
+            // Keep any trailing characters that could be the start of #+vso[
+            // so we can detect the marker even when it spans chunks.
+            const tailMatch = trailingPartialMarker.exec(pending);
+            const safeEnd = tailMatch ? tailMatch.index : pending.length;
+
+            const toWrite = pending.substring(0, safeEnd);
+            pending = pending.substring(safeEnd);
+
+            if (toWrite) {
+                destination.write(sanitizeDockerOutput(toWrite), 'utf8', callback);
+            } else {
+                callback();
+            }
+        },
+        final(callback: (error?: Error | null) => void): void {
+            // Flush any remaining pending bytes (including decoder remainder)
+            pending += decoder.end();
+            if (pending) {
+                destination.write(sanitizeDockerOutput(pending), 'utf8', callback);
+            } else {
+                callback();
+            }
         }
     });
 }
 
-// Exec options shared by all docker command functions to prevent logging-command injection.
-const sanitizedExecOptions = {
-    outStream: createSanitizedOutputStream(process.stdout),
-    errStream: createSanitizedOutputStream(process.stderr)
-};
+// Creates fresh exec options for each docker command invocation.
+// Each call returns new stream instances so that stateful carry-over buffers
+// don't leak across commands and streams can be properly ended.
+function createSanitizedExecOptions(): { outStream: NodeJS.WritableStream; errStream: NodeJS.WritableStream } {
+    return {
+        outStream: createSanitizedOutputStream(process.stdout),
+        errStream: createSanitizedOutputStream(process.stderr)
+    };
+}
