@@ -193,23 +193,42 @@ export class NuGetConfigHelper2 {
     const psmSources = psmNode?.packageSource;
     if (!Array.isArray(psmSources) || psmSources.length === 0) { tl.debug("no <packageSource> children."); return; }
 
+    // Keys already present in <packageSourceMapping>. Used to detect when a
+    // target prefixed key already exists (e.g. a user added a manual
+    // "feed-<name>" entry as the historical workaround from
+    // https://github.com/NuGet/Home/issues/11406). Renaming blindly in that
+    // case produces two identical "feed-<name>" keys and NuGet fails with
+    // "multiple package sources associated with the same key(s)".
+    const existingKeys = new Set<string>();
+    for (const src of psmSources) {
+        const k = src?.$?.key;
+        if (typeof k === "string") { existingKeys.add(k.trim()); }
+    }
+
     let changed = false;
     for (const src of psmSources) {
         const a = src?.$;
         if (!a || typeof a.key !== "string") { continue; }
         const originalKey = a.key.trim();
 
-        // If this mapping key maps to an internal feed now prefixed, rewrite it.
+        // Already prefixed -> leave as-is (idempotent).
+        if (originalKey.startsWith("feed-")) { continue; }
+
         const prefixedKey = originalToPrefixed.get(originalKey);
-        if (prefixedKey && originalKey !== prefixedKey) {
-            tl.debug(`PackageSourceMapping-Sync: key '${originalKey}' -> '${prefixedKey}'`);
-            a.key = prefixedKey;
-            changed = true;
+        if (!prefixedKey || originalKey === prefixedKey) { continue; }
+
+        // If the prefixed key is already declared, renaming would create a
+        // duplicate key. Leave the original node untouched instead. NuGet
+        // ignores a mapping entry whose key no longer matches a packageSources
+        // entry, so the stale unprefixed node is harmless.
+        if (existingKeys.has(prefixedKey)) {
+            tl.debug(`PackageSourceMapping-Sync: '${prefixedKey}' already present; skipping rename of '${originalKey}'.`);
             continue;
         }
 
-        // Already prefixed -> leave as-is (idempotent).
-        if (originalKey.startsWith("feed-")) { continue; }
+        tl.debug(`PackageSourceMapping-Sync: key '${originalKey}' -> '${prefixedKey}'`);
+        a.key = prefixedKey;
+        changed = true;
     }
 
     if (changed) {
