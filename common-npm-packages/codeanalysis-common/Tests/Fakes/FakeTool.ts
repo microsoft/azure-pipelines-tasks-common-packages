@@ -13,3 +13,9 @@ export class FakeTool extends BaseTool {
         throw new Error('Method not implemented.');
     }
 }
+
+export class FakeFsException extends Error {
+    constructor(public code: string) {
+        super();
+    }
+}
