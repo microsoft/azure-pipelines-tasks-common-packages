@@ -186,5 +186,6 @@
   "loc.messages.UpdatedAppServiceConfigurationSettings": "Updated App Service Configuration settings.",
   "loc.messages.UpdatingAppServiceApplicationSettings": "Updating App Service Application settings. Data: %s",
   "loc.messages.UpdatingAppServiceConfigurationSettings": "Trying to update App Service Configuration settings. Data: %s",
-  "loc.messages.VirtualApplicationDoesNotExist": "Virtual application doesn't exists : %s"
+  "loc.messages.VirtualApplicationDoesNotExist": "Virtual application doesn't exists : %s",
+  "loc.messages.ErrorInSettingUpSubscription": "Error in setting up subscription"
 }
