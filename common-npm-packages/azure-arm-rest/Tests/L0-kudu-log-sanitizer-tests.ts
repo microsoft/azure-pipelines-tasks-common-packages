@@ -1,0 +1,122 @@
+import assert = require('assert');
+import { sanitizeKuduLogForConsole } from '../azure-arm-app-service-kudu';
+
+// sanitizeKuduLogForConsole is a pure function (its only side effect is a console.log telemetry
+// emission and a read of the DISTRIBUTEDTASK_TASKS_ENABLEKUDULOGVSOCOMMANDSANITIZATION env var
+// via tl.getPipelineFeature), so it is exercised in-process here rather than via the
+// MockTestRunner subprocess pattern used for the HTTP-calling Kudu methods elsewhere in this
+// folder - no HTTP mocking is needed and env var manipulation is all that's required to flip
+// the feature on/off between cases.
+const FEATURE_ENV_VAR = 'DISTRIBUTEDTASK_TASKS_ENABLEKUDULOGVSOCOMMANDSANITIZATION';
+
+export function KuduLogSanitizerTests() {
+    describe('sanitizeKuduLogForConsole', () => {
+        let originalFeatureValue: string | undefined;
+        let originalConsoleLog: (...args: any[]) => void;
+        let consoleOutput: string[];
+
+        beforeEach(() => {
+            originalFeatureValue = process.env[FEATURE_ENV_VAR];
+            delete process.env[FEATURE_ENV_VAR];
+
+            consoleOutput = [];
+            originalConsoleLog = console.log;
+            console.log = (...args: any[]) => {
+                consoleOutput.push(args.join(' '));
+            };
+        });
+
+        afterEach(() => {
+            if (originalFeatureValue === undefined) {
+                delete process.env[FEATURE_ENV_VAR];
+            } else {
+                process.env[FEATURE_ENV_VAR] = originalFeatureValue;
+            }
+            console.log = originalConsoleLog;
+        });
+
+        it('leaves clean text untouched and emits no telemetry', () => {
+            const clean = 'npm install\nadded 42 packages in 3s\n';
+
+            const result = sanitizeKuduLogForConsole(clean, 'AzureRmWebAppDeployment');
+
+            assert.strictEqual(result, clean, 'clean text should pass through unmodified');
+            assert.strictEqual(
+                consoleOutput.some(line => line.includes('telemetry.publish')),
+                false,
+                'no telemetry should be emitted when no ##vso[ pattern is present');
+        });
+
+        it('detects a ##vso[task.setvariable] command and reports telemetry even when the feature is off', () => {
+            delete process.env[FEATURE_ENV_VAR];
+            const payload = '##vso[task.setvariable variable=ORYX_INJECTED]true';
+
+            const result = sanitizeKuduLogForConsole(payload, 'AzureRmWebAppDeployment');
+
+            assert.strictEqual(result, payload, 'text must be returned unmodified when the feature is off');
+            const telemetryLine = consoleOutput.find(line => line.includes('telemetry.publish'));
+            assert(telemetryLine, 'telemetry should always be emitted when a ##vso[ command is detected');
+            assert(telemetryLine.includes('area=TaskHub;feature=AzureRmWebAppDeployment'));
+            assert(telemetryLine.includes('"event":"KuduLogVsoCommandsDetected"'));
+            assert(telemetryLine.includes('"enforced":false'));
+            assert(telemetryLine.includes('"commands":"task.setvariable"'));
+        });
+
+        it('neutralizes ##vso[ and leaves the rest of the text intact when the feature is on', () => {
+            process.env[FEATURE_ENV_VAR] = 'true';
+            const payload = 'Oryx build log line one\n##vso[task.setvariable variable=ORYX_INJECTED]true\nOryx build log line two';
+
+            const result = sanitizeKuduLogForConsole(payload, 'AzureRmWebAppDeployment');
+
+            assert.strictEqual(result.includes('##vso['), false, 'the ##vso[ trigger sequence must be neutralized');
+            assert(result.includes('##_vso[task.setvariable variable=ORYX_INJECTED]true'),
+                'the neutralized text should still be readable/diagnosable in the log');
+            assert(result.includes('Oryx build log line one'));
+            assert(result.includes('Oryx build log line two'));
+
+            const telemetryLine = consoleOutput.find(line => line.includes('telemetry.publish'));
+            assert(telemetryLine, 'telemetry should still be emitted when enforcing');
+            assert(telemetryLine.includes('"event":"KuduLogVsoCommandsSanitized"'));
+            assert(telemetryLine.includes('"enforced":true'));
+        });
+
+        it('also neutralizes a leading ##[ (non-vso) logging command sequence when the feature is on', () => {
+            process.env[FEATURE_ENV_VAR] = 'true';
+            const payload = '##vso[task.setvariable variable=X]y\n##[section]Starting: attacker section';
+
+            const result = sanitizeKuduLogForConsole(payload, 'AzureRmWebAppDeployment');
+
+            assert.strictEqual(result.includes('##vso['), false);
+            assert.strictEqual(/^##\[/m.test(result), false, 'a leading ##[ sequence must also be neutralized');
+        });
+
+        it('cannot be broken out of the telemetry command envelope by a crafted payload', () => {
+            process.env[FEATURE_ENV_VAR] = 'false';
+            // Attempt to inject a bogus telemetry area/feature or a second ##vso[ command via the
+            // detected "command name" text itself - the command name capture group is bounded to
+            // [a-zA-Z0-9_.]+ so it cannot contain "]" or newlines that could terminate the
+            // ##vso[telemetry.publish ...] envelope early or inject an unrelated command.
+            const payload = '##vso[task.setvariable variable=X]value]##vso[task.setsecret]stolen';
+
+            const result = sanitizeKuduLogForConsole(payload, 'AzureRmWebAppDeployment');
+
+            assert.strictEqual(result, payload, 'text must be returned unmodified when the feature is off');
+            const telemetryLines = consoleOutput.filter(line => line.includes('telemetry.publish'));
+            assert.strictEqual(telemetryLines.length, 1, 'exactly one telemetry line should be emitted per call');
+            // The telemetry line itself must still be a single well-formed ##vso[telemetry.publish ...] command -
+            // i.e. JSON.parse must succeed on the payload segment, proving the attacker-controlled
+            // command names could not corrupt the envelope.
+            const telemetryLine = telemetryLines[0];
+            const jsonStart = telemetryLine.indexOf(']') + 1;
+            const jsonPayload = telemetryLine.substring(jsonStart);
+            assert.doesNotThrow(() => JSON.parse(jsonPayload), 'telemetry JSON payload must remain well-formed');
+            assert(telemetryLine.includes('"commands":"task.setvariable,task.setsecret"'));
+        });
+
+        it('treats an empty string as a no-op', () => {
+            const result = sanitizeKuduLogForConsole('', 'AzureRmWebAppDeployment');
+            assert.strictEqual(result, '');
+            assert.strictEqual(consoleOutput.length, 0);
+        });
+    });
+}

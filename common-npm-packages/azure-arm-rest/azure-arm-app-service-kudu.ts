@@ -842,14 +842,24 @@ export class Kudu {
 // If no ##vso[...] pattern is present in the text, this is a no-op (no telemetry emitted for
 // clean logs).
 
-const VSO_COMMAND_REGEX = /##vso\[([a-zA-Z0-9_.]+)/gi;
+// Used only to decide whether there is anything to do at all (telemetry and/or enforcement).
+// Intentionally NOT restricted to any command-name charset, so the kill switch below does not
+// depend on the agent's current command-name parsing rules - any "##vso[" (or leading "##[")
+// occurrence is treated as something to neutralize when enforcement is on.
+const VSO_COMMAND_PRESENCE_REGEX = /##vso\[/i;
+
+// Used only to name detected commands for telemetry. This charset is a best-effort label and
+// intentionally must NOT be used to decide whether enforcement/telemetry should run - see
+// VSO_COMMAND_PRESENCE_REGEX above for that gate.
+const VSO_COMMAND_NAME_REGEX = /##vso\[([a-zA-Z0-9_.]+)/gi;
 const KUDU_LOG_SANITIZER_TELEMETRY_AREA = 'TaskHub';
 const KUDU_LOG_SANITIZER_ENFORCE_PIPELINE_FEATURE = 'EnableKuduLogVsoCommandSanitization';
 
+// For telemetry naming only - see comment on VSO_COMMAND_NAME_REGEX above.
 function findVsoCommands(text: string): string[] {
     const found = new Set<string>();
     let match: RegExpExecArray | null;
-    const regex = new RegExp(VSO_COMMAND_REGEX);
+    const regex = new RegExp(VSO_COMMAND_NAME_REGEX);
     while ((match = regex.exec(text)) !== null) {
         found.add(match[1].toLowerCase());
     }
@@ -891,18 +901,16 @@ function emitKuduLogSanitizerDetectionTelemetry(feature: string, enforced: boole
  *   "##[") trigger sequences so the agent can no longer parse them as logging commands.
  */
 export function sanitizeKuduLogForConsole(text: string, telemetryFeature: string): string {
-    if (!text) {
-        return text;
-    }
-
-    const detectedCommands = findVsoCommands(text);
-    if (detectedCommands.length === 0) {
+    if (!text || !VSO_COMMAND_PRESENCE_REGEX.test(text)) {
         return text;
     }
 
     const activate = tl.getPipelineFeature(KUDU_LOG_SANITIZER_ENFORCE_PIPELINE_FEATURE);
 
-    emitKuduLogSanitizerDetectionTelemetry(telemetryFeature, activate, detectedCommands);
+    // Command names are extracted purely for telemetry labeling - see comment on
+    // VSO_COMMAND_NAME_REGEX/findVsoCommands above. Whether we got here (and whether we
+    // enforce below) is decided solely by VSO_COMMAND_PRESENCE_REGEX.
+    emitKuduLogSanitizerDetectionTelemetry(telemetryFeature, activate, findVsoCommands(text));
 
     if (!activate) {
         // Telemetry-only: report above, but do not touch the text that gets printed.
