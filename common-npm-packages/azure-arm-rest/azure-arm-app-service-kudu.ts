@@ -801,3 +801,121 @@ export class Kudu {
         tl.debug('Kudu warmup failed after all retries, proceeding without warmup');
     }
 }
+
+// Fix for MSRC 125166 / ICM 31000000654080.
+//
+// Consuming tasks (AzureRmWebAppDeployment, AzureWebApp, AzureFunctionApp and their container
+// variants) echo remote, cross-trust-boundary content fetched via Kudu.getFileContent /
+// Kudu.getDeploymentLogs (Kudu/Oryx deployment build logs, post-deployment script stdout/stderr)
+// verbatim via console.log() before printing. The Azure Pipelines agent scans ALL task stdout
+// for the literal sequence "##vso[" and executes any matching logging command it finds,
+// regardless of which line of code produced it. Because the Oryx build log is populated by
+// whatever the application's build (e.g. npm install -> postinstall) prints - content that may
+// be authored by a lower-trust party than the pipeline definition (external contributors,
+// transitive npm dependencies) - an attacker who only controls the app SOURCE can get arbitrary
+// ##vso commands (task.setvariable, task.setsecret, task.setendpoint, ...) executed at full
+// pipeline/agent trust, without ever touching the pipeline YAML.
+//
+// IMPORTANT: this helper is intentionally NOT applied inside Kudu.getFileContent /
+// Kudu.getDeploymentLogs themselves. Those methods are generic file/log fetchers reused by
+// callers for non-print, data-purpose reads too (e.g. manifest file contents, active deployment
+// IDs compared for equality, script return codes compared to '0'). Mutating the returned string
+// at that layer would risk corrupting those comparisons/parses. Sanitization must be applied by
+// each caller only at the point where fetched content is about to be printed to the console.
+// It is kept in this file (rather than a separate module) so it stays co-located with the Kudu
+// class whose output it exists to sanitize.
+//
+// Enforcement rollout is gated behind a pipeline feature (checked via tl.getPipelineFeature,
+// which reads the "DistributedTask.Tasks.<name>" pipeline variable) - tl.getBoolFeatureFlag is
+// deprecated in favor of tl.getPipelineFeature and is intentionally not used here:
+//   EnableKuduLogVsoCommandSanitization -> ENFORCE: neutralize the "##vso[" trigger sequence
+//                                          before printing, so the content can no longer be
+//                                          parsed as a logging command by the agent.
+//
+// Detection telemetry is NOT feature-gated: whenever a ##vso[...] command is detected in
+// remote log content, it is always reported via telemetry.publish (regardless of the feature
+// above), so real-world impact/prevalence can be measured before and after enforcement ramps.
+// This is safe to always emit unconditionally because the telemetry payload itself is fully
+// controlled by this code (fixed keys, command names extracted from a bounded regex) - it is
+// not remote/attacker content.
+//
+// If no ##vso[...] pattern is present in the text, this is a no-op (no telemetry emitted for
+// clean logs).
+
+// Used only to decide whether there is anything to do at all (telemetry and/or enforcement).
+// Intentionally NOT restricted to any command-name charset, so the kill switch below does not
+// depend on the agent's current command-name parsing rules - any "##vso[" (or leading "##[")
+// occurrence is treated as something to neutralize when enforcement is on.
+const VSO_COMMAND_PRESENCE_REGEX = /##vso\[/i;
+
+// Used only to name detected commands for telemetry. This charset is a best-effort label and
+// intentionally must NOT be used to decide whether enforcement/telemetry should run - see
+// VSO_COMMAND_PRESENCE_REGEX above for that gate.
+const VSO_COMMAND_NAME_REGEX = /##vso\[([a-zA-Z0-9_.]+)/gi;
+const KUDU_LOG_SANITIZER_TELEMETRY_AREA = 'TaskHub';
+const KUDU_LOG_SANITIZER_ENFORCE_PIPELINE_FEATURE = 'EnableKuduLogVsoCommandSanitization';
+
+// For telemetry naming only - see comment on VSO_COMMAND_NAME_REGEX above.
+function findVsoCommands(text: string): string[] {
+    const found = new Set<string>();
+    let match: RegExpExecArray | null;
+    const regex = new RegExp(VSO_COMMAND_NAME_REGEX);
+    while ((match = regex.exec(text)) !== null) {
+        found.add(match[1].toLowerCase());
+    }
+    return Array.from(found);
+}
+
+// Emits telemetry using the same "##vso[telemetry.publish ...]" channel as
+// azure-pipelines-tasks-utility-common/telemetry, without adding a new dependency to this
+// package for a small, self-issued payload.
+function emitKuduLogSanitizerDetectionTelemetry(feature: string, enforced: boolean, commands: string[]): void {
+    try {
+        const payload = {
+            event: enforced ? 'KuduLogVsoCommandsSanitized' : 'KuduLogVsoCommandsDetected',
+            enforced: enforced,
+            commandCount: commands.length,
+            commands: commands.join(',')
+        };
+        console.log(`##vso[telemetry.publish area=${KUDU_LOG_SANITIZER_TELEMETRY_AREA};feature=${feature}]${JSON.stringify(payload)}`);
+    } catch (err) {
+        tl.debug(`sanitizeKuduLogForConsole: failed to emit telemetry: ${err}`);
+    }
+}
+
+/**
+ * Pipeline-feature gated sanitizer for remote Kudu/Oryx log content, to be called by task code
+ * immediately before printing content obtained from Kudu.getFileContent / Kudu.getDeploymentLogs
+ * (see the comment above for the full rationale and feature name).
+ *
+ * @param text the raw remote log content about to be printed to the console.
+ * @param telemetryFeature the `feature` value to tag emitted telemetry with - callers should
+ *        pass a value identifying their own task (e.g. 'AzureRmWebAppDeployment',
+ *        'AzureFunctionApp') so telemetry can be attributed correctly.
+ *
+ * - Detection telemetry always runs: if `text` contains any ##vso[...] command sequence, it is
+ *   always reported via telemetry.publish, regardless of the pipeline feature state.
+ * - EnableKuduLogVsoCommandSanitization off (default today): text is returned completely
+ *   unmodified - telemetry-only, zero behavior change for customers.
+ * - EnableKuduLogVsoCommandSanitization on: enforce. Neutralizes the "##vso[" (and leading
+ *   "##[") trigger sequences so the agent can no longer parse them as logging commands.
+ */
+export function sanitizeKuduLogForConsole(text: string, telemetryFeature: string): string {
+    if (!text || !VSO_COMMAND_PRESENCE_REGEX.test(text)) {
+        return text;
+    }
+
+    const activate = tl.getPipelineFeature(KUDU_LOG_SANITIZER_ENFORCE_PIPELINE_FEATURE);
+
+    // Command names are extracted purely for telemetry labeling - see comment on
+    // VSO_COMMAND_NAME_REGEX/findVsoCommands above. Whether we got here (and whether we
+    // enforce below) is decided solely by VSO_COMMAND_PRESENCE_REGEX.
+    emitKuduLogSanitizerDetectionTelemetry(telemetryFeature, activate, findVsoCommands(text));
+
+    if (!activate) {
+        // Telemetry-only: report above, but do not touch the text that gets printed.
+        return text;
+    }
+
+    return text.replace(/##vso\[/gi, '##_vso[').replace(/^##\[/gm, '##_[');
+}
