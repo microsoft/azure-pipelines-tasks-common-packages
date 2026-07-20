@@ -18,6 +18,7 @@ extends:
   parameters:
     settings:
       skipBuildTagsForGitHubPullRequests: true
+      networkIsolationMode: Audit
     featureFlags:
       autoBaseline: false
     sdl:
