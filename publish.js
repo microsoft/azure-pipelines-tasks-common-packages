@@ -21,12 +21,8 @@ async function createGitHubReleases(packages) {
                 await releaseNotes.createReleaseNotes(package, 'main', releaseTarget);
             }
             catch(ex) {
-                if (ex instanceof util.CreateReleaseError) {
-                    console.error(`Error creating release notes for ${package}: ${ex.message}`);
-                    failures.push(package);
-                } else {
-                    throw ex;
-                }
+                console.error(`Error creating release notes for ${package}: ${ex.message}`);
+                failures.push(package);
             }
         }
     }
