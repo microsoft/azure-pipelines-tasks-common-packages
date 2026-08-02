@@ -4,6 +4,12 @@ name: $(Date:yyyyMMdd)$(Rev:.r)
 trigger: none
 pr: none
 
+parameters:
+- name: dryRun
+  displayName: Build and validate without publishing
+  type: boolean
+  default: false
+
 variables:
 - group: esrp-npm-release
 - name: EsrpMainPublisher
@@ -123,67 +129,68 @@ extends:
             done
           displayName: Verify packages exclude SBOM manifests
 
-    - stage: PublishToNpmViaESRP
-      displayName: Publish to npm via ESRP
-      dependsOn: BuildAndPack
-      jobs:
-      - job: esrp
-        displayName: Publish npm packages through ESRP
-        pool:
-          name: 1ES-ABTT-Shared-Pool
-          image: abtt-windows-2025
-          os: windows
-        templateContext:
-          type: releaseJob
-          isProduction: true
-          inputs:
-          - input: pipelineArtifact
-            artifactName: npm-packages
-            targetPath: $(Pipeline.Workspace)/npm-packages
-        steps:
-        - task: EsrpRelease@12
-          displayName: Publish packages to npm via ESRP
-          inputs:
-            connectedservicename: '$(EsrpServiceConnection)'
-            usemanagedidentity: true
-            keyvaultname: '$(EsrpKeyVault)'
-            signcertname: '$(EsrpSignCert)'
-            clientid: '$(EsrpClientId)'
-            intent: 'PackageDistribution'
-            contenttype: 'npm'
-            contentsource: 'Folder'
-            folderlocation: '$(Pipeline.Workspace)/npm-packages/packages'
-            waitforreleasecompletion: true
-            owners: '$(EsrpOwners)'
-            approvers: '$(EsrpApprovers)'
-            serviceendpointurl: '$(EsrpServiceEndpointUrl)'
-            mainpublisher: '$(EsrpMainPublisher)'
-            domaintenantid: '$(EsrpDomainTenantId)'
+    - ${{ if eq(parameters.dryRun, false) }}:
+      - stage: PublishToNpmViaESRP
+        displayName: Publish to npm via ESRP
+        dependsOn: BuildAndPack
+        jobs:
+        - job: esrp
+          displayName: Publish npm packages through ESRP
+          pool:
+            name: 1ES-ABTT-Shared-Pool
+            image: abtt-windows-2025
+            os: windows
+          templateContext:
+            type: releaseJob
+            isProduction: true
+            inputs:
+            - input: pipelineArtifact
+              artifactName: npm-packages
+              targetPath: $(Pipeline.Workspace)/npm-packages
+          steps:
+          - task: EsrpRelease@12
+            displayName: Publish packages to npm via ESRP
+            inputs:
+              connectedservicename: '$(EsrpServiceConnection)'
+              usemanagedidentity: true
+              keyvaultname: '$(EsrpKeyVault)'
+              signcertname: '$(EsrpSignCert)'
+              clientid: '$(EsrpClientId)'
+              intent: 'PackageDistribution'
+              contenttype: 'npm'
+              contentsource: 'Folder'
+              folderlocation: '$(Pipeline.Workspace)/npm-packages/packages'
+              waitforreleasecompletion: true
+              owners: '$(EsrpOwners)'
+              approvers: '$(EsrpApprovers)'
+              serviceendpointurl: '$(EsrpServiceEndpointUrl)'
+              mainpublisher: '$(EsrpMainPublisher)'
+              domaintenantid: '$(EsrpDomainTenantId)'
 
-      - job: createGitHubReleases
-        displayName: Create GitHub releases and tags
-        dependsOn: esrp
-        pool:
-          name: 1ES-ABTT-Shared-Pool
-          image: abtt-ubuntu-2404
-          os: linux
-        steps:
-        - checkout: self
-          clean: true
+        - job: createGitHubReleases
+          displayName: Create GitHub releases and tags
+          dependsOn: esrp
+          pool:
+            name: 1ES-ABTT-Shared-Pool
+            image: abtt-ubuntu-2404
+            os: linux
+          steps:
+          - checkout: self
+            clean: true
 
-        - task: UseNode@1
-          inputs:
-            version: 20.x
+          - task: UseNode@1
+            inputs:
+              version: 20.x
 
-        - task: NpmAuthenticate@0
-          inputs:
-            workingFile: .npmrc
+          - task: NpmAuthenticate@0
+            inputs:
+              workingFile: .npmrc
 
-        - script: npm ci
-          displayName: Install release-note dependencies
+          - script: npm ci
+            displayName: Install release-note dependencies
 
-        - script: npm run create-releases
-          displayName: Create GitHub releases
-          env:
-            GH_TOKEN: $(gh-automation.token)
-            RELEASE_TARGET: $(Build.SourceVersion)
+          - script: npm run create-releases
+            displayName: Create GitHub releases
+            env:
+              GH_TOKEN: $(gh-automation.token)
+              RELEASE_TARGET: $(Build.SourceVersion)
