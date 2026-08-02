@@ -30,7 +30,7 @@
 	    "serialize-javascript": "^7.0.4"
     },
     "scripts": {
-        "build": "cd ../build-scripts && npm install && cd ../codecoverage-tools && node make.js",
+        "build": "cd ../build-scripts && npm ci && cd ../codecoverage-tools && node make.js",
         "test": "mocha _build/Tests/L0.js"
     },
     "repository": {

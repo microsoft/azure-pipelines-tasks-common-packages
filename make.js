@@ -37,14 +37,14 @@ const printLabel = (name) => {
 const installBuildScriptsDependencies = () => {
     console.log('Installing dependencies for BuildScripts');
     util.cd('common-npm-packages/build-scripts');
-    util.run('npm install');
+    util.run('npm ci');
     util.cd(__dirname);
 }
 
 const buildPsTestHelpers = () => {
     console.log('Building Tests');
     util.cd('Tests');
-    util.run('npm install');
+    util.run('npm ci');
     util.run(path.join('node_modules', '.bin', 'tsc'));
     util.cd(__dirname);
 }
@@ -64,7 +64,7 @@ if (options['build']) {
             printLabel(child);
 
             util.cd(child);
-            util.run('npm install');
+            util.run('npm ci');
             util.run('npm run build');
             util.cd('..');
         }

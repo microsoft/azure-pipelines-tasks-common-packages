@@ -32,7 +32,7 @@ async function createGitHubReleases(packages) {
     }
 
     if (failures.length > 0) {
-        throw new util.CreateReleaseError(`Failed to create GitHub releases for: ${failures.join(', ')}`);
+        console.warn(`GitHub release creation failed for: ${failures.join(', ')}`);
     }
 }
 

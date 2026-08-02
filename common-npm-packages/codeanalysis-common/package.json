@@ -25,7 +25,7 @@
     },
     "main": "VSTS Tasks Code Analysis",
     "scripts": {
-        "build": "cd ../build-scripts && npm install && cd ../codeanalysis-common && node make.js --build",
+        "build": "cd ../build-scripts && npm ci && cd ../codeanalysis-common && node make.js --build",
         "test": "mocha _build/Tests/L0.js"
     },
     "repository": {

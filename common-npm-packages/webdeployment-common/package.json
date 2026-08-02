@@ -8,7 +8,7 @@
         "directory": "common-npm-packages/webdeployment-common"
     },
     "scripts": {
-        "prebuild": "cd ../build-scripts && npm install",
+        "prebuild": "cd ../build-scripts && npm ci",
         "build": "pwsh build.ps1",
         "test": "nyc --all --src ./_build mocha ./_build/Tests/L0.js"
     },

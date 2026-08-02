@@ -10,8 +10,8 @@ steps:
   inputs:
     workingFile: .npmrc
 
-- script: npm install
-  displayName: Npm install
+- script: npm ci
+  displayName: Npm ci
 
 - script: npm run build
   displayName: Build Common Npm packages

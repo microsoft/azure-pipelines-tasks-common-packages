@@ -4,7 +4,7 @@
     "description": "Azure Pipelines tasks SecureFiles Common",
     "main": "securefiles-common.js",
     "scripts": {
-        "build": "cd ../build-scripts && npm install && cd ../securefiles-common && node make.js"
+        "build": "cd ../build-scripts && npm ci && cd ../securefiles-common && node make.js"
     },
     "repository": {
         "type": "git",

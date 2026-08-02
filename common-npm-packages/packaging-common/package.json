@@ -4,7 +4,7 @@
     "description": "Azure Pipelines Packaging Tasks Common",
     "scripts": {
         "test": "mocha _build/Tests/L0.js",
-        "build": "cd ../build-scripts && npm install && cd ../packaging-common && node make.js"
+        "build": "cd ../build-scripts && npm ci && cd ../packaging-common && node make.js"
     },
     "author": "Microsoft Corporation",
     "repository": {
