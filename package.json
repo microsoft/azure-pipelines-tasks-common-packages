@@ -6,7 +6,7 @@
   "scripts": {
     "build": "npm install && cd common-npm-packages/build-scripts && npm install && cd ../.. && node make.js --build",
     "test": "node make.js --test",
-    "publish": "node publish.js"
+    "create-releases": "node publish.js"
   },
   "repository": {
     "type": "git",
