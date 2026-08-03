@@ -2,36 +2,39 @@ const fs = require('fs');
 const util = require('./common-npm-packages/build-scripts/util');
 const releaseNotes = require('./common-npm-packages/build-scripts/create-release');
 
-console.log('Publishing shared npm packages');
+console.log('Creating GitHub releases for shared npm packages');
 
-async function publishPackages(packages) {
+async function createGitHubReleases(packages) {
+    const releaseTarget = process.env['RELEASE_TARGET'];
+    if (!releaseTarget) {
+        throw new util.CreateReleaseError('RELEASE_TARGET is not defined');
+    }
+
+    const failures = [];
     for (let i = 0; i < packages.length; i++) {
         const package = packages[i];
         if (fs.statSync(package).isDirectory() &&  ['build-scripts', '.git', '_download', 'node_modules'].indexOf(package) < 0) {
             console.log('\n----------------------------------');
             console.log(package);
             console.log('----------------------------------');
-            util.cd(package);
-            util.cd('_build');
             try {
-                const npmrc = `//registry.npmjs.org/:_authToken=\${NPM_TOKEN}`;
-                console.log(`Writing .npmrc: ${npmrc}`);
-                fs.writeFileSync('.npmrc', npmrc);
-                util.run('npm publish --registry https://registry.npmjs.org/');
-                await releaseNotes.createReleaseNotes(package, 'main');
+                await releaseNotes.createReleaseNotes(package, 'main', releaseTarget);
             }
             catch(ex) {
-                if (ex instanceof util.CreateReleaseError) {
-                    console.log(`Error creating release notes: ${ex.message}`);
-                } else {
-                    console.log('Publish failed - this usually indicates that the package has already been published');
-                }
+                console.error(`Error creating release notes for ${package}: ${ex.message}`);
+                failures.push(package);
             }
-            util.cd('../..');
         }
+    }
+
+    if (failures.length > 0) {
+        console.warn(`GitHub release creation failed for: ${failures.join(', ')}`);
     }
 }
 
 util.cd('common-npm-packages');
 const packages = fs.readdirSync('./', { encoding: 'utf-8' });
-publishPackages(packages);
+createGitHubReleases(packages).catch(error => {
+    console.error(`Failed to create GitHub releases: ${error.message}`);
+    process.exitCode = 1;
+});
