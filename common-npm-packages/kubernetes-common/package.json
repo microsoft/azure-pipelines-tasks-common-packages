@@ -29,6 +29,7 @@
         "typescript": "^4.9.5"
     },
     "scripts": {
-        "build": "cd ../build-scripts && npm ci && cd ../kubernetes-common && node make.js"
+        "build": "cd ../build-scripts && npm install && cd ../kubernetes-common && node make.js",
+        "build:ci": "node make.js"
     }
 }

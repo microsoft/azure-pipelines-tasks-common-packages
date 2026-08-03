@@ -28,7 +28,8 @@
         "typescript": "^4.9.5"
     },
     "scripts": {
-        "build": "cd ../build-scripts && npm ci && cd ../docker-common && node make.js",
+        "build": "cd ../build-scripts && npm install && cd ../docker-common && node make.js",
+        "build:ci": "node make.js",
         "test": "npm run build && mocha _build/Tests/L0.js"
     }
 }

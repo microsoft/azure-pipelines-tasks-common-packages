@@ -4,7 +4,8 @@
     "description": "Azure Pipelines tasks iOS Signing Common",
     "main": "ios-signing-common.js",
     "scripts": {
-        "build": "cd ../build-scripts && npm ci && cd ../ios-signing-common && node make.js"
+        "build": "cd ../build-scripts && npm install && cd ../ios-signing-common && node make.js",
+        "build:ci": "node make.js"
     },
     "repository": {
         "type": "git",

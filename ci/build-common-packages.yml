@@ -13,14 +13,14 @@ steps:
 - script: npm ci
   displayName: Npm ci
 
-- script: npm run build
+- script: npm run build:ci
   displayName: Build Common Npm packages
 
 - script: node ./ci/verify-source-changes.js
   displayName: Verify task source changes
   condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/main'))
 
-- script: npm run test
+- script: npm run test:ci
   displayName: Test Common Npm packages
 
 - task: PublishTestResults@2

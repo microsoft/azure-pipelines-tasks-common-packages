@@ -4,8 +4,10 @@
   "description": "Shared npm packages for azure pipelines tasks",
   "main": "make.js",
   "scripts": {
-    "build": "npm ci && cd common-npm-packages/build-scripts && npm ci && cd ../.. && node make.js --build",
+    "build": "npm install && cd common-npm-packages/build-scripts && npm install && cd ../.. && node make.js --build",
+    "build:ci": "node make.js --build --ci",
     "test": "node make.js --test",
+    "test:ci": "node make.js --test --ci",
     "create-releases": "node publish.js"
   },
   "repository": {
