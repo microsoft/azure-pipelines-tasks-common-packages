@@ -15,13 +15,10 @@ const ENTRIES_EXCLUDE = [
   path.basename(buildPath),
   '.npmrc',
   'E2ETests',
-  'EngineTests',
   'IntegrationTests',
   'make.js',
   'node_modules',
   'PerfTests',
-  'ProvidersTests',
-  'StoreTests',
   'TestData'
 ];
 
