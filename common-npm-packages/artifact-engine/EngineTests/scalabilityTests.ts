@@ -3,9 +3,11 @@ import * as Stream from 'stream';
 
 import * as engine from '../Engine';
 import * as models from '../Models';
+import { ArtifactItemStore } from '../Store/artifactItemStore';
 
 class HighVolumeSourceProvider implements models.IArtifactProvider {
     private readonly items: models.ArtifactItem[];
+    public artifactItemStore: ArtifactItemStore;
 
     constructor(itemCount: number) {
         this.items = Array.from({ length: itemCount }, (_, i) => {
@@ -44,6 +46,7 @@ class HighVolumeSourceProvider implements models.IArtifactProvider {
 
 class InMemoryDestinationProvider implements models.IArtifactProvider {
     public uploaded: { [itemPath: string]: string } = {};
+    public artifactItemStore: ArtifactItemStore;
 
     async getRootItems(): Promise<models.ArtifactItem[]> {
         return [];
