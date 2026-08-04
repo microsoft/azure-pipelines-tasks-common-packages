@@ -4,3 +4,7 @@ import '../ProvidersTests/handlersTests';
 import '../ProvidersTests/webClientFactoryTests';
 import '../ProvidersTests/webProviderTests';
 import '../StoreTests/artifactItemStoreTests';
+import '../EngineTests/jenkinsTests';
+import '../EngineTests/proxyTests';
+import '../EngineTests/httpStatusFailureTests';
+import '../EngineTests/scalabilityTests';

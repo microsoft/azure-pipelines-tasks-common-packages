@@ -5,8 +5,7 @@ Artifact engine is a generic framework which supports download of artifacts from
 The framework is extensible and other providers can be easily plugged in the downloader.
 
 ## How to Use
-To use Artifact engine in your tasks or app have a look at [E2E.ts](E2ETests/jenkins.e2e.ts
-).
+To use Artifact engine in your tasks or app, see the provider and engine test coverage under `EngineTests` and `ProvidersTests` for end-to-end usage examples.
 
 ## Usage
 ![Daily downloads using artifact engine](https://github.com/Microsoft/azure-pipelines-extensions/blob/master/Extensions/ArtifactEngine/usage.png)
@@ -27,14 +26,11 @@ To use Artifact engine in your tasks or app have a look at [E2E.ts](E2ETests/jen
 1. Install [mocha sidebar](https://marketplace.visualstudio.com/items?itemName=maty.vscode-mocha-sidebar) extension to run tests from vscode.
 2. Optional install [node tdd](https://marketplace.visualstudio.com/items?itemName=prashaantt.node-tdd) extension to automatically run tests on build.
 
-*gulp*
+*node*
 ------
-1. To run ArtifactEngine integration and unit tests from root directory use
+1. Build artifact-engine from repository root:
 
-    `gulp test --suite=ArtifactEngineV2`
-2. To run Performance tests update [test config file](test.config.json.example) and rename it to test.config.json  and run
+    `node make.js --build --packageName artifact-engine`
+2. Run artifact-engine default test suite from repository root:
 
-    `gulp test --suite=ArtifactEngineV2 --perf`
-3. To run End-to-End tests update [test config file](test.config.json.example) and rename it to test.config.json  and run
-
-    `gulp test --suite=ArtifactEngineV2 --e2e`
+    `node make.js --test --packageName artifact-engine`

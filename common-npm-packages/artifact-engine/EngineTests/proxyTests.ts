@@ -8,7 +8,7 @@ import { BasicCredentialHandler } from "typed-rest-client/handlers/basiccreds";
 
 var packagejson = require('../package.json');
 
-describe('Integration Tests', () => {
+describe('Unit Tests', () => {
     describe('proxy tests', () => {
 
         it('should be able to download jenkins artifact under proxy', function (done) {

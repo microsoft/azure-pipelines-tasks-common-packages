@@ -14,11 +14,8 @@ fs.mkdirSync(buildPath, { recursive: true });
 const ENTRIES_EXCLUDE = [
   path.basename(buildPath),
   '.npmrc',
-  'E2ETests',
-  'IntegrationTests',
   'make.js',
   'node_modules',
-  'PerfTests',
   'TestData'
 ];
 
