@@ -582,9 +582,12 @@ export class ApplicationTokenCredentials {
             case AzureModels.Scheme.WorkloadIdentityFederation:
                 tl.debug('Using WorkloadIdentityCredential for OIDC');
                 const federatedToken = await this.getFederatedToken();
+                // Use a unique file name per invocation. A fixed 'token.jwt' name races when
+                // multiple credentials are built concurrently in the same job (e.g. parallel
+                // slot deployments), where one write can clobber another's federated token.
                 const tokenFilePath = path.join(
                     tl.getVariable('Agent.TempDirectory') || tl.getVariable('system.DefaultWorkingDirectory'),
-                    'token.jwt'
+                    `token-${crypto.randomBytes(16).toString('hex')}.jwt`
                 );
                 fs.writeFileSync(tokenFilePath, federatedToken);
 
