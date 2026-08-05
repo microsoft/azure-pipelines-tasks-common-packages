@@ -602,6 +602,21 @@ export class ApplicationTokenCredentials {
                 authorityHost: authorityHost
             };
             console.log(`##vso[telemetry.publish area=TaskDeploymentMethod;feature=KuduScopeLevelToken]${JSON.stringify(payload)}`);
+
+            // Dedicated, stable signal for a production monitor. Whenever a Kudu/SCM call still
+            // receives an ARM-audience token we emit KuduArmTokenDeprecated so adoption of the
+            // scoped path can be measured (and the ARM path safely retired) later. Kept silent -
+            // no customer-facing warning - because the ARM fallback is still the expected behavior
+            // while ALLOWSCOPELEVELTOKEN is rolling out; a warning here would be noise.
+            if (requestedAudience === "ARM") {
+                const deprecationPayload = {
+                    source: "azure-arm-rest",
+                    reason: outcome,
+                    authorityHost: authorityHost
+                };
+                console.log(`##vso[telemetry.publish area=TaskDeploymentMethod;feature=KuduArmTokenDeprecated]${JSON.stringify(deprecationPayload)}`);
+                tl.debug(`[deprecation] Kudu/SCM received an ARM-audience token (reason=${outcome}). This path is deprecated and will be removed once ALLOWSCOPELEVELTOKEN is fully enabled.`);
+            }
         } catch (e) {
             tl.debug(`Failed to publish scope token telemetry: ${e}`);
         }
