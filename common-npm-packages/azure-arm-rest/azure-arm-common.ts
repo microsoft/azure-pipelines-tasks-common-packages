@@ -549,8 +549,10 @@ export class ApplicationTokenCredentials {
                 tl.debug(`allowScopeLevelToken is enabled, using scope: ${this.scopes[scopeKind]}`);
                 const credential = await this.buildCredentialByScheme();
                 const tokenResponse = await credential.getToken(this.scopes[scopeKind]);
+                this.publishScopeTokenTelemetry(scopeKind, "AppService", "scoped");
                 return tokenResponse.token;
             } else {
+                let outcome: string;
                 if (this.allowScopeLevelToken && (!this.scopes || !this.scopes[scopeKind])) {
                     // The scope-level token feature is enabled but no scope is mapped for this
                     // cloud/scopeKind (e.g. an unregistered sovereign cloud). We deliberately fall
@@ -559,14 +561,49 @@ export class ApplicationTokenCredentials {
                     // is exactly what this feature aims to eliminate. authorityUrl (a public login
                     // endpoint, not a secret) is logged to help identify the cloud.
                     tl.warning(`acquireTokenForScope: no '${scopeKind}' scope is mapped for this environment (authority: ${this.authorityUrl}); falling back to an ARM-audience token.`);
+                    outcome = "fallbackUnmapped";
                 } else {
                     tl.debug(`allowScopeLevelToken is disabled`);
+                    outcome = "fallbackDisabled";
                 }
-                return await this.getToken();
+                const token = await this.getToken();
+                this.publishScopeTokenTelemetry(scopeKind, "ARM", outcome);
+                return token;
             }
         } catch (error) {
             tl.debug(`acquireTokenForScopes - error: ${error}`);
+            this.publishScopeTokenTelemetry(scopeKind, "None", "error");
             throw new Error(tl.loc('CouldNotFetchAccessTokenforAzureStatusCode', error.errorCode, error.errorMessage));
+        }
+    }
+
+    // Emits non-sensitive telemetry so we can prove Kudu/SCM calls request an App Service-audience
+    // token (and detect any ARM-audience fallback) once ALLOWSCOPELEVELTOKEN is rolled out. Only
+    // metadata is recorded - never a token, secret, or credential material. authorityHost is a
+    // public Entra login endpoint used to identify the cloud.
+    private publishScopeTokenTelemetry(scopeKind: string, requestedAudience: string, outcome: string): void {
+        try {
+            let authorityHost = "";
+            try {
+                authorityHost = this.authorityUrl ? new URL(this.authorityUrl).host : "";
+            } catch (e) {
+                authorityHost = "";
+            }
+            const payload = {
+                scopeKind: scopeKind,
+                requestedAudience: requestedAudience,
+                outcome: outcome,
+                allowScopeLevelToken: !!this.allowScopeLevelToken,
+                // this.scheme is undefined for the service-principal case (the constructor maps
+                // the endpoint's "ServicePrincipal" scheme against an enum that only defines
+                // ManagedServiceIdentity/SPN/WorkloadIdentityFederation), so default to
+                // "ServicePrincipal" instead of emitting an empty field.
+                scheme: this.scheme === undefined ? "ServicePrincipal" : AzureModels.Scheme[this.scheme],
+                authorityHost: authorityHost
+            };
+            console.log(`##vso[telemetry.publish area=TaskDeploymentMethod;feature=KuduScopeLevelToken]${JSON.stringify(payload)}`);
+        } catch (e) {
+            tl.debug(`Failed to publish scope token telemetry: ${e}`);
         }
     }
 
