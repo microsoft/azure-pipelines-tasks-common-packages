@@ -551,7 +551,17 @@ export class ApplicationTokenCredentials {
                 const tokenResponse = await credential.getToken(this.scopes[scopeKind]);
                 return tokenResponse.token;
             } else {
-                tl.debug(`allowScopeLevelToken is disabbled`);
+                if (this.allowScopeLevelToken && (!this.scopes || !this.scopes[scopeKind])) {
+                    // The scope-level token feature is enabled but no scope is mapped for this
+                    // cloud/scopeKind (e.g. an unregistered sovereign cloud). We deliberately fall
+                    // back to the ARM-audience token to preserve deployment functionality, but log
+                    // a warning so this is observable - a Kudu call receiving an ARM-audience token
+                    // is exactly what this feature aims to eliminate. authorityUrl (a public login
+                    // endpoint, not a secret) is logged to help identify the cloud.
+                    tl.warning(`acquireTokenForScope: no '${scopeKind}' scope is mapped for this environment (authority: ${this.authorityUrl}); falling back to an ARM-audience token.`);
+                } else {
+                    tl.debug(`allowScopeLevelToken is disabled`);
+                }
                 return await this.getToken();
             }
         } catch (error) {
