@@ -567,6 +567,13 @@ export class ApplicationTokenCredentials {
             throw new Error(`@azure/identity is not supported on Node ${nodeVersion}. Please use Node 16 or higher for this authentication scheme.`);
         }
 
+        // Point @azure/identity credentials at the service connection's Entra authority so that
+        // scope-level tokens are requested from the correct (sovereign) cloud instead of the
+        // public login.microsoftonline.com default. this.authorityUrl carries the per-cloud
+        // authority (e.g. login.microsoftonline.us / login.chinacloudapi.cn) and is the same
+        // value the ARM/MSAL path derives its authority from (see buildMSAL).
+        const credentialOptions = { authorityHost: this.authorityUrl };
+
         switch (this.scheme) {
             case AzureModels.Scheme.ManagedServiceIdentity:
                 tl.debug('Using ManagedIdentityCredential for MSI');
@@ -582,6 +589,7 @@ export class ApplicationTokenCredentials {
                 fs.writeFileSync(tokenFilePath, federatedToken);
 
                 return new azureIdentity.WorkloadIdentityCredential({
+                    ...credentialOptions,
                     tenantId: this.tenantId,
                     clientId: this.clientId,
                     tokenFilePath: tokenFilePath
@@ -592,10 +600,10 @@ export class ApplicationTokenCredentials {
                 tl.debug('Using specific credential for Service Principal');
                 if (this.authType === constants.AzureServicePrinicipalAuthentications.servicePrincipalKey) {
                     tl.debug('Using ClientSecretCredential for key-based SPN');
-                    return new azureIdentity.ClientSecretCredential(this.tenantId, this.clientId, this.secret);
+                    return new azureIdentity.ClientSecretCredential(this.tenantId, this.clientId, this.secret, credentialOptions);
                 } else {
                     tl.debug('Using ClientCertificateCredential for certificate-based SPN');
-                    return new azureIdentity.ClientCertificateCredential(this.tenantId, this.clientId, this.certFilePath);
+                    return new azureIdentity.ClientCertificateCredential(this.tenantId, this.clientId, this.certFilePath, credentialOptions);
                 }
         }
     }
