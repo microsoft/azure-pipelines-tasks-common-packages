@@ -25,7 +25,7 @@ export class ZipProvider implements IArtifactProvider {
     }
 
     public getArtifactItems(artifactItem: ArtifactItem): Promise<ArtifactItem[]> {
-        return null;
+        return Promise.reject(new Error('Not implemented'));
     }
 
     public getArtifactItem(artifactItem: ArtifactItem): Promise<NodeJS.ReadableStream> {

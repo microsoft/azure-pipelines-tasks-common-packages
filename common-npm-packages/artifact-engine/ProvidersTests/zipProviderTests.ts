@@ -35,6 +35,19 @@ beforeEach((done) => {
 
 describe('Unit Tests', () => {
     describe('zipProvider tests', () => {
+        it('getArtifactItems should reject as not implemented', (done) => {
+            zipProvider.getArtifactItems(artifactItem).then(() => {
+                done(new Error('Expected getArtifactItems to reject'));
+            }, (err) => {
+                try {
+                    assert.strictEqual(err.message, 'Not implemented');
+                    done();
+                } catch (error) {
+                    done(error);
+                }
+            });
+        });
+
         it('getArtifactItem should call http get with correct url', (done) => {
             zipProvider.getArtifactItem(artifactItem).then(() => {
                 assert.strictEqual(getStub.callCount, 1);
