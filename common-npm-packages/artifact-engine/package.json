@@ -10,7 +10,7 @@
     "artifact"
   ],
   "license": "MIT",
-  "main": "",
+  "main": "Engine/index.js",
   "author": {
     "name": "omeshp",
     "email": "omeshp@microsoft.com"
