@@ -48,6 +48,19 @@ describe('Unit Tests', () => {
             });
         });
 
+        it('putArtifactItem should reject as not implemented', (done) => {
+            zipProvider.putArtifactItem(artifactItem, null).then(() => {
+                done(new Error('Expected putArtifactItem to reject'));
+            }, (err) => {
+                try {
+                    assert.strictEqual(err.message, 'Not implemented');
+                    done();
+                } catch (error) {
+                    done(error);
+                }
+            });
+        });
+
         it('getArtifactItem should call http get with correct url', (done) => {
             zipProvider.getArtifactItem(artifactItem).then(() => {
                 assert.strictEqual(getStub.callCount, 1);

@@ -60,7 +60,7 @@ export class ZipProvider implements IArtifactProvider {
     }
 
     public putArtifactItem(artifactItem: ArtifactItem, stream: NodeJS.ReadableStream): Promise<ArtifactItem> {
-        return null;
+        return Promise.reject(new Error('Not implemented'));
     }
 
     public dispose(): void {
