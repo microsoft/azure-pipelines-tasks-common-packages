@@ -86,7 +86,7 @@ if (options['test']) {
     const nycExecutableName = process.platform === 'win32' ? 'nyc.cmd' : 'nyc';
     const rootNycPath = path.join(__dirname, 'node_modules', '.bin', nycExecutableName);
     const packageNycPath = options['packageName'] && path.join(__dirname, 'common-npm-packages', options['packageName'], 'node_modules', '.bin', nycExecutableName);
-    const nycPath = fs.existsSync(rootNycPath) ? rootNycPath : packageNycPath;
+    const nycPath = [rootNycPath, packageNycPath].find(candidate => candidate && fs.existsSync(candidate)) || nycExecutableName;
     let testsFailed = false;
     util.cleanFolder(testResultsPath, [gitkeepName]);
 
