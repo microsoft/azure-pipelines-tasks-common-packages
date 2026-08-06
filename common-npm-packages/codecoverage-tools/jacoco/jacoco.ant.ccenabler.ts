@@ -66,7 +66,7 @@ export class JacocoAntCodeCoverageEnabler extends cc.JacocoCodeCoverageEnabler {
 
     protected getSourceFilter(): string {
         let srcData = "";
-        let srcDirs = this.sourceDirs === null ? "" : this.sourceDirs;
+        let srcDirs = util.isNullOrWhitespace(this.sourceDirs) ? "" : this.sourceDirs;
         srcDirs.split(",").forEach(dir => {
             if (!util.isNullOrWhitespace(dir)) {
                 srcData += `<fileset dir="${dir}"/>`;
