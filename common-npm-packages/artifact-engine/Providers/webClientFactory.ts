@@ -45,7 +45,7 @@ export class WebClientFactory {
         }
     }
 
-    private static _readTaskLibSecrets(lookupKey: string): string {
+    private static _readTaskLibSecrets(lookupKey: string | null | undefined): string | undefined {
         // the lookupKey should has following format
         // base64encoded<keyFilePath>:base64encoded<encryptedContent>
         if (lookupKey && lookupKey.indexOf(':') > 0) {
