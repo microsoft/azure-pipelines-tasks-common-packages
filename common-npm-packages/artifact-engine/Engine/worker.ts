@@ -33,7 +33,7 @@ export class Worker<T> {
 
             let item = this.getNextItem();
             if (!item && !this.canExit()) {
-                Logger.logInfo(`Nothing to process currently, respawing worker ${this.id} after 1 sec.`);
+                Logger.logInfo(`Nothing to process currently, respawning worker ${this.id} after 1 sec.`);
                 setTimeout(() => this.spawnWorker(resolve, reject), 1000);
                 return;
             }
@@ -47,7 +47,7 @@ export class Worker<T> {
             let executePromise = this.execute(item);
 
             executePromise.then(() => {
-                Logger.logInfo(`Nothing to process currently, respawing worker ${this.id} after 1 sec.`);
+                Logger.logInfo(`Nothing to process currently, respawning worker ${this.id} after 1 sec.`);
                 this.spawnWorker(resolve, reject);
             }, (reason) => {
                 reject(reason);
