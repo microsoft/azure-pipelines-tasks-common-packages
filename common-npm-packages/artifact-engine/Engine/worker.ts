@@ -27,9 +27,10 @@ export class Worker<T> {
         try {
             if (this.hasDownloadFailed()) {
                 Logger.logInfo(`Aborting respawning worker, as download failed for some file(s).`);
+                resolve();
                 return;
             }
-            
+
             let item = this.getNextItem();
             if (!item && !this.canExit()) {
                 Logger.logInfo(`Nothing to process currently, respawing worker ${this.id} after 1 sec.`);

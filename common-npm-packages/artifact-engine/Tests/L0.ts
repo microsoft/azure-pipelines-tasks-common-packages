@@ -1,4 +1,5 @@
 import '../EngineTests/artifactEngineTests';
+import '../EngineTests/workerTests';
 import '../ProvidersTests/filesystemProviderTests';
 import '../ProvidersTests/handlersTests';
 import '../ProvidersTests/webClientFactoryTests';
