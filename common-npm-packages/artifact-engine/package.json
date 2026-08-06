@@ -4,7 +4,8 @@
   "description": "Artifact Engine to download artifacts from jenkins, teamcity, vsts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Microsoft/azure-pipelines-extensions/tree/master/Extensions/ArtifactEngineV2"
+    "url": "git+https://github.com/microsoft/azure-pipelines-tasks-common-packages.git",
+    "directory": "common-npm-packages/artifact-engine"
   },
   "keywords": [
     "artifact"
