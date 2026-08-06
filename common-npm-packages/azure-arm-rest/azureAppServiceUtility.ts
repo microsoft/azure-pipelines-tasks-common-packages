@@ -6,6 +6,68 @@ import { Kudu } from './azure-arm-app-service-kudu';
 import webClient = require('./webClient');
 import { SiteContainer, VolumeMount, EnvironmentVariable } from './SiteContainer';
 
+export interface KuduAuthModeTelemetryParams {
+    // "Basic" | "Bearer" - how the Kudu/SCM request is authenticated.
+    authMethod: string;
+    // Which code path emitted this ("kuduAuthHeader" | "msDeploy" | "publishProfile"), for slicing.
+    source: string;
+    // ApplicationTokenCredentials for token (Bearer) paths - used to read the scoped-vs-broad decision.
+    credentials?: any;
+    // True when SCM basic auth is enabled on the site (only meaningful for the standard REST path).
+    scmBasicAuthEnabled?: boolean;
+    // Per-task identity (the task's telemetry feature name) for per-task breakdown.
+    telemetryFeature?: string;
+}
+
+// Emits the unified, additive `feature=KuduAuthMode` event so a single query can count how many task
+// instances use basic auth vs a tightly-scoped App Service token vs a broad ARM-audience token
+// (fallback). It is intentionally separate from - and does not alter - the pre-existing
+// authMethod / KuduScopeLevelToken / KuduArmTokenDeprecated events, so existing monitors are unaffected.
+// The scoped-vs-broad classification is read back from the credentials' last decision (no duplicated
+// logic). Non-sensitive metadata only - never a token, secret, or credential material.
+export function publishKuduAuthModeTelemetry(params: KuduAuthModeTelemetryParams): void {
+    try {
+        let scope: { requestedAudience: string, outcome: string, allowScopeLevelToken: boolean, scheme: string, authorityHost: string } =
+            { requestedAudience: undefined, outcome: undefined, allowScopeLevelToken: false, scheme: undefined, authorityHost: "" };
+        if (params.credentials && typeof params.credentials.getLastScopeTokenTelemetry === "function") {
+            try {
+                scope = params.credentials.getLastScopeTokenTelemetry();
+            } catch (e) {
+                tl.debug(`KuduAuthMode: failed to read scope token telemetry: ${e}`);
+            }
+        }
+
+        const isBasic = params.authMethod === "Basic";
+        let authMode: string;
+        if (isBasic) {
+            authMode = "basic";
+        } else if (scope.outcome === "scoped") {
+            authMode = "scopedToken";
+        } else if (scope.outcome === "error") {
+            authMode = "error";
+        } else {
+            // fallbackDisabled / fallbackUnmapped => an ARM-audience (broad) token was used for Kudu.
+            authMode = "broadToken";
+        }
+
+        const payload = {
+            authMode: authMode,
+            authMethod: params.authMethod,
+            source: params.source,
+            requestedAudience: isBasic ? "None" : scope.requestedAudience,
+            outcome: isBasic ? "basic" : scope.outcome,
+            allowScopeLevelToken: !!scope.allowScopeLevelToken,
+            scmBasicAuthEnabled: params.scmBasicAuthEnabled,
+            telemetryFeature: params.telemetryFeature,
+            authorityHost: scope.authorityHost,
+            scheme: scope.scheme
+        };
+        console.log(`##vso[telemetry.publish area=TaskDeploymentMethod;feature=KuduAuthMode]${JSON.stringify(payload)}`);
+    } catch (e) {
+        tl.debug(`Failed to publish KuduAuthMode telemetry: ${e}`);
+    }
+}
+
 export class AzureAppServiceUtility {
 
     private readonly _appService: AzureAppService;
@@ -152,6 +214,17 @@ export class AzureAppServiceUtility {
         };
         tl.debug(`Using ${method} authentication method for Kudu service.`);
         console.log(`##vso[telemetry.publish area=TaskDeploymentMethod;feature=${this._telemetryFeature}]${JSON.stringify(authMethodtelemetry)}`);
+
+        // Unified, additive auth-mode signal (feature=KuduAuthMode) - see publishKuduAuthModeTelemetry.
+        // Lets us count basic vs tightly-scoped vs broad(ARM-fallback) token usage per task with a
+        // single query, without touching the pre-existing events above (back-compat preserved).
+        publishKuduAuthModeTelemetry({
+            authMethod: method,
+            source: "kuduAuthHeader",
+            credentials: this._appService._client.getCredentials(),
+            scmBasicAuthEnabled: scmPolicyCheck === true,
+            telemetryFeature: this._telemetryFeature
+        });
 
         return method + " " + token;
     }

@@ -65,6 +65,12 @@ export class ApplicationTokenCredentials {
     private scopes: any;
     private allowScopeLevelToken: boolean;
 
+    // Records the audience/outcome of the most recent acquireTokenForScope call so callers
+    // (e.g. the Kudu auth layer) can emit a single unified auth-mode telemetry event without
+    // re-deriving the scoped-vs-broad decision. Non-sensitive metadata only - never a token.
+    private _lastRequestedAudience: string = undefined;
+    private _lastScopeOutcome: string = undefined;
+
     private readonly tokenMutex: Mutex;
 
     constructor(
@@ -582,6 +588,10 @@ export class ApplicationTokenCredentials {
     // metadata is recorded - never a token, secret, or credential material. authorityHost is a
     // public Entra login endpoint used to identify the cloud.
     private publishScopeTokenTelemetry(scopeKind: string, requestedAudience: string, outcome: string): void {
+        // Remember the most recent decision so getLastScopeTokenTelemetry() can expose it to the
+        // Kudu auth layer for the unified KuduAuthMode event. Existing events below are unchanged.
+        this._lastRequestedAudience = requestedAudience;
+        this._lastScopeOutcome = outcome;
         try {
             let authorityHost = "";
             try {
@@ -620,6 +630,26 @@ export class ApplicationTokenCredentials {
         } catch (e) {
             tl.debug(`Failed to publish scope token telemetry: ${e}`);
         }
+    }
+
+    // Exposes non-sensitive metadata about the most recent scoped-token decision so the Kudu auth
+    // layer can publish a single, unified auth-mode telemetry event (basic vs scoped vs broad).
+    // requestedAudience/outcome are undefined until acquireTokenForScope has run (e.g. the Basic
+    // auth path never calls it); allowScopeLevelToken/scheme/authorityHost are always meaningful.
+    public getLastScopeTokenTelemetry(): { requestedAudience: string, outcome: string, allowScopeLevelToken: boolean, scheme: string, authorityHost: string } {
+        let authorityHost = "";
+        try {
+            authorityHost = this.authorityUrl ? new URL(this.authorityUrl).host : "";
+        } catch (e) {
+            authorityHost = "";
+        }
+        return {
+            requestedAudience: this._lastRequestedAudience,
+            outcome: this._lastScopeOutcome,
+            allowScopeLevelToken: !!this.allowScopeLevelToken,
+            scheme: this.scheme === undefined ? "ServicePrincipal" : AzureModels.Scheme[this.scheme],
+            authorityHost: authorityHost
+        };
     }
 
     private async buildCredentialByScheme(): Promise<any> {
