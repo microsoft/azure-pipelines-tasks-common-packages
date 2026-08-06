@@ -35,4 +35,4 @@ fs.readdirSync(__dirname).forEach(entry => {
 fs.copyFileSync(path.join(__dirname, 'tsconfig.json'), path.join(buildPath, 'tsconfig.json'));
 
 cp.execSync(`npm install --omit=dev --userconfig "${npmUserConfigPath}"`, { stdio: 'inherit', cwd: buildPath });
-cp.execSync('tsc -p tsconfig.json', { stdio: 'inherit', cwd: buildPath });
+cp.execFileSync(process.execPath, [require.resolve('typescript/bin/tsc'), '-p', 'tsconfig.json'], { stdio: 'inherit', cwd: buildPath });

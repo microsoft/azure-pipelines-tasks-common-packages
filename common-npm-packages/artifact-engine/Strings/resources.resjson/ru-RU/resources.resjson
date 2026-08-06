@@ -8,5 +8,5 @@
   "loc.messages.SkippingItem": "Пропущена обработка элемента %s",
   "loc.messages.UnhandledRejection": "artifact-engine-v2: необработанное отклонение %s",
   "loc.messages.UnhandledException": "artifact-engine-v2: необработанное исключение %s",
-  "loc.messages.FailedRequest": "Сбой запроса: (statusCode)"
+  "loc.messages.FailedRequest": "Сбой запроса: (%s)"
 }
