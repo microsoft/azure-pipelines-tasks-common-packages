@@ -37,6 +37,7 @@ describe('Unit Tests', () => {
             processor.processItems(webProvider, filesystemProvider, processorOptions)
                 .then(() => assert.fail('Expected failure'), (error) => {
                     assert.strictEqual(error.statusCode, 404);
+                    assert(error.message.indexOf('404') >= 0, `Expected error message to contain 404, got: ${error.message}`);
                     done();
                 });
         });
@@ -61,6 +62,7 @@ describe('Unit Tests', () => {
             processor.processItems(webProvider, filesystemProvider, processorOptions)
                 .then(() => assert.fail('Expected failure'), (error) => {
                     assert.strictEqual(error.statusCode, 401);
+                    assert(error.message.indexOf('401') >= 0, `Expected error message to contain 401, got: ${error.message}`);
                     done();
                 });
         });
@@ -85,6 +87,7 @@ describe('Unit Tests', () => {
             processor.processItems(webProvider, filesystemProvider, processorOptions)
                 .then(() => assert.fail('Expected failure'), (error) => {
                     assert.strictEqual(error.statusCode, 500);
+                    assert(error.message.indexOf('500') >= 0, `Expected error message to contain 500, got: ${error.message}`);
                     done();
                 });
         });
