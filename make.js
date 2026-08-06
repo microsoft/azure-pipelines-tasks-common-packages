@@ -84,6 +84,7 @@ if (options['test']) {
     util.cd('common-npm-packages');
     const suite = options['suite'] || defaultTestSuite;
     const nycExecutableName = process.platform === 'win32' ? 'nyc.cmd' : 'nyc';
+    const mochaExecutableName = process.platform === 'win32' ? 'mocha.cmd' : 'mocha';
     const rootNycPath = path.join(__dirname, 'node_modules', '.bin', nycExecutableName);
     const packageNycPath = options['packageName'] && path.join(__dirname, 'common-npm-packages', options['packageName'], 'node_modules', '.bin', nycExecutableName);
     const nycPath = [rootNycPath, packageNycPath].find(candidate => candidate && fs.existsSync(candidate)) || nycExecutableName;
@@ -106,10 +107,10 @@ if (options['test']) {
                         const suitName = `${child}-suite`;
                         const mochaOptions = util.createMochaOptions(mochaReporterPath, junitPath, suitName);
                         const packageNycPath = path.join(startPath, child, 'node_modules', '.bin', nycExecutableName);
-                        const packageNyc = fs.existsSync(rootNycPath) ? rootNycPath : packageNycPath;
-                        const rootMochaPath = path.join(__dirname, 'node_modules', '.bin', process.platform === 'win32' ? 'mocha.cmd' : 'mocha');
-                        const packageMochaPath = path.join(startPath, child, 'node_modules', '.bin', process.platform === 'win32' ? 'mocha.cmd' : 'mocha');
-                        const mochaPath = fs.existsSync(rootMochaPath) ? rootMochaPath : packageMochaPath;
+                        const packageNyc = [rootNycPath, packageNycPath].find(candidate => candidate && fs.existsSync(candidate)) || nycExecutableName;
+                        const rootMochaPath = path.join(__dirname, 'node_modules', '.bin', mochaExecutableName);
+                        const packageMochaPath = path.join(startPath, child, 'node_modules', '.bin', mochaExecutableName);
+                        const mochaPath = [rootMochaPath, packageMochaPath].find(candidate => candidate && fs.existsSync(candidate)) || mochaExecutableName;
 
                         util.run(`"${packageNyc}" --all --src ${buildPath} --report-dir ${coveragePath} "${mochaPath}" ${mochaOptions} ${testPath}`, true);
                         util.renameFile(coveragePath, coverageBaseNameJson, `${child}-coverage.json`);
