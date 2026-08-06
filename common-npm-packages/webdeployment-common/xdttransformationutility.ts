@@ -2,6 +2,7 @@ import tl = require('azure-pipelines-task-lib/task');
 import * as fs from 'fs';
 import path = require('path');
 import { DOMParser } from '@xmldom/xmldom';
+import { detectFileEncoding } from './fileencoding';
 
 const xdtNamespace = 'http://schemas.microsoft.com/XML-Document-Transform';
 const builtInXdtTransformTypes = [
@@ -71,51 +72,21 @@ function validateXdtTransformFile(transformFile: string): void {
 
 function readTransformFile(transformFile: string): string {
     const buffer = fs.readFileSync(transformFile);
-    if (buffer.length >= 4 && buffer.slice(0, 4).equals(Buffer.from([255, 254, 0, 0]))) {
-        throw new Error(tl.loc('XdtTransformationUnsupportedEncoding', transformFile, 'UTF-32LE'));
+    const encoding = detectTransformFileEncoding(transformFile, buffer);
+    return buffer.toString(encoding as BufferEncoding);
+}
+
+function detectTransformFileEncoding(transformFile: string, buffer: Buffer): string {
+    try {
+        // Reuse the shared encoding detection so the XDT transform path stays consistent
+        // with the XML/JSON variable-substitution paths and there is a single source of truth.
+        // detectFileEncoding returns utf-8 / utf-16le and throws for unsupported encodings.
+        return detectFileEncoding(transformFile, buffer)[0].toString();
     }
-
-    if (buffer.length >= 4 && buffer.slice(0, 4).equals(Buffer.from([0, 0, 254, 255]))) {
-        throw new Error(tl.loc('XdtTransformationUnsupportedEncoding', transformFile, 'UTF-32BE'));
+    catch (error) {
+        tl.debug('Unable to detect encoding of XDT transform file ' + transformFile + ': ' + (error && error.message ? error.message : error));
+        throw new Error(tl.loc('XdtTransformationUnsupportedEncoding', transformFile));
     }
-
-    if (buffer.length >= 3 && buffer.slice(0, 3).equals(Buffer.from([239, 187, 191]))) {
-        return buffer.toString('utf8');
-    }
-
-    if (buffer.length >= 2 && buffer.slice(0, 2).equals(Buffer.from([255, 254]))) {
-        return buffer.toString('utf16le');
-    }
-
-    if (buffer.length >= 2 && buffer.slice(0, 2).equals(Buffer.from([254, 255]))) {
-        throw new Error(tl.loc('XdtTransformationUnsupportedEncoding', transformFile, 'UTF-16BE'));
-    }
-
-    if (buffer.length >= 4) {
-        var typeCode = 0;
-        for (let index = 0; index < 4; index++) {
-            typeCode = typeCode << 1;
-            typeCode = typeCode | (buffer[index] > 0 ? 1 : 0);
-        }
-
-        if (typeCode == 10) {
-            return buffer.toString('utf16le');
-        }
-
-        if (typeCode == 5) {
-            throw new Error(tl.loc('XdtTransformationUnsupportedEncoding', transformFile, 'UTF-16BE'));
-        }
-
-        if (typeCode == 1) {
-            throw new Error(tl.loc('XdtTransformationUnsupportedEncoding', transformFile, 'UTF-32BE'));
-        }
-
-        if (typeCode == 8) {
-            throw new Error(tl.loc('XdtTransformationUnsupportedEncoding', transformFile, 'UTF-32LE'));
-        }
-    }
-
-    return buffer.toString('utf8');
 }
 
 function parseTransformFile(transformFile: string, xmlContent: string): Document {
