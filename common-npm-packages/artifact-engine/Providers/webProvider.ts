@@ -28,7 +28,7 @@ export class WebProvider implements IArtifactProvider {
 
     public artifactItemStore: ArtifactItemStore;
 
-    constructor(rootItemsLocation, templateFile: string, variables: any, handler: IRequestHandler, requestOptions?: IRequestOptions) {
+    constructor(rootItemsLocation: string, templateFile: string, variables: Record<string, unknown>, handler: IRequestHandler, requestOptions?: IRequestOptions) {
         this.rootItemsLocation = rootItemsLocation;
         this.templateFile = templateFile;
         this.webClient = WebClientFactory.getClient([handler], requestOptions);
@@ -169,7 +169,7 @@ export class WebProvider implements IArtifactProvider {
 
     private rootItemsLocation: string;
     private templateFile: string;
-    private variables: string;
+    private variables: Record<string, unknown>;
     private requestCompressionForDownloads: boolean;
     public webClient: WebClient;
 }
