@@ -23,7 +23,7 @@ export class ArtifactItemStore {
     }
 
     public addItems(items: models.ArtifactItem[]): void {
-        items.map((value: models.ArtifactItem, index: number) => {
+        items.forEach((value: models.ArtifactItem) => {
             this.addItem(value);
         });
     }
