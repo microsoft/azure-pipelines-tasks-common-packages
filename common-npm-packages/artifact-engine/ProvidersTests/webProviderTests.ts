@@ -123,6 +123,22 @@ describe('Unit Tests', () => {
             });
         });
 
+        it('getArtifactItem should reject when download url is unavailable', (done) => {
+            artifactItem.metadata = null;
+
+            webProvider.getArtifactItem(artifactItem).then(() => {
+                done(new Error('Expected getArtifactItem to reject'));
+            }, (err) => {
+                try {
+                    assert.strictEqual(err, 'No downloadUrl available to download the item.');
+                    assert.strictEqual(getStub.callCount, 0);
+                    done();
+                } catch (error) {
+                    done(error);
+                }
+            });
+        });
+
         it('getArtifactItem should Unzip on stream if content type is gzip', (done) => {
             stubResponse.message.headers = { 'content-encoding': 'gzip' };
             stubResponse.message.pipe = sinon.spy();

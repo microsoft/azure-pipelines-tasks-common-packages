@@ -53,7 +53,7 @@ export class WebProvider implements IArtifactProvider {
     getArtifactItem(artifactItem: ArtifactItem): Promise<NodeJS.ReadableStream> {
         var promise = new Promise<NodeJS.ReadableStream>((resolve, reject) => {
             if (!artifactItem.metadata || !artifactItem.metadata['downloadUrl']) {
-                reject("No downloadUrl available to download the item.");
+                return reject("No downloadUrl available to download the item.");
             }
 
             var downloadSize: number = 0;
