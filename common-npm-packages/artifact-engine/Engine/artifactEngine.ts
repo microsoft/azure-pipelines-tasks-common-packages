@@ -133,6 +133,8 @@ export class ArtifactEngine {
                 if (items.length > 0) {
                     this.artifactItemStore.addItems(items);
                     this.artifactItemStore.updateState(item, models.TicketState.Processed);
+                    Logger.logInfo("Enqueued " + items.length + " for processing.");
+                    resolve();
                 }
                 else {
                     destProvider.putArtifactItem(item, null)
@@ -144,9 +146,6 @@ export class ArtifactEngine {
                             retryIfRequired(err);
                         });
                 }
-
-                Logger.logInfo("Enqueued " + items.length + " for processing.");
-                resolve();
             }, (err) => {
                 Logger.logInfo("Error getting " + item.path + ":" + err);
                 retryIfRequired(err);
