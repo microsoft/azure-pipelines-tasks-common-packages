@@ -13,7 +13,7 @@ To use Artifact engine in your tasks or app, see the provider and engine test co
 ## Development
 **Build**
 ---------
-1. Run npm install in ArtifactEngineV2 folder
+1. Run npm install in the `common-npm-packages/artifact-engine` folder
 2. Use command ctrl-shift-b to build from vscode
 
 **Testing**
