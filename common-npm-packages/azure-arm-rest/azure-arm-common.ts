@@ -269,6 +269,12 @@ export class ApplicationTokenCredentials {
         }
     }
 
+    // Extracted as its own (overridable) method purely so tests can simulate the Node <16 branch
+    // of acquireTokenForScope without needing an actual Node 10 runtime.
+    private supportsModernIdentity(): boolean {
+        return nodeVersion >= 16;
+    }
+
     private async getMSAL(): Promise<any> /*Promise<msal.ConfidentialClientApplication>*/ {
         // use same instance if it already exists
         if (!this.msalInstance) {
@@ -513,7 +519,14 @@ export class ApplicationTokenCredentials {
         return msalInstance;
     }
 
-    private async getMSALToken(force?: boolean, retryCount: number = 3, retryWaitMS: number = 2000): Promise<string> {
+    // scopeOverride lets callers (e.g. acquireTokenForScope on Node <16, where @azure/identity is
+    // unavailable) request a specific scope/audience via MSAL instead of the default ARM audience.
+    // Callers must always pass one of our own hardcoded per-cloud entries from the `scopes` map
+    // built in azure-arm-endpoint.ts (getScopesByEnvironment) - e.g. appservice:
+    // 'https://appservice.azure.com/.default'. Those literals already include the "/.default"
+    // suffix, so it is NOT appended again here (unlike the default activeDirectoryResourceId case
+    // below, which is a bare resource URI and still needs the suffix).
+    private async getMSALToken(force?: boolean, retryCount: number = 3, retryWaitMS: number = 2000, scopeOverride?: string): Promise<string> {
         tl.debug(`MSAL - getMSALToken called. force=${force}`);
         const msalApp: any /*msal.ConfidentialClientApplication*/ = await this.getMSAL();
         if (force) {
@@ -521,7 +534,7 @@ export class ApplicationTokenCredentials {
         }
         try {
             const request: any /*msal.ClientCredentialRequest*/ = {
-                scopes: [this.activeDirectoryResourceId + "/.default"]
+                scopes: [scopeOverride || (this.activeDirectoryResourceId + "/.default")]
             };
             const response = await msalApp.acquireTokenByClientCredential(request);
             tl.debug(`MSAL - retrieved token - isFromCache?: ${response.fromCache}`);
@@ -532,7 +545,7 @@ export class ApplicationTokenCredentials {
                 tl.debug(`MSAL - retrying getMSALToken - remaining attempts: ${retryCount}`);
 
                 await new Promise(r => setTimeout(r, Math.min(retryWaitMS, MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT)));
-                return await this.getMSALToken(force, (retryCount - 1), retryWaitMS * 2);
+                return await this.getMSALToken(force, (retryCount - 1), retryWaitMS * 2, scopeOverride);
             }
 
             if (error.errorMessage && error.errorMessage.toString().startsWith("7000222")) {
@@ -553,10 +566,24 @@ export class ApplicationTokenCredentials {
         try {
             if (this.allowScopeLevelToken && this.scopes && this.scopes[scopeKind]) {
                 tl.debug(`allowScopeLevelToken is enabled, using scope: ${this.scopes[scopeKind]}`);
-                const credential = await this.buildCredentialByScheme();
-                const tokenResponse = await credential.getToken(this.scopes[scopeKind]);
-                this.publishScopeTokenTelemetry(scopeKind, "AppService", "scoped");
-                return tokenResponse.token;
+                if (!this.supportsModernIdentity()) {
+                    // @azure/identity requires Node 16+, but MSAL (msalv1) already supports SPN,
+                    // MSI, and WIF client-credential flows on Node 10. Request the same mapped
+                    // scope/audience through MSAL instead of falling back to the ARM audience, so
+                    // Node 10 agents get a genuine App Service-scoped token, not a compromise.
+                    tl.debug(`Node ${nodeVersion} detected; using MSAL to acquire scoped token instead of @azure/identity.`);
+                    const token = await this.getMSALToken(false, 3, 2000, this.scopes[scopeKind]);
+                    this.publishScopeTokenTelemetry(scopeKind, "AppService", "scoped");
+                    return token;
+                }
+                const credentialInfo = await this.buildCredentialByScheme();
+                try {
+                    const tokenResponse = await credentialInfo.credential.getToken(this.scopes[scopeKind]);
+                    this.publishScopeTokenTelemetry(scopeKind, "AppService", "scoped");
+                    return tokenResponse.token;
+                } finally {
+                    this.deleteFederatedTokenFile(credentialInfo.tokenFilePath);
+                }
             } else {
                 let outcome: string;
                 if (this.allowScopeLevelToken && (!this.scopes || !this.scopes[scopeKind])) {
@@ -669,7 +696,9 @@ export class ApplicationTokenCredentials {
         switch (this.scheme) {
             case AzureModels.Scheme.ManagedServiceIdentity:
                 tl.debug('Using ManagedIdentityCredential for MSI');
-                return new azureIdentity.ManagedIdentityCredential(this.msiClientId);
+                return {
+                    credential: new azureIdentity.ManagedIdentityCredential(this.msiClientId)
+                };
 
             case AzureModels.Scheme.WorkloadIdentityFederation:
                 tl.debug('Using WorkloadIdentityCredential for OIDC');
@@ -681,25 +710,48 @@ export class ApplicationTokenCredentials {
                     tl.getVariable('Agent.TempDirectory') || tl.getVariable('system.DefaultWorkingDirectory'),
                     `token-${crypto.randomBytes(16).toString('hex')}.jwt`
                 );
-                fs.writeFileSync(tokenFilePath, federatedToken);
-
-                return new azureIdentity.WorkloadIdentityCredential({
-                    ...credentialOptions,
-                    tenantId: this.tenantId,
-                    clientId: this.clientId,
-                    tokenFilePath: tokenFilePath
-                });
+                try {
+                    fs.writeFileSync(tokenFilePath, federatedToken);
+                    return {
+                        credential: new azureIdentity.WorkloadIdentityCredential({
+                            ...credentialOptions,
+                            tenantId: this.tenantId,
+                            clientId: this.clientId,
+                            tokenFilePath: tokenFilePath
+                        }),
+                        tokenFilePath: tokenFilePath
+                    };
+                } catch (error) {
+                    this.deleteFederatedTokenFile(tokenFilePath);
+                    throw error;
+                }
 
             case AzureModels.Scheme.SPN:
             default:
                 tl.debug('Using specific credential for Service Principal');
                 if (this.authType === constants.AzureServicePrinicipalAuthentications.servicePrincipalKey) {
                     tl.debug('Using ClientSecretCredential for key-based SPN');
-                    return new azureIdentity.ClientSecretCredential(this.tenantId, this.clientId, this.secret, credentialOptions);
+                    return {
+                        credential: new azureIdentity.ClientSecretCredential(this.tenantId, this.clientId, this.secret, credentialOptions)
+                    };
                 } else {
                     tl.debug('Using ClientCertificateCredential for certificate-based SPN');
-                    return new azureIdentity.ClientCertificateCredential(this.tenantId, this.clientId, this.certFilePath, credentialOptions);
+                    return {
+                        credential: new azureIdentity.ClientCertificateCredential(this.tenantId, this.clientId, this.certFilePath, credentialOptions)
+                    };
                 }
+        }
+    }
+
+    private deleteFederatedTokenFile(tokenFilePath?: string): void {
+        if (!tokenFilePath || !fs.existsSync(tokenFilePath)) {
+            return;
+        }
+
+        try {
+            fs.unlinkSync(tokenFilePath);
+        } catch (error) {
+            tl.debug(`Failed to delete federated token file '${tokenFilePath}': ${error}`);
         }
     }
 

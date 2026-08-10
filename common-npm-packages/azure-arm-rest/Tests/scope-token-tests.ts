@@ -33,6 +33,28 @@ function makeCreds(allowScopeLevelToken: boolean, scopes: any): ApplicationToken
 }
 
 class ScopeTokenTests {
+    // Feature enabled and scope mapped -> returns the App Service-audience token.
+    public static async scopedTokenSuccess() {
+        try {
+            const creds: any = makeCreds(true, { appservice: "https://appservice/.default" });
+            creds.buildCredentialByScheme = async () => ({
+                credential: {
+                    getToken: async (scope: string) => {
+                        if (scope !== "https://appservice/.default") {
+                            throw new Error("unexpected scope");
+                        }
+                        return { token: "DUMMY_APPSERVICE_TOKEN" };
+                    }
+                }
+            });
+            const token = await creds.acquireTokenForScope("appservice");
+            console.log('SCOPED_TOKEN: ' + token);
+        } catch (error) {
+            console.log(error);
+            tl.setResult(tl.TaskResult.Failed, 'scopedTokenSuccess should have passed but failed');
+        }
+    }
+
     // Feature disabled -> returns the ARM-audience token, no warning.
     public static async fallbackWhenFeatureDisabled() {
         try {
@@ -56,11 +78,53 @@ class ScopeTokenTests {
             tl.setResult(tl.TaskResult.Failed, 'fallbackWhenScopeUnmapped should have passed but failed');
         }
     }
+
+    // Feature enabled and scope mapped, but running on Node <16 (@azure/identity unavailable) ->
+    // uses MSAL (getMSALToken) with the mapped scope instead, still returns the App
+    // Service-audience token, no ARM compromise.
+    public static async scopedTokenSuccessOnLegacyNode() {
+        try {
+            const creds: any = makeCreds(true, { appservice: "https://appservice/.default" });
+            creds.supportsModernIdentity = () => false;
+            creds.getMSALToken = async (_force: boolean, _retryCount: number, _retryWaitMS: number, scopeOverride: string) => {
+                if (scopeOverride !== "https://appservice/.default") {
+                    throw new Error("unexpected scope passed to getMSALToken");
+                }
+                return "DUMMY_APPSERVICE_TOKEN_VIA_MSAL";
+            };
+            const token = await creds.acquireTokenForScope("appservice");
+            console.log('SCOPED_TOKEN_LEGACY_NODE: ' + token);
+        } catch (error) {
+            console.log(error);
+            tl.setResult(tl.TaskResult.Failed, 'scopedTokenSuccessOnLegacyNode should have passed but failed');
+        }
+    }
+
+    // Feature enabled and scope mapped, but scoped token acquisition fails -> fails without ARM fallback.
+    public static async scopedTokenFailure() {
+        try {
+            const creds: any = makeCreds(true, { appservice: "https://appservice/.default" });
+            creds.buildCredentialByScheme = async () => ({
+                credential: {
+                    getToken: async () => {
+                        throw new Error("scoped token unavailable");
+                    }
+                }
+            });
+            await creds.acquireTokenForScope("appservice");
+            tl.setResult(tl.TaskResult.Failed, 'scopedTokenFailure should have failed');
+        } catch (error) {
+            console.log('SCOPED_TOKEN_ERROR: ' + error.message);
+        }
+    }
 }
 
 async function RUNTESTS() {
+    await ScopeTokenTests.scopedTokenSuccess();
+    await ScopeTokenTests.scopedTokenSuccessOnLegacyNode();
     await ScopeTokenTests.fallbackWhenFeatureDisabled();
     await ScopeTokenTests.fallbackWhenScopeUnmapped();
+    await ScopeTokenTests.scopedTokenFailure();
 }
 
 RUNTESTS();
