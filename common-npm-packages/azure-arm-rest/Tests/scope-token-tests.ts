@@ -1,5 +1,9 @@
 import { ApplicationTokenCredentials } from '../azure-arm-common';
-import { getMockEndpoint } from './mock_utils';
+import { publishKuduAuthModeTelemetry } from '../azureAppServiceUtility';
+import { getMockEndpoint, nock } from './mock_utils';
+import fs = require('fs');
+import os = require('os');
+import path = require('path');
 import tl = require('azure-pipelines-task-lib/task');
 
 // Installs the ARM (ADAL) nock interceptor that answers the client-credentials token
@@ -29,6 +33,28 @@ function makeCreds(allowScopeLevelToken: boolean, scopes: any): ApplicationToken
         false,       // useMSAL -> ADAL path (served by nock)
         allowScopeLevelToken,
         scopes
+    );
+}
+
+function makeManagedIdentityCreds(): any {
+    return new ApplicationTokenCredentials(
+        "MOCK_SERVICE_CONNECTION",
+        undefined,
+        "MOCK_TENANT_ID",
+        undefined,
+        "https://management.azure.com/",
+        "https://login.windows.net/",
+        "https://management.azure.com/",
+        false,
+        "ManagedServiceIdentity",
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        true,
+        true,
+        { appservice: "https://appservice/.default" }
     );
 }
 
@@ -100,6 +126,91 @@ class ScopeTokenTests {
         }
     }
 
+    // Managed Identity uses the requested scope's resource instead of always requesting ARM.
+    public static async managedIdentityScopeResource() {
+        try {
+            nock("http://169.254.169.254", {
+                reqheaders: {
+                    "Metadata": true
+                }
+            })
+                .get("/metadata/identity/oauth2/token")
+                .query({
+                    "api-version": "2018-02-01",
+                    "resource": "https://appservice"
+                })
+                .reply(200, {
+                    access_token: "DUMMY_APPSERVICE_TOKEN_FROM_MSI",
+                    expires_in: 3600
+                });
+
+            const creds = makeManagedIdentityCreds();
+            const msalClient = await creds.buildMSAL();
+            const result = await msalClient.acquireTokenByClientCredential({
+                scopes: ["https://appservice/.default"]
+            });
+            if (result.accessToken !== "DUMMY_APPSERVICE_TOKEN_FROM_MSI") {
+                throw new Error(`unexpected Managed Identity token: ${result.accessToken}`);
+            }
+            console.log('MSI_SCOPE_RESOURCE: https://appservice');
+        } catch (error) {
+            console.log(error);
+            tl.setResult(tl.TaskResult.Failed, 'managedIdentityScopeResource should have passed but failed');
+        }
+    }
+
+    public static async federatedTokenFileCleanup() {
+        let tempDirectory: string;
+        let cleanupFailurePath: string;
+        try {
+            const creds: any = makeCreds(true, { appservice: "https://appservice/.default" });
+            tempDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'azure-arm-rest-'));
+            const tokenFilePath = path.join(tempDirectory, 'token.jwt');
+            fs.writeFileSync(tokenFilePath, 'DUMMY_OIDC_TOKEN');
+            creds.deleteFederatedTokenFile(tokenFilePath);
+            if (fs.existsSync(tokenFilePath)) {
+                throw new Error('federated token file was not deleted');
+            }
+
+            cleanupFailurePath = path.join(tempDirectory, 'undeletable-directory');
+            fs.mkdirSync(cleanupFailurePath);
+            creds.deleteFederatedTokenFile(cleanupFailurePath);
+            console.log('FEDERATED_TOKEN_CLEANUP_TEST: completed');
+        } catch (error) {
+            console.log(error);
+            tl.setResult(tl.TaskResult.Failed, 'federatedTokenFileCleanup should have passed but failed');
+        } finally {
+            if (cleanupFailurePath && fs.existsSync(cleanupFailurePath)) {
+                fs.rmdirSync(cleanupFailurePath);
+            }
+            if (tempDirectory && fs.existsSync(tempDirectory)) {
+                fs.rmdirSync(tempDirectory);
+            }
+        }
+    }
+
+    public static async unknownKuduAuthMode() {
+        try {
+            publishKuduAuthModeTelemetry({
+                authMethod: "Bearer",
+                source: "test",
+                credentials: {
+                    getLastScopeTokenTelemetry: () => ({
+                        requestedAudience: undefined,
+                        outcome: undefined,
+                        allowScopeLevelToken: true,
+                        scheme: "ServicePrincipal",
+                        authorityHost: "login.windows.net"
+                    })
+                }
+            });
+            console.log('KUDU_AUTH_UNKNOWN: emitted');
+        } catch (error) {
+            console.log(error);
+            tl.setResult(tl.TaskResult.Failed, 'unknownKuduAuthMode should have passed but failed');
+        }
+    }
+
     // Feature enabled and scope mapped, but scoped token acquisition fails -> fails without ARM fallback.
     public static async scopedTokenFailure() {
         try {
@@ -122,6 +233,9 @@ class ScopeTokenTests {
 async function RUNTESTS() {
     await ScopeTokenTests.scopedTokenSuccess();
     await ScopeTokenTests.scopedTokenSuccessOnLegacyNode();
+    await ScopeTokenTests.managedIdentityScopeResource();
+    await ScopeTokenTests.federatedTokenFileCleanup();
+    await ScopeTokenTests.unknownKuduAuthMode();
     await ScopeTokenTests.fallbackWhenFeatureDisabled();
     await ScopeTokenTests.fallbackWhenScopeUnmapped();
     await ScopeTokenTests.scopedTokenFailure();

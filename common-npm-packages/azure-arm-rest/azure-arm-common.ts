@@ -389,16 +389,19 @@ export class ApplicationTokenCredentials {
     }
 
     private configureMSALWithMSI(msalConfig: any /*msal.Configuration*/): any /*msal.ConfidentialClientApplication*/ {
-        let resourceId = this.activeDirectoryResourceId;
         let accessTokenProvider: any /*msal.IAppTokenProvider*/ = (appTokenProviderParameters: any /*msal.AppTokenProviderParameters*/): Promise<any> /*Promise<msal.AppTokenProviderResult>*/ => {
 
             tl.debug("MSAL - ManagedIdentity is used.");
 
-            let providerResultPromise = new Promise<any>/*Promise<msal.AppTokenProviderResult>*/(function (resolve, reject) {
+            let providerResultPromise = new Promise<any>/*Promise<msal.AppTokenProviderResult>*/((resolve, reject) => {
                 // same for MSAL
                 let webRequest = new webClient.WebRequest();
                 webRequest.method = "GET";
                 let apiVersion = "2018-02-01";
+                let requestedScope = appTokenProviderParameters && appTokenProviderParameters.scopes
+                    ? appTokenProviderParameters.scopes[0]
+                    : undefined;
+                let resourceId = this.getResourceIdFromScope(requestedScope);
                 webRequest.uri = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=" + apiVersion + "&resource=" + resourceId;
                 webRequest.headers = {
                     "Metadata": true
@@ -430,6 +433,13 @@ export class ApplicationTokenCredentials {
         let msalInstance = new msal.ConfidentialClientApplication(msalConfig);
         msalInstance.SetAppTokenProvider(accessTokenProvider);
         return msalInstance;
+    }
+
+    private getResourceIdFromScope(scope?: string): string {
+        const defaultScopeSuffix = "/.default";
+        return scope && scope.endsWith(defaultScopeSuffix)
+            ? scope.substring(0, scope.length - defaultScopeSuffix.length)
+            : this.activeDirectoryResourceId;
     }
 
     private configureMSALWithSP(msalConfig: any /*msal.Configuration*/): any /*msal.ConfidentialClientApplication*/ {
@@ -750,8 +760,19 @@ export class ApplicationTokenCredentials {
 
         try {
             fs.unlinkSync(tokenFilePath);
+            this.publishFederatedTokenFileCleanupTelemetry("deleted");
         } catch (error) {
+            tl.warning("Failed to delete the federated token file after token acquisition.");
             tl.debug(`Failed to delete federated token file '${tokenFilePath}': ${error}`);
+            this.publishFederatedTokenFileCleanupTelemetry("error");
+        }
+    }
+
+    private publishFederatedTokenFileCleanupTelemetry(outcome: string): void {
+        try {
+            console.log(`##vso[telemetry.publish area=TaskDeploymentMethod;feature=FederatedTokenFileCleanup]${JSON.stringify({ outcome: outcome })}`);
+        } catch (error) {
+            tl.debug(`Failed to publish federated token file cleanup telemetry: ${error}`);
         }
     }
 

@@ -45,9 +45,12 @@ export function publishKuduAuthModeTelemetry(params: KuduAuthModeTelemetryParams
             authMode = "scopedToken";
         } else if (scope.outcome === "error") {
             authMode = "error";
-        } else {
-            // fallbackDisabled / fallbackUnmapped => an ARM-audience (broad) token was used for Kudu.
+        } else if (scope.outcome === "fallbackDisabled" || scope.outcome === "fallbackUnmapped") {
+            // Only classify known ARM fallback outcomes as broadToken. Missing metadata must not
+            // inflate the broad-token count when package versions or telemetry state are mixed.
             authMode = "broadToken";
+        } else {
+            authMode = "unknown";
         }
 
         const payload = {
@@ -413,4 +416,3 @@ export class AzureAppServiceUtility {
         return await this._appService._getAppServiceInstances();
     }
 }
-

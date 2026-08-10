@@ -16,6 +16,12 @@ export function ScopeTokenTests(defaultTimeout = 2000) {
                 scopedTokenSuccess(tr);
                 console.log("\tvalidating scoped token success on Node <16 (MSAL path)");
                 scopedTokenSuccessOnLegacyNode(tr);
+                console.log("\tvalidating Managed Identity scope resource selection");
+                managedIdentityScopeResource(tr);
+                console.log("\tvalidating federated token file cleanup");
+                federatedTokenFileCleanup(tr);
+                console.log("\tvalidating unknown Kudu auth mode");
+                unknownKuduAuthMode(tr);
                 console.log("\tvalidating fallback when the feature is disabled");
                 fallbackWhenFeatureDisabled(tr);
                 console.log("\tvalidating fallback (with warning) when the scope is unmapped");
@@ -47,6 +53,27 @@ function scopedTokenSuccessOnLegacyNode(tr: ttm.MockTestRunner) {
         'Should have returned the App Service-audience token via MSAL when @azure/identity is unavailable (Node <16)');
     assert(tr.stdOutContained('using MSAL to acquire scoped token instead of @azure/identity'),
         'Should have logged that MSAL is used instead of @azure/identity');
+}
+
+function managedIdentityScopeResource(tr: ttm.MockTestRunner) {
+    assert(tr.stdOutContained('MSI_SCOPE_RESOURCE: https://appservice'),
+        'Managed Identity should request the App Service resource for an App Service scope');
+}
+
+function federatedTokenFileCleanup(tr: ttm.MockTestRunner) {
+    assert(tr.stdOutContained('FEDERATED_TOKEN_CLEANUP_TEST: completed'),
+        'Federated token file cleanup test should have completed');
+    assert(tr.stdOutContained('feature=FederatedTokenFileCleanup]{"outcome":"deleted"}'),
+        'Successful federated token file cleanup should emit telemetry');
+    assert(tr.stdOutContained('feature=FederatedTokenFileCleanup]{"outcome":"error"}'),
+        'Failed federated token file cleanup should emit telemetry');
+}
+
+function unknownKuduAuthMode(tr: ttm.MockTestRunner) {
+    assert(tr.stdOutContained('KUDU_AUTH_UNKNOWN: emitted'),
+        'Unknown Kudu auth mode test should have completed');
+    assert(tr.stdOutContained('"authMode":"unknown"'),
+        'Missing scope metadata should be classified as unknown');
 }
 
 // Feature disabled: returns the ARM-audience token, records outcome "fallbackDisabled", no warning.
