@@ -583,13 +583,16 @@ export class ApplicationTokenCredentials {
                     // Node 10 agents get a genuine App Service-scoped token, not a compromise.
                     tl.debug(`Node ${nodeVersion} detected; using MSAL to acquire scoped token instead of @azure/identity.`);
                     const token = await this.getMSALToken(false, 3, 2000, this.scopes[scopeKind]);
-                    this.publishScopeTokenTelemetry(scopeKind, this.getAudienceLabel(scopeKind), "scoped");
+                    // acquireTokenForScope is only ever called for the App Service/Kudu scenario
+                    // (scopeKind is always "appservice"), so telemetry only needs to distinguish
+                    // this narrow case - not every possible _azureScopes key.
+                    this.publishScopeTokenTelemetry(scopeKind, "AppService", "scoped");
                     return token;
                 }
                 const credentialInfo = await this.buildCredentialByScheme();
                 try {
                     const tokenResponse = await credentialInfo.credential.getToken(this.scopes[scopeKind]);
-                    this.publishScopeTokenTelemetry(scopeKind, this.getAudienceLabel(scopeKind), "scoped");
+                    this.publishScopeTokenTelemetry(scopeKind, "AppService", "scoped");
                     return tokenResponse.token;
                 } finally {
                     this.deleteFederatedTokenFile(credentialInfo.tokenFilePath);
@@ -618,36 +621,6 @@ export class ApplicationTokenCredentials {
             this.publishScopeTokenTelemetry(scopeKind, "None", "error");
             throw new Error(tl.loc('CouldNotFetchAccessTokenforAzureStatusCode', error.errorCode, error.errorMessage));
         }
-    }
-
-    // Maps a scopeKind key (from the _azureScopes map built in azure-arm-endpoint.ts, e.g.
-    // 'appservice') to the human-readable audience label used in telemetry. 'appservice' is the
-    // only scopeKind acquireTokenForScope is called with today, so this always resolves to
-    // "AppService" in practice - but deriving it here (instead of hardcoding "AppService" at each
-    // call site) keeps requestedAudience honest if another scopeKind is ever wired in.
-    private static readonly scopeKindAudienceLabels: { [key: string]: string } = {
-        appservice: "AppService",
-        resourcemanager: "ARM",
-        // AzureCloud/AzureUSGovernment key this same scope 'resoucemanager' (pre-existing typo in
-        // azure-arm-endpoint.ts's _azureScopes map) - map both spellings so the label still
-        // resolves correctly if this scopeKind is ever wired in against one of those clouds.
-        resoucemanager: "ARM",
-        storage: "Storage",
-        keyvalut: "KeyVault",
-        sqldatabase: "SqlDatabase",
-        cosmosdb: "CosmosDB",
-        servicebus: "ServiceBus",
-        eventhubs: "EventHubs",
-        eventgrid: "EventGrid",
-        cognitiveservices: "CognitiveServices",
-        containerregistry: "ContainerRegistry",
-        devops: "DevOps",
-        batch: "Batch",
-        datafactory: "DataFactory"
-    };
-
-    private getAudienceLabel(scopeKind: string): string {
-        return ApplicationTokenCredentials.scopeKindAudienceLabels[scopeKind] || scopeKind;
     }
 
     // Emits non-sensitive telemetry so we can prove Kudu/SCM calls request an App Service-audience
