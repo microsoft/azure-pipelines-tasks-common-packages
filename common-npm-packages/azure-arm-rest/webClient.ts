@@ -3,6 +3,7 @@ import util = require("util");
 import fs = require('fs');
 import httpClient = require("typed-rest-client/HttpClient");
 import httpInterfaces = require("typed-rest-client/Interfaces");
+import url = require('url');
 
 let proxyUrl: string = tl.getVariable("agent.proxyurl");
 var requestOptions: httpInterfaces.IRequestOptions = proxyUrl ? {
@@ -43,6 +44,8 @@ export class WebRequestOptions {
     public retryIntervalInSeconds: number;
     public retriableStatusCodes: number[];
     public retryRequestTimedout: boolean;
+    public requestTimeout?: number;
+    public suppressErrorIssue?: boolean;
 }
 
 export async function sendRequest(request: WebRequest, options?: WebRequestOptions): Promise<WebResponse> {
@@ -77,7 +80,7 @@ export async function sendRequest(request: WebRequest, options?: WebRequestOptio
                 request.body = fs.createReadStream(request.body["path"]);
             }
 
-            let response: WebResponse = await sendRequestInternal(request);
+            let response: WebResponse = await sendRequestInternal(request, options);
             if (retriableStatusCodes.indexOf(response.statusCode) != -1 && ++i < retryCount) {
                 tl.debug(util.format("Encountered a retriable status code: %s. Message: '%s'.", response.statusCode, response.statusMessage));
                 await sleepFor(timeToWait);
@@ -94,8 +97,9 @@ export async function sendRequest(request: WebRequest, options?: WebRequestOptio
                 timeToWait = timeToWait * retryIntervalInSeconds + retryIntervalInSeconds;
             }
             else {
-                if (error.code) {
-                    console.log("##vso[task.logissue type=error;code=" + error.code + ";]");
+                if (error.code && !(options && options.suppressErrorIssue)) {
+                    const message = error.message || error.code;
+                    console.log(`##vso[task.logissue type=error;code=${error.code};]${message}`);
                 }
 
                 throw error;
@@ -110,15 +114,90 @@ export function sleepFor(sleepDurationInSeconds): Promise<any> {
     });
 }
 
-async function sendRequestInternal(request: WebRequest): Promise<WebResponse> {
+async function sendRequestInternal(request: WebRequest, options?: WebRequestOptions): Promise<WebResponse> {
     tl.debug(util.format("[%s]%s", request.method, request.uri));
-    var httpCallbackClient = new httpClient.HttpClient(azureHttpUserAgent, null, requestOptions);
-    
-    var response: httpClient.HttpClientResponse = await httpCallbackClient.request(request.method, request.uri, request.body, request.headers);
-    const weResponse = await toWebResponse(response);
-    
-    httpCallbackClient.dispose();
-    return weResponse;
+    const currentRequestOptions: httpInterfaces.IRequestOptions = {
+        ...requestOptions
+    };
+
+    if (options && options.requestTimeout !== undefined) {
+        currentRequestOptions.socketTimeout = options.requestTimeout;
+    }
+
+    const httpCallbackClient = new httpClient.HttpClient(azureHttpUserAgent, null, currentRequestOptions);
+    let timeoutHandle: NodeJS.Timeout;
+    const disposeRequestResources = prepareRequestResources(httpCallbackClient, request, options && options.requestTimeout);
+
+    try {
+        const responsePromise = httpCallbackClient.request(request.method, request.uri, request.body, request.headers)
+            .then(response => toWebResponse(response));
+
+        if (options && options.requestTimeout !== undefined) {
+            const timeoutPromise = new Promise<WebResponse>((resolve, reject) => {
+                timeoutHandle = setTimeout(() => {
+                    const timeoutError: any = new Error(`Request timed out after ${options.requestTimeout} ms: ${request.uri}`);
+                    timeoutError.code = 'ETIMEDOUT';
+                    disposeRequestResources();
+                    reject(timeoutError);
+                }, options.requestTimeout);
+            });
+
+            return await Promise.race([responsePromise, timeoutPromise]);
+        }
+
+        return await responsePromise;
+    } finally {
+        if (timeoutHandle) {
+            clearTimeout(timeoutHandle);
+        }
+        disposeRequestResources();
+        httpCallbackClient.dispose();
+    }
+}
+
+function prepareRequestResources(client: httpClient.HttpClient, request: WebRequest, requestTimeout?: number): () => void {
+    if (requestTimeout === undefined) {
+        return () => { };
+    }
+
+    const internalClient: any = client;
+    if (typeof internalClient._getAgent !== 'function') {
+        return () => { };
+    }
+
+    internalClient._keepAlive = true;
+    const agent: any = internalClient._getAgent(new url.URL(request.uri));
+    const pendingProxyRequests: any[] = [];
+    const isTunnelingAgent = agent && Array.isArray(agent.requests) && Array.isArray(agent.sockets) && agent.proxyOptions;
+
+    if (isTunnelingAgent && agent.request) {
+        const createProxyRequest = agent.request;
+        agent.request = (requestOptions) => {
+            const proxyRequest = createProxyRequest(requestOptions);
+            pendingProxyRequests.push(proxyRequest);
+            proxyRequest.once('close', () => {
+                const requestIndex = pendingProxyRequests.indexOf(proxyRequest);
+                if (requestIndex !== -1) {
+                    pendingProxyRequests.splice(requestIndex, 1);
+                }
+            });
+            return proxyRequest;
+        };
+    }
+
+    return () => {
+        pendingProxyRequests.splice(0).forEach(proxyRequest => proxyRequest.destroy());
+        if (isTunnelingAgent) {
+            agent.requests.splice(0).forEach(pendingRequest => pendingRequest.request.destroy());
+            agent.sockets.splice(0).forEach(socket => {
+                if (socket && socket.destroy) {
+                    socket.destroy();
+                }
+            });
+        } else if (agent && typeof agent.destroy === 'function') {
+            agent.destroy();
+        }
+    };
 }
 
 async function toWebResponse(response: httpClient.HttpClientResponse): Promise<WebResponse> {
