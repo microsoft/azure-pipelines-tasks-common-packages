@@ -628,6 +628,10 @@ export class ApplicationTokenCredentials {
     private static readonly scopeKindAudienceLabels: { [key: string]: string } = {
         appservice: "AppService",
         resourcemanager: "ARM",
+        // AzureCloud/AzureUSGovernment key this same scope 'resoucemanager' (pre-existing typo in
+        // azure-arm-endpoint.ts's _azureScopes map) - map both spellings so the label still
+        // resolves correctly if this scopeKind is ever wired in against one of those clouds.
+        resoucemanager: "ARM",
         storage: "Storage",
         keyvalut: "KeyVault",
         sqldatabase: "SqlDatabase",
