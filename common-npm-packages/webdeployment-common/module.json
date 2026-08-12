@@ -11,6 +11,7 @@
         "XdtTransformationBlockedCustomType": "The XML transform file %s uses unsupported xdt:%s type '%s'. Azure Pipelines tasks allow only built-in XDT transform and locator types.",
         "XdtTransformationInvalidXml": "Unable to parse XML transform file %s. Error: %s",
         "XdtTransformationUnsupportedEncoding": "Unable to validate XML transform file %s because its file encoding is not supported. Supported encodings are UTF-8 and UTF-16 LE.",
+        "XdtTransformationSecurityValidationDisabled": "Security validation of the XML transform file %s is disabled because the AZP_ALLOW_UNSAFE_XDT_TRANSFORMS variable is set. xdt:Import and custom XDT transform/locator types are allowed, which can run arbitrary code from untrusted transform files. Unset this variable to restore secure-by-default behavior.",
         "JSONParseError": "Unable to parse JSON file: %s. Error: %s",
         "NOJSONfilematchedwithspecificpattern": "NO JSON file matched with specific pattern: %s.",
         "FailedToApplyTransformation": "Unable to apply transformation for the given package. Verify the following.",

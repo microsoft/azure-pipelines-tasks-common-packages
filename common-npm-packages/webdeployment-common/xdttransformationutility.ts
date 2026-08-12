@@ -5,6 +5,10 @@ import { DOMParser } from '@xmldom/xmldom';
 import { detectFileEncoding } from './fileencoding';
 
 const xdtNamespace = 'http://schemas.microsoft.com/XML-Document-Transform';
+// Built-in XDT transform/locator type names. Verified by reflecting the concrete (non-abstract)
+// subclasses of Microsoft.Web.XmlTransform.Transform / .Locator in the bundled ctt.exe
+// (Microsoft.Web.XmlTransform v1.6.0.51029). Any transform/locator type outside this set can only
+// be resolved through xdt:Import, which is blocked. Regenerate this list if the bundled ctt changes.
 const builtInXdtTransformTypes = [
     'Insert',
     'InsertAfter',
@@ -15,7 +19,6 @@ const builtInXdtTransformTypes = [
     'RemoveAttributes',
     'Replace',
     'SetAttributes',
-    'SetTokenizedAttributeStorage',
     'SetTokenizedAttributes'
 ];
 const builtInXdtLocatorTypes = [
@@ -65,9 +68,36 @@ export function applyXdtTransformation(sourceFile: string, transformFile: string
 }
 
 function validateXdtTransformFile(transformFile: string): void {
+    if (isUnsafeXdtTransformAllowed()) {
+        // Opt-out escape hatch: restores the pre-hardening behavior for pipeline authors who
+        // legitimately depend on custom XDT transforms.
+        tl.warning(tl.loc('XdtTransformationSecurityValidationDisabled', transformFile));
+        publishXdtSecurityTelemetry('bypassed', 'optOut');
+        return;
+    }
+
     const xmlContent = readTransformFile(transformFile);
     const transformDocument = parseTransformFile(transformFile, xmlContent);
     validateXdtNode(transformFile, transformDocument.documentElement);
+}
+
+function isUnsafeXdtTransformAllowed(): boolean {
+    const value = tl.getVariable('AZP_ALLOW_UNSAFE_XDT_TRANSFORMS');
+    if (!value) {
+        return false;
+    }
+
+    return value.trim().toLowerCase() === 'true';
+}
+
+function publishXdtSecurityTelemetry(result: string, reason: string): void {
+    try {
+        const payload = JSON.stringify({ result: result, reason: reason });
+        console.log('##vso[telemetry.publish area=TaskHub;feature=XdtTransformationSecurity]' + payload);
+    }
+    catch (error) {
+        tl.debug('Unable to publish XDT transformation security telemetry: ' + (error && error.message ? error.message : error));
+    }
 }
 
 function readTransformFile(transformFile: string): string {
@@ -132,6 +162,7 @@ function validateXdtNode(transformFile: string, node: Node): void {
 
 function validateXdtElement(transformFile: string, element: Element): void {
     if (isXdtNode(element, 'Import')) {
+        publishXdtSecurityTelemetry('blocked', 'import');
         throw new Error(tl.loc('XdtTransformationBlockedImport', transformFile));
     }
 }
@@ -163,6 +194,7 @@ function validateBuiltInXdtType(transformFile: string, attributeName: string, at
         return;
     }
 
+    publishXdtSecurityTelemetry('blocked', attributeName == 'Transform' ? 'customTransform' : 'customLocator');
     throw new Error(tl.loc('XdtTransformationBlockedCustomType', transformFile, attributeName, typeName));
 }
 
