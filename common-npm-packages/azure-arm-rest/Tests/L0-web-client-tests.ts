@@ -179,6 +179,38 @@ export function WebClientTests() {
         assert.strictEqual(capturedOptions.socketTimeout, undefined);
     });
 
+    it('does not apply the advisory timeout to ordinary requests', async function () {
+        this.timeout(10000);
+
+        const server = http.createServer((request, response) => {
+            setTimeout(() => {
+                response.writeHead(200, { 'Content-Type': 'application/json' });
+                response.end('{"status":"ok"}');
+            }, 4000);
+        });
+        await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+
+        try {
+            process.env.NO_PROXY = '127.0.0.1';
+            const address = server.address() as { port: number };
+            const request = Object.assign(new webClient.WebRequest(), {
+                method: 'GET',
+                uri: `http://127.0.0.1:${address.port}`,
+                headers: {}
+            });
+            const startedAt = Date.now();
+
+            const response = await webClient.sendRequest(request);
+            const duration = Date.now() - startedAt;
+
+            assert.strictEqual(response.statusCode, 200);
+            assert.strictEqual(response.body.status, 'ok');
+            assert(duration >= 4000, `Expected request to wait four seconds, but waited ${duration} ms`);
+        } finally {
+            await new Promise<void>(resolve => server.close(() => resolve()));
+        }
+    });
+
     it('terminates a request when the socket does not respond', async () => {
         const server = http.createServer(() => {
         });
