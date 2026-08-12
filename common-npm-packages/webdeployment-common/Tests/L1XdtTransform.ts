@@ -194,6 +194,28 @@ export function runL1XdtTransformTests(this: Mocha.Suite) {
         done();
     });
 
+    it('Enforces validation when the opt-out variable is not exactly "true"', function(done: Mocha.Done) {
+        const transformFile = writeTemporaryTransformFile('Web.OptOutDisabledImport.config',
+            '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">\r\n' +
+            '  <xdt:Import path="CustomTransform.dll" namespace="CustomTransform" />\r\n' +
+            '  <appSettings xdt:Transform="SetAttributes" />\r\n' +
+            '</configuration>\r\n');
+
+        try {
+            ['false', '1', 'yes'].forEach(value => {
+                tl.setVariable('AZP_ALLOW_UNSAFE_XDT_TRANSFORMS', value);
+                assert.throws(
+                    () => applyXdtTransformation(getAbsolutePath('Web_test.config'), transformFile),
+                    /xdt:Import/,
+                    'Opt-out value "' + value + '" must not bypass XDT security validation');
+            });
+        }
+        finally {
+            tl.setVariable('AZP_ALLOW_UNSAFE_XDT_TRANSFORMS', '');
+        }
+        done();
+    });
+
     function getAbsolutePath(file: string): string {
         return path.join(__dirname, 'L1XdtTransform', file);
     }

@@ -67,11 +67,18 @@ export function applyXdtTransformation(sourceFile: string, transformFile: string
     }
 }
 
+// Tracks whether the opt-out warning has already been emitted, so a package with many .config
+// transform files does not produce repeated identical warnings during a single task run.
+let unsafeXdtTransformWarningEmitted = false;
+
 function validateXdtTransformFile(transformFile: string): void {
     if (isUnsafeXdtTransformAllowed()) {
         // Opt-out escape hatch: restores the pre-hardening behavior for pipeline authors who
         // legitimately depend on custom XDT transforms.
-        tl.warning(tl.loc('XdtTransformationSecurityValidationDisabled', transformFile));
+        if (!unsafeXdtTransformWarningEmitted) {
+            tl.warning(tl.loc('XdtTransformationSecurityValidationDisabled', transformFile));
+            unsafeXdtTransformWarningEmitted = true;
+        }
         publishXdtSecurityTelemetry('bypassed', 'optOut');
         return;
     }
@@ -115,6 +122,7 @@ function detectTransformFileEncoding(transformFile: string, buffer: Buffer): str
     }
     catch (error) {
         tl.debug('Unable to detect encoding of XDT transform file ' + transformFile + ': ' + (error && error.message ? error.message : error));
+        publishXdtSecurityTelemetry('blocked', 'unsupportedEncoding');
         throw new Error(tl.loc('XdtTransformationUnsupportedEncoding', transformFile));
     }
 }
@@ -136,6 +144,7 @@ function parseTransformFile(transformFile: string, xmlContent: string): Document
         }).parseFromString(xmlContent, 'text/xml');
     }
     catch (error) {
+        publishXdtSecurityTelemetry('blocked', 'invalidXml');
         throw new Error(tl.loc('XdtTransformationInvalidXml', transformFile, error.message || error));
     }
 }
