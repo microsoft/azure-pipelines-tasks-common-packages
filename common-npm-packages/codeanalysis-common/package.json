@@ -31,6 +31,7 @@
     "main": "VSTS Tasks Code Analysis",
     "scripts": {
         "build": "cd ../build-scripts && npm install && cd ../codeanalysis-common && node make.js --build",
+        "build:ci": "node make.js --build",
         "test": "mocha _build/Tests/L0.js"
     },
     "repository": {

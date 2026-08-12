@@ -10,7 +10,8 @@ const defaultTestSuite = 'L0';
 const predefinedFlags = {
     boolean: [
         'build',
-        'test'
+        'test',
+        'ci'
     ],
     string: [
         'suite',
@@ -19,6 +20,7 @@ const predefinedFlags = {
 };
 
 const options = minimist(process.argv, predefinedFlags)
+const installCommand = options['ci'] ? 'npm ci' : 'npm install';
 const testResultsPath = path.join(__dirname, 'test-results');
 const mochaReporterPath = path.join(__dirname, 'common-npm-packages', 'build-scripts', 'junit-spec-reporter.js');
 const coverageBaseNameJson = 'coverage-final.json';
@@ -37,14 +39,14 @@ const printLabel = (name) => {
 const installBuildScriptsDependencies = () => {
     console.log('Installing dependencies for BuildScripts');
     util.cd('common-npm-packages/build-scripts');
-    util.run('npm install');
+    util.run(installCommand);
     util.cd(__dirname);
 }
 
 const buildPsTestHelpers = () => {
     console.log('Building Tests');
     util.cd('Tests');
-    util.run('npm install');
+    util.run(installCommand);
     util.run(path.join('node_modules', '.bin', 'tsc'));
     util.cd(__dirname);
 }
@@ -64,8 +66,10 @@ if (options['build']) {
             printLabel(child);
 
             util.cd(child);
-            util.run('npm install');
-            util.run('npm run build');
+            util.run(installCommand);
+            const packageDefinition = JSON.parse(fs.readFileSync('package.json', 'utf-8'));
+            const buildScript = options['ci'] && packageDefinition.scripts?.['build:ci'] ? 'build:ci' : 'build';
+            util.run(`npm run ${buildScript}`);
             util.cd('..');
         }
     });

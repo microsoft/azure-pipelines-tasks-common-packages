@@ -10,6 +10,7 @@
     "scripts": {
         "prebuild": "cd ../build-scripts && npm install",
         "build": "pwsh build.ps1",
+        "build:ci": "pwsh build.ps1",
         "test": "nyc --all --src ./_build mocha ./_build/Tests/L0.js"
     },
     "author": "Microsoft Corporation",

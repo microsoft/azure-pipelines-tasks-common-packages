@@ -5,8 +5,10 @@
   "main": "make.js",
   "scripts": {
     "build": "npm install && cd common-npm-packages/build-scripts && npm install && cd ../.. && node make.js --build",
+    "build:ci": "node make.js --build --ci",
     "test": "node make.js --test",
-    "publish": "node publish.js"
+    "test:ci": "node make.js --test --ci",
+    "create-releases": "node publish.js"
   },
   "repository": {
     "type": "git",
