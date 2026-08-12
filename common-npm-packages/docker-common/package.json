@@ -35,6 +35,7 @@
     },
     "scripts": {
         "build": "cd ../build-scripts && npm install && cd ../docker-common && node make.js",
+        "build:ci": "node make.js",
         "test": "npm run build && mocha _build/Tests/L0.js"
     }
 }
