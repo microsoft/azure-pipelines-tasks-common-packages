@@ -65,6 +65,12 @@ export class ApplicationTokenCredentials {
     private scopes: any;
     private allowScopeLevelToken: boolean;
 
+    // Records the audience/outcome of the most recent acquireTokenForScope call so callers
+    // (e.g. the Kudu auth layer) can emit a single unified auth-mode telemetry event without
+    // re-deriving the scoped-vs-broad decision. Non-sensitive metadata only - never a token.
+    private _lastRequestedAudience: string = undefined;
+    private _lastScopeOutcome: string = undefined;
+
     private readonly tokenMutex: Mutex;
 
     constructor(
@@ -263,6 +269,12 @@ export class ApplicationTokenCredentials {
         }
     }
 
+    // Extracted as its own (overridable) method purely so tests can simulate the Node <16 branch
+    // of acquireTokenForScope without needing an actual Node 10 runtime.
+    private supportsModernIdentity(): boolean {
+        return nodeVersion >= 16;
+    }
+
     private async getMSAL(): Promise<any> /*Promise<msal.ConfidentialClientApplication>*/ {
         // use same instance if it already exists
         if (!this.msalInstance) {
@@ -377,16 +389,19 @@ export class ApplicationTokenCredentials {
     }
 
     private configureMSALWithMSI(msalConfig: any /*msal.Configuration*/): any /*msal.ConfidentialClientApplication*/ {
-        let resourceId = this.activeDirectoryResourceId;
         let accessTokenProvider: any /*msal.IAppTokenProvider*/ = (appTokenProviderParameters: any /*msal.AppTokenProviderParameters*/): Promise<any> /*Promise<msal.AppTokenProviderResult>*/ => {
 
             tl.debug("MSAL - ManagedIdentity is used.");
 
-            let providerResultPromise = new Promise<any>/*Promise<msal.AppTokenProviderResult>*/(function (resolve, reject) {
+            let providerResultPromise = new Promise<any>/*Promise<msal.AppTokenProviderResult>*/((resolve, reject) => {
                 // same for MSAL
                 let webRequest = new webClient.WebRequest();
                 webRequest.method = "GET";
                 let apiVersion = "2018-02-01";
+                let requestedScope = appTokenProviderParameters && appTokenProviderParameters.scopes
+                    ? appTokenProviderParameters.scopes[0]
+                    : undefined;
+                let resourceId = this.getResourceIdFromScope(requestedScope);
                 webRequest.uri = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=" + apiVersion + "&resource=" + resourceId;
                 webRequest.headers = {
                     "Metadata": true
@@ -418,6 +433,13 @@ export class ApplicationTokenCredentials {
         let msalInstance = new msal.ConfidentialClientApplication(msalConfig);
         msalInstance.SetAppTokenProvider(accessTokenProvider);
         return msalInstance;
+    }
+
+    private getResourceIdFromScope(scope?: string): string {
+        const defaultScopeSuffix = "/.default";
+        return scope && scope.endsWith(defaultScopeSuffix)
+            ? scope.substring(0, scope.length - defaultScopeSuffix.length)
+            : this.activeDirectoryResourceId;
     }
 
     private configureMSALWithSP(msalConfig: any /*msal.Configuration*/): any /*msal.ConfidentialClientApplication*/ {
@@ -507,7 +529,14 @@ export class ApplicationTokenCredentials {
         return msalInstance;
     }
 
-    private async getMSALToken(force?: boolean, retryCount: number = 3, retryWaitMS: number = 2000): Promise<string> {
+    // scopeOverride lets callers (e.g. acquireTokenForScope on Node <16, where @azure/identity is
+    // unavailable) request a specific scope/audience via MSAL instead of the default ARM audience.
+    // Callers must always pass one of our own hardcoded per-cloud entries from the `scopes` map
+    // built in azure-arm-endpoint.ts (getScopesByEnvironment) - e.g. appservice:
+    // 'https://appservice.azure.com/.default'. Those literals already include the "/.default"
+    // suffix, so it is NOT appended again here (unlike the default activeDirectoryResourceId case
+    // below, which is a bare resource URI and still needs the suffix).
+    private async getMSALToken(force?: boolean, retryCount: number = 3, retryWaitMS: number = 2000, scopeOverride?: string): Promise<string> {
         tl.debug(`MSAL - getMSALToken called. force=${force}`);
         const msalApp: any /*msal.ConfidentialClientApplication*/ = await this.getMSAL();
         if (force) {
@@ -515,7 +544,7 @@ export class ApplicationTokenCredentials {
         }
         try {
             const request: any /*msal.ClientCredentialRequest*/ = {
-                scopes: [this.activeDirectoryResourceId + "/.default"]
+                scopes: [scopeOverride || (this.activeDirectoryResourceId + "/.default")]
             };
             const response = await msalApp.acquireTokenByClientCredential(request);
             tl.debug(`MSAL - retrieved token - isFromCache?: ${response.fromCache}`);
@@ -526,7 +555,7 @@ export class ApplicationTokenCredentials {
                 tl.debug(`MSAL - retrying getMSALToken - remaining attempts: ${retryCount}`);
 
                 await new Promise(r => setTimeout(r, Math.min(retryWaitMS, MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT)));
-                return await this.getMSALToken(force, (retryCount - 1), retryWaitMS * 2);
+                return await this.getMSALToken(force, (retryCount - 1), retryWaitMS * 2, scopeOverride);
             }
 
             if (error.errorMessage && error.errorMessage.toString().startsWith("7000222")) {
@@ -547,17 +576,120 @@ export class ApplicationTokenCredentials {
         try {
             if (this.allowScopeLevelToken && this.scopes && this.scopes[scopeKind]) {
                 tl.debug(`allowScopeLevelToken is enabled, using scope: ${this.scopes[scopeKind]}`);
-                const credential = await this.buildCredentialByScheme();
-                const tokenResponse = await credential.getToken(this.scopes[scopeKind]);
-                return tokenResponse.token;
+                if (!this.supportsModernIdentity()) {
+                    // @azure/identity requires Node 16+, but MSAL (msalv1) already supports SPN,
+                    // MSI, and WIF client-credential flows on Node 10. Request the same mapped
+                    // scope/audience through MSAL instead of falling back to the ARM audience, so
+                    // Node 10 agents get a genuine App Service-scoped token, not a compromise.
+                    tl.debug(`Node ${nodeVersion} detected; using MSAL to acquire scoped token instead of @azure/identity.`);
+                    const token = await this.getMSALToken(false, 3, 2000, this.scopes[scopeKind]);
+                    // acquireTokenForScope is only ever called for the App Service/Kudu scenario
+                    // (scopeKind is always "appservice"), so telemetry only needs to distinguish
+                    // this narrow case - not every possible _azureScopes key.
+                    this.publishScopeTokenTelemetry(scopeKind, "AppService", "scoped");
+                    return token;
+                }
+                const credentialInfo = await this.buildCredentialByScheme();
+                try {
+                    const tokenResponse = await credentialInfo.credential.getToken(this.scopes[scopeKind]);
+                    this.publishScopeTokenTelemetry(scopeKind, "AppService", "scoped");
+                    return tokenResponse.token;
+                } finally {
+                    this.deleteFederatedTokenFile(credentialInfo.tokenFilePath);
+                }
             } else {
-                tl.debug(`allowScopeLevelToken is disabbled`);
-                return await this.getToken();
+                let outcome: string;
+                if (this.allowScopeLevelToken && (!this.scopes || !this.scopes[scopeKind])) {
+                    // The scope-level token feature is enabled but no scope is mapped for this
+                    // cloud/scopeKind (e.g. an unregistered sovereign cloud). We deliberately fall
+                    // back to the ARM-audience token to preserve deployment functionality, but log
+                    // a warning so this is observable - a Kudu call receiving an ARM-audience token
+                    // is exactly what this feature aims to eliminate. authorityUrl (a public login
+                    // endpoint, not a secret) is logged to help identify the cloud.
+                    tl.warning(`acquireTokenForScope: no '${scopeKind}' scope is mapped for this environment (authority: ${this.authorityUrl}); falling back to an ARM-audience token.`);
+                    outcome = "fallbackUnmapped";
+                } else {
+                    tl.debug(`allowScopeLevelToken is disabled`);
+                    outcome = "fallbackDisabled";
+                }
+                const token = await this.getToken();
+                this.publishScopeTokenTelemetry(scopeKind, "ARM", outcome);
+                return token;
             }
         } catch (error) {
             tl.debug(`acquireTokenForScopes - error: ${error}`);
+            this.publishScopeTokenTelemetry(scopeKind, "None", "error");
             throw new Error(tl.loc('CouldNotFetchAccessTokenforAzureStatusCode', error.errorCode, error.errorMessage));
         }
+    }
+
+    // Emits non-sensitive telemetry so we can prove Kudu/SCM calls request an App Service-audience
+    // token (and detect any ARM-audience fallback) once ALLOWSCOPELEVELTOKEN is rolled out. Only
+    // metadata is recorded - never a token, secret, or credential material. authorityHost is a
+    // public Entra login endpoint used to identify the cloud.
+    private publishScopeTokenTelemetry(scopeKind: string, requestedAudience: string, outcome: string): void {
+        // Remember the most recent decision so getLastScopeTokenTelemetry() can expose it to the
+        // Kudu auth layer for the unified KuduAuthMode event. Existing events below are unchanged.
+        this._lastRequestedAudience = requestedAudience;
+        this._lastScopeOutcome = outcome;
+        try {
+            let authorityHost = "";
+            try {
+                authorityHost = this.authorityUrl ? new URL(this.authorityUrl).host : "";
+            } catch (e) {
+                authorityHost = "";
+            }
+            const payload = {
+                scopeKind: scopeKind,
+                requestedAudience: requestedAudience,
+                outcome: outcome,
+                allowScopeLevelToken: !!this.allowScopeLevelToken,
+                // this.scheme is undefined for the service-principal case (the constructor maps
+                // the endpoint's "ServicePrincipal" scheme against an enum that only defines
+                // ManagedServiceIdentity/SPN/WorkloadIdentityFederation), so default to
+                // "ServicePrincipal" instead of emitting an empty field.
+                scheme: this.scheme === undefined ? "ServicePrincipal" : AzureModels.Scheme[this.scheme],
+                authorityHost: authorityHost
+            };
+            console.log(`##vso[telemetry.publish area=TaskDeploymentMethod;feature=KuduScopeLevelToken]${JSON.stringify(payload)}`);
+
+            // Dedicated, stable signal for a production monitor. Whenever a Kudu/SCM call still
+            // receives an ARM-audience token we emit KuduArmTokenDeprecated so adoption of the
+            // scoped path can be measured (and the ARM path safely retired) later. Kept silent -
+            // no customer-facing warning - because the ARM fallback is still the expected behavior
+            // while ALLOWSCOPELEVELTOKEN is rolling out; a warning here would be noise.
+            if (requestedAudience === "ARM") {
+                const deprecationPayload = {
+                    source: "azure-arm-rest",
+                    reason: outcome,
+                    authorityHost: authorityHost
+                };
+                console.log(`##vso[telemetry.publish area=TaskDeploymentMethod;feature=KuduArmTokenDeprecated]${JSON.stringify(deprecationPayload)}`);
+                tl.debug(`[deprecation] Kudu/SCM received an ARM-audience token (reason=${outcome}). This path is deprecated and will be removed once ALLOWSCOPELEVELTOKEN is fully enabled.`);
+            }
+        } catch (e) {
+            tl.debug(`Failed to publish scope token telemetry: ${e}`);
+        }
+    }
+
+    // Exposes non-sensitive metadata about the most recent scoped-token decision so the Kudu auth
+    // layer can publish a single, unified auth-mode telemetry event (basic vs scoped vs broad).
+    // requestedAudience/outcome are undefined until acquireTokenForScope has run (e.g. the Basic
+    // auth path never calls it); allowScopeLevelToken/scheme/authorityHost are always meaningful.
+    public getLastScopeTokenTelemetry(): { requestedAudience: string, outcome: string, allowScopeLevelToken: boolean, scheme: string, authorityHost: string } {
+        let authorityHost = "";
+        try {
+            authorityHost = this.authorityUrl ? new URL(this.authorityUrl).host : "";
+        } catch (e) {
+            authorityHost = "";
+        }
+        return {
+            requestedAudience: this._lastRequestedAudience,
+            outcome: this._lastScopeOutcome,
+            allowScopeLevelToken: !!this.allowScopeLevelToken,
+            scheme: this.scheme === undefined ? "ServicePrincipal" : AzureModels.Scheme[this.scheme],
+            authorityHost: authorityHost
+        };
     }
 
     private async buildCredentialByScheme(): Promise<any> {
@@ -567,36 +699,83 @@ export class ApplicationTokenCredentials {
             throw new Error(`@azure/identity is not supported on Node ${nodeVersion}. Please use Node 16 or higher for this authentication scheme.`);
         }
 
+        // Point @azure/identity credentials at the service connection's Entra authority so that
+        // scope-level tokens are requested from the correct (sovereign) cloud instead of the
+        // public login.microsoftonline.com default. this.authorityUrl carries the per-cloud
+        // authority (e.g. login.microsoftonline.us / login.chinacloudapi.cn) and is the same
+        // value the ARM/MSAL path derives its authority from (see buildMSAL).
+        const credentialOptions = { authorityHost: this.authorityUrl };
+
         switch (this.scheme) {
             case AzureModels.Scheme.ManagedServiceIdentity:
                 tl.debug('Using ManagedIdentityCredential for MSI');
-                return new azureIdentity.ManagedIdentityCredential(this.msiClientId);
+                return {
+                    credential: new azureIdentity.ManagedIdentityCredential(this.msiClientId)
+                };
 
             case AzureModels.Scheme.WorkloadIdentityFederation:
                 tl.debug('Using WorkloadIdentityCredential for OIDC');
                 const federatedToken = await this.getFederatedToken();
+                // Use a unique file name per invocation. A fixed 'token.jwt' name races when
+                // multiple credentials are built concurrently in the same job (e.g. parallel
+                // slot deployments), where one write can clobber another's federated token.
                 const tokenFilePath = path.join(
                     tl.getVariable('Agent.TempDirectory') || tl.getVariable('system.DefaultWorkingDirectory'),
-                    'token.jwt'
+                    `token-${crypto.randomBytes(16).toString('hex')}.jwt`
                 );
-                fs.writeFileSync(tokenFilePath, federatedToken);
-
-                return new azureIdentity.WorkloadIdentityCredential({
-                    tenantId: this.tenantId,
-                    clientId: this.clientId,
-                    tokenFilePath: tokenFilePath
-                });
+                try {
+                    fs.writeFileSync(tokenFilePath, federatedToken);
+                    return {
+                        credential: new azureIdentity.WorkloadIdentityCredential({
+                            ...credentialOptions,
+                            tenantId: this.tenantId,
+                            clientId: this.clientId,
+                            tokenFilePath: tokenFilePath
+                        }),
+                        tokenFilePath: tokenFilePath
+                    };
+                } catch (error) {
+                    this.deleteFederatedTokenFile(tokenFilePath);
+                    throw error;
+                }
 
             case AzureModels.Scheme.SPN:
             default:
                 tl.debug('Using specific credential for Service Principal');
                 if (this.authType === constants.AzureServicePrinicipalAuthentications.servicePrincipalKey) {
                     tl.debug('Using ClientSecretCredential for key-based SPN');
-                    return new azureIdentity.ClientSecretCredential(this.tenantId, this.clientId, this.secret);
+                    return {
+                        credential: new azureIdentity.ClientSecretCredential(this.tenantId, this.clientId, this.secret, credentialOptions)
+                    };
                 } else {
                     tl.debug('Using ClientCertificateCredential for certificate-based SPN');
-                    return new azureIdentity.ClientCertificateCredential(this.tenantId, this.clientId, this.certFilePath);
+                    return {
+                        credential: new azureIdentity.ClientCertificateCredential(this.tenantId, this.clientId, this.certFilePath, credentialOptions)
+                    };
                 }
+        }
+    }
+
+    private deleteFederatedTokenFile(tokenFilePath?: string): void {
+        if (!tokenFilePath || !fs.existsSync(tokenFilePath)) {
+            return;
+        }
+
+        try {
+            fs.unlinkSync(tokenFilePath);
+            this.publishFederatedTokenFileCleanupTelemetry("deleted");
+        } catch (error) {
+            tl.warning("Failed to delete the federated token file after token acquisition.");
+            tl.debug(`Failed to delete federated token file '${tokenFilePath}': ${error}`);
+            this.publishFederatedTokenFileCleanupTelemetry("error");
+        }
+    }
+
+    private publishFederatedTokenFileCleanupTelemetry(outcome: string): void {
+        try {
+            console.log(`##vso[telemetry.publish area=TaskDeploymentMethod;feature=FederatedTokenFileCleanup]${JSON.stringify({ outcome: outcome })}`);
+        } catch (error) {
+            tl.debug(`Failed to publish federated token file cleanup telemetry: ${error}`);
         }
     }
 
