@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-ios-signing-common",
-    "version": "2.272.0",
+    "version": "2.279.0",
     "description": "Azure Pipelines tasks iOS Signing Common",
     "main": "ios-signing-common.js",
     "scripts": {
@@ -21,9 +21,12 @@
         "@types/mocha": "^5.2.7",
         "@types/node": "^16.11.39",
         "@types/q": "^1.5.4",
-        "azure-pipelines-task-lib": "5.2.8"
+        "azure-pipelines-task-lib": "5.278.2"
     },
     "devDependencies": {
         "typescript": "4.9.5"
+    },
+    "overrides": {
+        "brace-expansion": "^1.1.18"
     }
 }
