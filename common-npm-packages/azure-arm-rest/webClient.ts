@@ -115,36 +115,39 @@ export function sleepFor(sleepDurationInSeconds): Promise<any> {
 
 async function sendRequestInternal(request: WebRequest, options?: WebRequestOptions): Promise<WebResponse> {
     tl.debug(util.format("[%s]%s", request.method, request.uri));
-    const currentRequestOptions: httpInterfaces.IRequestOptions = {
-        ...requestOptions
-    };
 
-    if (options && options.requestTimeout !== undefined) {
-        currentRequestOptions.socketTimeout = options.requestTimeout;
+    if (!options || options.requestTimeout === undefined) {
+        const httpCallbackClient = new httpClient.HttpClient(azureHttpUserAgent, null, requestOptions);
+        const response = await httpCallbackClient.request(request.method, request.uri, request.body, request.headers);
+        const webResponse = await toWebResponse(response);
+
+        httpCallbackClient.dispose();
+        return webResponse;
     }
+
+    const currentRequestOptions: httpInterfaces.IRequestOptions = {
+        ...requestOptions,
+        socketTimeout: options.requestTimeout
+    };
 
     const httpCallbackClient = new httpClient.HttpClient(azureHttpUserAgent, null, currentRequestOptions);
     let timeoutHandle: NodeJS.Timeout;
-    const disposeRequestResources = prepareRequestResources(httpCallbackClient, request, options && options.requestTimeout);
+    const disposeRequestResources = prepareRequestResources(httpCallbackClient, request, options.requestTimeout);
 
     try {
         const responsePromise = httpCallbackClient.request(request.method, request.uri, request.body, request.headers)
             .then(response => toWebResponse(response));
 
-        if (options && options.requestTimeout !== undefined) {
-            const timeoutPromise = new Promise<WebResponse>((resolve, reject) => {
-                timeoutHandle = setTimeout(() => {
-                    const timeoutError: any = new Error(`Request timed out after ${options.requestTimeout} ms: ${request.uri}`);
-                    timeoutError.code = 'ETIMEDOUT';
-                    disposeRequestResources();
-                    reject(timeoutError);
-                }, options.requestTimeout);
-            });
+        const timeoutPromise = new Promise<WebResponse>((resolve, reject) => {
+            timeoutHandle = setTimeout(() => {
+                const timeoutError: any = new Error(`Request timed out after ${options.requestTimeout} ms: ${request.uri}`);
+                timeoutError.code = 'ETIMEDOUT';
+                disposeRequestResources();
+                reject(timeoutError);
+            }, options.requestTimeout);
+        });
 
-            return await Promise.race([responsePromise, timeoutPromise]);
-        }
-
-        return await responsePromise;
+        return await Promise.race([responsePromise, timeoutPromise]);
     } finally {
         if (timeoutHandle) {
             clearTimeout(timeoutHandle);

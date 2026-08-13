@@ -15,6 +15,7 @@ export function WebClientTests() {
     const originalConsoleLog = console.log;
     const originalHttpsProxy = process.env.HTTPS_PROXY;
     const originalNoProxy = process.env.NO_PROXY;
+    const originalRequestTimeoutFeature = process.env.DISTRIBUTEDTASK_TASKS_ENABLEAZUREMODULEVERSIONCHECKREQUESTTIMEOUT;
 
     afterEach(() => {
         (httpClient as any).HttpClient = originalHttpClient;
@@ -25,6 +26,7 @@ export function WebClientTests() {
         console.log = originalConsoleLog;
         restoreEnvironmentVariable('HTTPS_PROXY', originalHttpsProxy);
         restoreEnvironmentVariable('NO_PROXY', originalNoProxy);
+        restoreEnvironmentVariable('DISTRIBUTEDTASK_TASKS_ENABLEAZUREMODULEVERSIONCHECKREQUESTTIMEOUT', originalRequestTimeoutFeature);
     });
 
     it('applies the request timeout and disposes the client on success', async () => {
@@ -92,6 +94,7 @@ export function WebClientTests() {
         });
         const options = Object.assign(new webClient.WebRequestOptions(), {
             retryCount: 1,
+            requestTimeout: 3000,
             suppressErrorIssue: true
         });
 
@@ -102,7 +105,7 @@ export function WebClientTests() {
         assert.strictEqual(consoleOutput.some(line => line.includes('task.logissue')), false);
     });
 
-    it('disposes the failed client and succeeds with a new client on retry', async () => {
+    it('disposes the failed client and succeeds with a new client on timeout-enabled retry', async () => {
         let clientCount = 0;
         let requestCount = 0;
         let disposeCount = 0;
@@ -144,7 +147,8 @@ export function WebClientTests() {
         });
         const options = Object.assign(new webClient.WebRequestOptions(), {
             retryCount: 2,
-            retryIntervalInSeconds: 0.001
+            retryIntervalInSeconds: 0.001,
+            requestTimeout: 3000
         });
 
         const response = await webClient.sendRequest(request, options);
@@ -158,6 +162,7 @@ export function WebClientTests() {
 
     it('preserves default timeout and error issue behavior when options are omitted', async () => {
         let capturedOptions: any;
+        let disposeCount = 0;
         const consoleOutput: string[] = [];
 
         (httpClient as any).HttpClient = class {
@@ -172,6 +177,7 @@ export function WebClientTests() {
             }
 
             public dispose() {
+                disposeCount++;
             }
         };
         console.log = (message?: any) => consoleOutput.push(String(message));
@@ -185,6 +191,7 @@ export function WebClientTests() {
         await assert.rejects(webClient.sendRequest(request), /request failed/);
 
         assert.strictEqual(capturedOptions.socketTimeout, undefined);
+        assert.strictEqual(disposeCount, 0);
         assert.deepStrictEqual(consoleOutput, ['##vso[task.logissue type=error;code=CUSTOM;]']);
     });
 
@@ -408,7 +415,7 @@ export function WebClientTests() {
         }
     });
 
-    it('uses bounded request options for the advisory version check', async () => {
+    it('uses bounded request options when the request timeout feature is enabled', async () => {
         let requestCount = 0;
         let capturedRequest: webClient.WebRequest;
         let capturedOptions: webClient.WebRequestOptions;
@@ -438,6 +445,7 @@ export function WebClientTests() {
         let requestCount = 0;
         let capturedOptions: webClient.WebRequestOptions;
 
+        process.env.DISTRIBUTEDTASK_TASKS_ENABLEAZUREMODULEVERSIONCHECKREQUESTTIMEOUT = 'false';
         (tl as any).getPipelineFeature = (featureName: string) => featureName === 'ShowWarningOnOlderAzureModules';
         (webClient as any).sendRequest = async (request: webClient.WebRequest, options?: webClient.WebRequestOptions) => {
             requestCount++;

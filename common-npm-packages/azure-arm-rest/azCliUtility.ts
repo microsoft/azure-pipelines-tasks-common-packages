@@ -252,7 +252,8 @@ async function getLatestAzureModuleReleaseVersion(moduleName: string): Promise<s
         request.uri = `https://api.github.com/repos/Azure/${moduleName}/releases`;
         request.method = 'GET';
         request.headers = request.headers || {};
-        const response = tl.getPipelineFeature("EnableAzureModuleVersionCheckRequestTimeout")
+        const enableRequestTimeout = tl.getPipelineFeature("EnableAzureModuleVersionCheckRequestTimeout");
+        const response = enableRequestTimeout
             ? await webClient.sendRequest(request, Object.assign(new webClient.WebRequestOptions(), {
                 retryCount: 1,
                 requestTimeout: 3000,
