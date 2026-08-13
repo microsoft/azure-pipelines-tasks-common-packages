@@ -98,8 +98,7 @@ export async function sendRequest(request: WebRequest, options?: WebRequestOptio
             }
             else {
                 if (error.code && !(options && options.suppressErrorIssue)) {
-                    const message = error.message || error.code;
-                    console.log(`##vso[task.logissue type=error;code=${error.code};]${message}`);
+                    console.log("##vso[task.logissue type=error;code=" + error.code + ";]");
                 }
 
                 throw error;
