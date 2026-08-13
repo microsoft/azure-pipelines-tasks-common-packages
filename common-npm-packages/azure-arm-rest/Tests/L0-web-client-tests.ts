@@ -131,7 +131,7 @@ export function WebClientTests() {
         await assert.rejects(webClient.sendRequest(request), /request failed/);
 
         assert.strictEqual(capturedOptions.socketTimeout, undefined);
-        assert.strictEqual(consoleOutput.some(line => line.includes('##vso[task.logissue type=error;code=CUSTOM;]request failed')), true);
+        assert.deepStrictEqual(consoleOutput, ['##vso[task.logissue type=error;code=CUSTOM;]']);
     });
 
     it('preserves behavior for callers using only the existing request options', async () => {
@@ -211,6 +211,64 @@ export function WebClientTests() {
         }
     });
 
+    it('succeeds when the response arrives before the request timeout', async () => {
+        const server = http.createServer((request, response) => {
+            setTimeout(() => {
+                response.writeHead(200, { 'Content-Type': 'application/json' });
+                response.end('{"status":"ok"}');
+            }, 50);
+        });
+        await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+
+        try {
+            const address = server.address() as { port: number };
+            const request = Object.assign(new webClient.WebRequest(), {
+                method: 'GET',
+                uri: `http://127.0.0.1:${address.port}`,
+                headers: {}
+            });
+            const options = Object.assign(new webClient.WebRequestOptions(), {
+                retryCount: 1,
+                requestTimeout: 500
+            });
+
+            const response = await webClient.sendRequest(request, options);
+
+            assert.strictEqual(response.statusCode, 200);
+            assert.strictEqual(response.body.status, 'ok');
+        } finally {
+            await new Promise<void>(resolve => server.close(() => resolve()));
+        }
+    });
+
+    it('times out when the response arrives after the request deadline', async () => {
+        const server = http.createServer((request, response) => {
+            setTimeout(() => {
+                response.writeHead(200);
+                response.end();
+            }, 500);
+        });
+        await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+
+        try {
+            const address = server.address() as { port: number };
+            const request = Object.assign(new webClient.WebRequest(), {
+                method: 'GET',
+                uri: `http://127.0.0.1:${address.port}`,
+                headers: {}
+            });
+            const options = Object.assign(new webClient.WebRequestOptions(), {
+                retryCount: 1,
+                requestTimeout: 50,
+                suppressErrorIssue: true
+            });
+
+            await assert.rejects(webClient.sendRequest(request, options), (error: any) => error.code === 'ETIMEDOUT');
+        } finally {
+            await new Promise<void>(resolve => server.close(() => resolve()));
+        }
+    });
+
     it('terminates a request when the socket does not respond', async () => {
         const server = http.createServer(() => {
         });
@@ -233,6 +291,34 @@ export function WebClientTests() {
             await assert.rejects(webClient.sendRequest(request, options));
 
             assert(Date.now() - startedAt < 2000, 'the socket timeout should bound the stalled request');
+        } finally {
+            server.close();
+        }
+    });
+
+    it('makes one attempt when the request times out', async () => {
+        let requestCount = 0;
+        const server = http.createServer(() => {
+            requestCount++;
+        });
+        await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+
+        try {
+            const address = server.address() as { port: number };
+            const request = Object.assign(new webClient.WebRequest(), {
+                method: 'GET',
+                uri: `http://127.0.0.1:${address.port}`,
+                headers: {}
+            });
+            const options = Object.assign(new webClient.WebRequestOptions(), {
+                retryCount: 1,
+                requestTimeout: 50,
+                suppressErrorIssue: true
+            });
+
+            await assert.rejects(webClient.sendRequest(request, options), (error: any) => error.code === 'ETIMEDOUT');
+
+            assert.strictEqual(requestCount, 1);
         } finally {
             server.close();
         }
@@ -274,7 +360,8 @@ export function WebClientTests() {
         let capturedOptions: webClient.WebRequestOptions;
         let warningCount = 0;
 
-        (tl as any).getPipelineFeature = () => true;
+        (tl as any).getPipelineFeature = (featureName: string) =>
+            featureName === 'ShowWarningOnOlderAzureModules' || featureName === 'EnableAzureModuleVersionCheckRequestTimeout';
         (tl as any).warning = () => warningCount++;
         (webClient as any).sendRequest = async (request: webClient.WebRequest, options: webClient.WebRequestOptions) => {
             requestCount++;
@@ -291,6 +378,23 @@ export function WebClientTests() {
         assert.strictEqual(capturedOptions.requestTimeout, 3000);
         assert.strictEqual(capturedOptions.suppressErrorIssue, true);
         assert.strictEqual(warningCount, 1);
+    });
+
+    it('preserves the original advisory request when the request timeout feature is disabled', async () => {
+        let requestCount = 0;
+        let capturedOptions: webClient.WebRequestOptions;
+
+        (tl as any).getPipelineFeature = (featureName: string) => featureName === 'ShowWarningOnOlderAzureModules';
+        (webClient as any).sendRequest = async (request: webClient.WebRequest, options?: webClient.WebRequestOptions) => {
+            requestCount++;
+            capturedOptions = options;
+            return { body: [{ tag_name: 'azure-cli-2.90.0' }] };
+        };
+
+        await validateAzModuleVersion('azure-Cli', '2.90.0', 'Azure-Cli', 1);
+
+        assert.strictEqual(requestCount, 1);
+        assert.strictEqual(capturedOptions, undefined);
     });
 
     it('logs advisory request failures at debug level and continues', async () => {
