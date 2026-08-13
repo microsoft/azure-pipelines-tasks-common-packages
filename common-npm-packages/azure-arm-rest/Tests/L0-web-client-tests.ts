@@ -102,6 +102,60 @@ export function WebClientTests() {
         assert.strictEqual(consoleOutput.some(line => line.includes('task.logissue')), false);
     });
 
+    it('disposes the failed client and succeeds with a new client on retry', async () => {
+        let clientCount = 0;
+        let requestCount = 0;
+        let disposeCount = 0;
+
+        (httpClient as any).HttpClient = class {
+            private clientNumber: number;
+
+            constructor() {
+                this.clientNumber = ++clientCount;
+            }
+
+            public async request() {
+                requestCount++;
+                if (this.clientNumber === 1) {
+                    const error: any = new Error('connection reset');
+                    error.code = 'ECONNRESET';
+                    throw error;
+                }
+
+                return {
+                    message: {
+                        statusCode: 200,
+                        statusMessage: 'OK',
+                        headers: {}
+                    },
+                    readBody: async () => '{"status":"ok"}'
+                };
+            }
+
+            public dispose() {
+                disposeCount++;
+            }
+        };
+
+        const request = Object.assign(new webClient.WebRequest(), {
+            method: 'GET',
+            uri: 'https://example.test',
+            headers: {}
+        });
+        const options = Object.assign(new webClient.WebRequestOptions(), {
+            retryCount: 2,
+            retryIntervalInSeconds: 0.001
+        });
+
+        const response = await webClient.sendRequest(request, options);
+
+        assert.strictEqual(response.statusCode, 200);
+        assert.strictEqual(response.body.status, 'ok');
+        assert.strictEqual(clientCount, 2);
+        assert.strictEqual(requestCount, 2);
+        assert.strictEqual(disposeCount, 2);
+    });
+
     it('preserves default timeout and error issue behavior when options are omitted', async () => {
         let capturedOptions: any;
         const consoleOutput: string[] = [];
