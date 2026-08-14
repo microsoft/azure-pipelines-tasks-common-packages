@@ -8,8 +8,8 @@ import { AzureCliUtilityTests } from "./L0-azure-cli-utility-tests";
 import { OpenSSLCheck } from "./L0-azure-cli-openssl-check";
 import { AzureAppServiceUtilityTests } from "./L0-azure-app-service-utility-tests";
 import { KuduLogSanitizerTests } from "./L0-kudu-log-sanitizer-tests";
-import { ScopeTokenTests } from "./L0-scope-token-tests";
 import { WebClientTests } from "./L0-web-client-tests";
+import { ScopeTokenTests } from "./L0-scope-token-tests";
 
 const DEFAULT_TIMEOUT = 1000 * 20;
 
@@ -25,6 +25,6 @@ describe("AzureARMRestTests", function () {
     describe("Azure Cli OpenSSL check", OpenSSLCheck.bind(OpenSSLCheck, DEFAULT_TIMEOUT));
     describe("AzureAppServiceUtility Tests", AzureAppServiceUtilityTests.bind(AzureAppServiceUtilityTests, DEFAULT_TIMEOUT));
     describe("Kudu log VSO-command sanitizer Tests", KuduLogSanitizerTests);
-    describe("Scope-level token Tests", ScopeTokenTests.bind(ScopeTokenTests, DEFAULT_TIMEOUT));
     describe("Web client Tests", WebClientTests);
+    describe("Scope-level token Tests", ScopeTokenTests.bind(ScopeTokenTests, DEFAULT_TIMEOUT));
 });
