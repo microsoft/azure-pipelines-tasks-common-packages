@@ -67,19 +67,20 @@ export function applyXdtTransformation(sourceFile: string, transformFile: string
     }
 }
 
-// Tracks whether the opt-out warning has already been emitted, so a package with many .config
-// transform files does not produce repeated identical warnings during a single task run.
-let unsafeXdtTransformWarningEmitted = false;
+// Tracks whether the opt-out bypass has already been reported, so a package with many .config
+// transform files does not emit repeated identical warnings and telemetry during a single task run.
+let unsafeXdtTransformBypassReported = false;
 
 function validateXdtTransformFile(transformFile: string): void {
     if (isUnsafeXdtTransformAllowed()) {
         // Opt-out escape hatch: restores the pre-hardening behavior for pipeline authors who
-        // legitimately depend on custom XDT transforms.
-        if (!unsafeXdtTransformWarningEmitted) {
+        // legitimately depend on custom XDT transforms. Report the bypass (warning + telemetry)
+        // once per task run to avoid noise when many .config files are transformed in a loop.
+        if (!unsafeXdtTransformBypassReported) {
             tl.warning(tl.loc('XdtTransformationSecurityValidationDisabled', transformFile));
-            unsafeXdtTransformWarningEmitted = true;
+            publishXdtSecurityTelemetry('bypassed', 'optOut');
+            unsafeXdtTransformBypassReported = true;
         }
-        publishXdtSecurityTelemetry('bypassed', 'optOut');
         return;
     }
 
