@@ -1,5 +1,32 @@
 import tl = require('azure-pipelines-task-lib/task');
+import * as fs from 'fs';
 import path = require('path');
+import { DOMParser } from '@xmldom/xmldom';
+import { detectFileEncoding } from './fileencoding';
+
+const xdtNamespace = 'http://schemas.microsoft.com/XML-Document-Transform';
+// Built-in XDT transform/locator type names. Verified by reflecting the concrete (non-abstract)
+// subclasses of Microsoft.Web.XmlTransform.Transform / .Locator in the bundled ctt.exe
+// (Microsoft.Web.XmlTransform v1.6.0.51029). Any transform/locator type outside this set can only
+// be resolved through xdt:Import, which is blocked. Regenerate this list if the bundled ctt changes.
+const builtInXdtTransformTypes = [
+    'Insert',
+    'InsertAfter',
+    'InsertBefore',
+    'InsertIfMissing',
+    'Remove',
+    'RemoveAll',
+    'RemoveAttributes',
+    'Replace',
+    'SetAttributes',
+    'SetTokenizedAttributes'
+];
+const builtInXdtLocatorTypes = [
+    'Condition',
+    'DefaultLocator',
+    'Match',
+    'XPath'
+];
 
 export function expandWildcardPattern(folderPath: string, wildcardPattern : string) {
     var matchingFiles = tl.findMatch(folderPath, wildcardPattern,   { followSymbolicLinks: false, allowBrokenSymbolicLinks: false, followSpecifiedSymbolicLink: false });
@@ -21,6 +48,8 @@ export function expandWildcardPattern(folderPath: string, wildcardPattern : stri
 */
 export function applyXdtTransformation(sourceFile: string, transformFile: string, destinationFile?: string) {
 
+    validateXdtTransformFile(transformFile);
+
     var cttPath = path.join(__dirname, "ctt", "ctt", "ctt.exe"); 
     var cttArgsArray= [
         "s:" + sourceFile,
@@ -36,6 +65,166 @@ export function applyXdtTransformation(sourceFile: string, transformFile: string
     if(cttExecutionResult.stderr) {
         throw new Error(tl.loc("XdtTransformationErrorWhileTransforming", sourceFile, transformFile));
     }
+}
+
+// Tracks whether the opt-out bypass has already been reported, so a package with many .config
+// transform files does not emit repeated identical warnings and telemetry during a single task run.
+let unsafeXdtTransformBypassReported = false;
+
+function validateXdtTransformFile(transformFile: string): void {
+    if (isUnsafeXdtTransformAllowed()) {
+        // Opt-out escape hatch: restores the pre-hardening behavior for pipeline authors who
+        // legitimately depend on custom XDT transforms. Report the bypass (warning + telemetry)
+        // once per task run to avoid noise when many .config files are transformed in a loop.
+        if (!unsafeXdtTransformBypassReported) {
+            tl.warning(tl.loc('XdtTransformationSecurityValidationDisabled', transformFile));
+            publishXdtSecurityTelemetry('bypassed', 'optOut');
+            unsafeXdtTransformBypassReported = true;
+        }
+        return;
+    }
+
+    const xmlContent = readTransformFile(transformFile);
+    const transformDocument = parseTransformFile(transformFile, xmlContent);
+    validateXdtNode(transformFile, transformDocument.documentElement);
+}
+
+function isUnsafeXdtTransformAllowed(): boolean {
+    const value = tl.getVariable('AZP_ALLOW_UNSAFE_XDT_TRANSFORMS');
+    if (!value) {
+        return false;
+    }
+
+    return value.trim().toLowerCase() === 'true';
+}
+
+function publishXdtSecurityTelemetry(result: string, reason: string): void {
+    try {
+        const payload = JSON.stringify({ result: result, reason: reason });
+        console.log('##vso[telemetry.publish area=TaskHub;feature=XdtTransformationSecurity]' + payload);
+    }
+    catch (error) {
+        tl.debug('Unable to publish XDT transformation security telemetry: ' + (error && error.message ? error.message : error));
+    }
+}
+
+function readTransformFile(transformFile: string): string {
+    const buffer = fs.readFileSync(transformFile);
+    const encoding = detectTransformFileEncoding(transformFile, buffer);
+    return buffer.toString(encoding as BufferEncoding);
+}
+
+function detectTransformFileEncoding(transformFile: string, buffer: Buffer): string {
+    try {
+        // Reuse the shared encoding detection so the XDT transform path stays consistent
+        // with the XML/JSON variable-substitution paths and there is a single source of truth.
+        // detectFileEncoding returns utf-8 / utf-16le and throws for unsupported encodings.
+        return detectFileEncoding(transformFile, buffer)[0].toString();
+    }
+    catch (error) {
+        tl.debug('Unable to detect encoding of XDT transform file ' + transformFile + ': ' + (error && error.message ? error.message : error));
+        publishXdtSecurityTelemetry('blocked', 'unsupportedEncoding');
+        throw new Error(tl.loc('XdtTransformationUnsupportedEncoding', transformFile));
+    }
+}
+
+function parseTransformFile(transformFile: string, xmlContent: string): Document {
+    try {
+        return new DOMParser({
+            errorHandler: {
+                warning: function(message) {
+                    tl.debug(message);
+                },
+                error: function(message) {
+                    throw new Error(message);
+                },
+                fatalError: function(message) {
+                    throw new Error(message);
+                }
+            }
+        }).parseFromString(xmlContent, 'text/xml');
+    }
+    catch (error) {
+        publishXdtSecurityTelemetry('blocked', 'invalidXml');
+        throw new Error(tl.loc('XdtTransformationInvalidXml', transformFile, error.message || error));
+    }
+}
+
+function validateXdtNode(transformFile: string, node: Node): void {
+    if (!node) {
+        return;
+    }
+
+    if (node.nodeType == 1) {
+        const element = node as Element;
+        validateXdtElement(transformFile, element);
+        validateXdtAttributes(transformFile, element);
+    }
+
+    if (!node.childNodes) {
+        return;
+    }
+
+    for (let index = 0; index < node.childNodes.length; index++) {
+        validateXdtNode(transformFile, node.childNodes.item(index));
+    }
+}
+
+function validateXdtElement(transformFile: string, element: Element): void {
+    if (isXdtNode(element, 'Import')) {
+        publishXdtSecurityTelemetry('blocked', 'import');
+        throw new Error(tl.loc('XdtTransformationBlockedImport', transformFile));
+    }
+}
+
+function validateXdtAttributes(transformFile: string, element: Element): void {
+    if (!element.attributes) {
+        return;
+    }
+
+    for (let index = 0; index < element.attributes.length; index++) {
+        const attribute = element.attributes.item(index);
+        if (!attribute || attribute.namespaceURI != xdtNamespace) {
+            continue;
+        }
+
+        const attributeName = getLocalName(attribute);
+        if (attributeName == 'Transform') {
+            validateBuiltInXdtType(transformFile, attributeName, attribute.value, builtInXdtTransformTypes);
+        }
+        else if (attributeName == 'Locator') {
+            validateBuiltInXdtType(transformFile, attributeName, attribute.value, builtInXdtLocatorTypes);
+        }
+    }
+}
+
+function validateBuiltInXdtType(transformFile: string, attributeName: string, attributeValue: string, builtInTypes: string[]): void {
+    const typeName = getXdtTypeName(attributeValue);
+    if (!typeName || builtInTypes.indexOf(typeName) != -1) {
+        return;
+    }
+
+    publishXdtSecurityTelemetry('blocked', attributeName == 'Transform' ? 'customTransform' : 'customLocator');
+    throw new Error(tl.loc('XdtTransformationBlockedCustomType', transformFile, attributeName, typeName));
+}
+
+function getXdtTypeName(attributeValue: string): string {
+    const argumentStartIndex = attributeValue.indexOf('(');
+    const typeName = argumentStartIndex == -1 ? attributeValue : attributeValue.substr(0, argumentStartIndex);
+    return typeName.trim();
+}
+
+function isXdtNode(node: Element | Attr, localName: string): boolean {
+    return node.namespaceURI == xdtNamespace && getLocalName(node) == localName;
+}
+
+function getLocalName(node: Element | Attr): string {
+    if (node.localName) {
+        return node.localName;
+    }
+
+    const separatorIndex = node.nodeName.indexOf(':');
+    return separatorIndex == -1 ? node.nodeName : node.nodeName.substr(separatorIndex + 1);
 }
 
 /**
