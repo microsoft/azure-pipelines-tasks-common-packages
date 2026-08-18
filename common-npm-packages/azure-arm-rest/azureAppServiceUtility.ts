@@ -19,13 +19,15 @@ export interface KuduAuthModeTelemetryParams {
     telemetryFeature?: string;
 }
 
-// Emits the unified, additive `feature=KuduAuthMode` event so a single query can count how many task
-// instances use basic auth vs a tightly-scoped App Service token vs a broad ARM-audience token
-// (fallback). It is intentionally separate from - and does not alter - the pre-existing
-// authMethod / KuduScopeLevelToken / KuduArmTokenDeprecated events, so existing monitors are unaffected.
+// Emits the unified `feature=KuduAuthMode` event while ALLOWSCOPELEVELTOKEN is enabled so a single
+// query can count basic auth vs a tightly-scoped App Service token vs a broad ARM-audience token.
 // The scoped-vs-broad classification is read back from the credentials' last decision (no duplicated
 // logic). Non-sensitive metadata only - never a token, secret, or credential material.
 export function publishKuduAuthModeTelemetry(params: KuduAuthModeTelemetryParams): void {
+    if (!tl.getPipelineFeature("ALLOWSCOPELEVELTOKEN")) {
+        return;
+    }
+
     try {
         let scope: { requestedAudience: string, outcome: string, allowScopeLevelToken: boolean, scheme: string, authorityHost: string } =
             { requestedAudience: undefined, outcome: undefined, allowScopeLevelToken: false, scheme: undefined, authorityHost: "" };
@@ -193,7 +195,13 @@ export class AzureAppServiceUtility {
         const password = publishingCredentials.properties["publishingPassword"];
 
         if (scmPolicyCheck === false) {
-            token = await this._appService._client.getCredentials().acquireTokenForScope("appservice");
+            const credentials = this._appService._client.getCredentials();
+            if (tl.getPipelineFeature("ALLOWSCOPELEVELTOKEN")) {
+                token = await credentials.acquireTokenForScope("appservice");
+            } else {
+                tl.debug("ALLOWSCOPELEVELTOKEN is disabled; using the legacy ARM-audience token for Kudu.");
+                token = await credentials.getToken();
+            }
             method = "Bearer";
             // Though bearer AuthN is used, lets try to set publish profile password for mask hints to maintain compat with old behavior for MSDEPLOY.
             // This needs to be cleaned up once MSDEPLOY suppport is removed. Safe handle the exception setting up mask hint as we dont want to fail here.
@@ -218,7 +226,7 @@ export class AzureAppServiceUtility {
         tl.debug(`Using ${method} authentication method for Kudu service.`);
         console.log(`##vso[telemetry.publish area=TaskDeploymentMethod;feature=${this._telemetryFeature}]${JSON.stringify(authMethodtelemetry)}`);
 
-        // Unified, additive auth-mode signal (feature=KuduAuthMode) - see publishKuduAuthModeTelemetry.
+        // Unified auth-mode signal (feature=KuduAuthMode) - see publishKuduAuthModeTelemetry.
         // Lets us count basic vs tightly-scoped vs broad(ARM-fallback) token usage per task with a
         // single query, without touching the pre-existing events above (back-compat preserved).
         publishKuduAuthModeTelemetry({
