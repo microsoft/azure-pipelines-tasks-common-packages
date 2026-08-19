@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-codecoverage-tools",
-    "version": "3.276.0",
+    "version": "3.279.0",
     "author": "Microsoft Corporation",
     "description": "VSTS Tasks Code Coverage Tools",
     "license": "MIT",
@@ -11,10 +11,10 @@
         "@types/cheerio": "0.22.0",
         "@types/node": "^16.11.39",
         "@types/q": "^1.5.4",
-        "azure-pipelines-task-lib": "^5.2.10",
+        "azure-pipelines-task-lib": "^5.279.0",
         "cheerio": "1.0.0-rc.6",
         "fs-extra": "^0.30.0",
-        "mocha": "^11.7.5",
+        "mocha": "^11.8.0",
         "os": "^0.1.1",
         "rewire": "^6.0.0",
         "semver": "^7.5.4",
@@ -27,10 +27,16 @@
         "typescript": "^4.9.5"
     },
     "overrides": {
-	    "serialize-javascript": "^7.0.4"
+	    "serialize-javascript": "^7.0.5",
+        "brace-expansion@1.x": { ".": "1.1.18" },
+        "brace-expansion@2.x": { ".": "2.1.4" },
+        "fast-uri": "3.1.5",
+        "js-yaml@3.x": { ".": "3.15.1" },
+        "js-yaml@4.x": { ".": "4.3.1" }
     },
     "scripts": {
         "build": "cd ../build-scripts && npm install && cd ../codecoverage-tools && node make.js",
+        "build:ci": "node make.js",
         "test": "mocha _build/Tests/L0.js"
     },
     "repository": {

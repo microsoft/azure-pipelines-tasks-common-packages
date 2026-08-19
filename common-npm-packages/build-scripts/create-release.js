@@ -172,12 +172,12 @@ async function getPRsFiles(PRs, _package) {
  * @param {string} releaseNotes - Release notes for the new release
  * @param {string} _package - The name of the package
  * @param {string} version - Version of the new release
- * @param {string} releaseBranch - Branch to create the release on
+ * @param {string} targetCommitish - Commit to create the release on
  */
-async function createRelease(releaseNotes, _package, version, releaseBranch) {
+async function createRelease(releaseNotes, _package, version, targetCommitish) {
     const name = `Release ${_package} ${version}`;
     const tagName = `${_package}-${version}`;
-    console.log(`Creating release ${tagName} on ${releaseBranch}`);
+    console.log(`Creating release ${tagName} on ${targetCommitish}`);
     const octokit = await getESMOctokit(token);
 
     const newRelease = await octokit.repos.createRelease({
@@ -186,7 +186,7 @@ async function createRelease(releaseNotes, _package, version, releaseBranch) {
         tag_name: tagName,
         name,
         body: releaseNotes,
-        target_commitish: releaseBranch
+        target_commitish: targetCommitish
     });
 
     console.log(`Release ${tagName} created`);
@@ -218,10 +218,11 @@ async function isReleaseTagExists(_package, version) {
 /**
  * Function to create release notes for the package
  * @param {string} _package - Package name to create release notes for
- * @param {string} branch - Branch to create release notes for
+ * @param {string} branch - Branch to query for merged pull requests
+ * @param {string} targetCommitish - Commit to create the release on
  * @returns
  */
-async function createReleaseNotes(_package, branch) {
+async function createReleaseNotes(_package, branch, targetCommitish) {
     try {
         const version = util.getCurrentPackageVersion(_package);
         const isReleaseExists = await isReleaseTagExists(_package, version);
@@ -248,7 +249,7 @@ async function createReleaseNotes(_package, branch) {
         }
 
         const releaseNotes = changes.join('\n');
-        await createRelease(releaseNotes, _package, version, branch);
+        await createRelease(releaseNotes, _package, version, targetCommitish);
     } catch (e) {
         throw new util.CreateReleaseError(e.message);
     }

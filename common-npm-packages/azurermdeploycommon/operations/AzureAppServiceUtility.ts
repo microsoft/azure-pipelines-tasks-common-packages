@@ -144,6 +144,13 @@ export class AzureAppServiceUtility {
             token = await this._appService._client.getCredentials().getToken();
             method = "Bearer";
 
+            // Deprecation tripwire: unlike azure-arm-rest, this legacy package was never updated to
+            // acquireTokenForScope, so it sends an ARM-audience token to Kudu/SCM. No in-repo task
+            // consumes it, so this should effectively never fire in production - the telemetry lets a
+            // monitor confirm that (and catch any external/on-prem consumer) before the path is removed.
+            const kuduArmDeprecation = { source: "azurermdeploycommon", reason: "legacyPackage" };
+            console.log("##vso[telemetry.publish area=TaskDeploymentMethod;feature=KuduArmTokenDeprecated]" + JSON.stringify(kuduArmDeprecation));
+            tl.debug("[deprecation] azurermdeploycommon sent an ARM-audience token to Kudu/SCM. This package/path is deprecated; use azure-pipelines-tasks-azure-arm-rest (scoped tokens) instead.");
             
             // Though bearer AuthN is used, lets try to set publish profile password for mask hints to maintain compat with old behavior for MSDEPLOY. 
             // This needs to be cleaned up once MSDEPLOY suppport is reomve. Safe handle the exception setting up mask hint as we dont want to fail here.

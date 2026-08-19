@@ -71,21 +71,52 @@ export class AzureRMEndpoint {
             batch: 'https://batch.core.usgovcloudapi.net/.default',
             datafactory: 'https://datafactory.azure.us/.default'
         },
+        // BEST-EFFORT / UPFRONT SUPPORT: AzureGermanCloud now maps to the S3NS/SAP "Delos"
+        // sovereign cloud (Germany), the successor to the retired Microsoft Cloud Deutschland.
+        // Endpoints use the sovcloud-api.de root domain. Only 'appservice' and 'resourcemanager'
+        // are authoritative (from the App Service team's cloud.definitions); the remaining
+        // audiences are pattern-derived, dormant placeholders (only 'appservice' is consumed
+        // today) added ahead of full platform enablement to keep the map shape consistent
+        // across clouds. Reconcile the non-appservice audiences against Delos ARM
+        // /metadata/endpoints and confirm the platform's SC environment string before any
+        // other feature relies on them.
         AzureGermanCloud: {
-            resoucemanager: 'https://management.microsoftazure.de/.default',
-            appservice: 'https://appservice.azure.de/.default',
-            storage: 'https://storage.azure.de/.default',
-            keyvalut: 'https://vault.azure.de/.default',
-            sqldatabase: 'https://database.cloudapi.de/.default',
-            cosmosdb: 'https://cosmos.azure.de/.default',
-            servicebus: 'https://servicebus.azure.de/.default',
-            eventhubs: 'https://eventhubs.azure.de/.default',
-            eventgrid: 'https://eventgrid.azure.de/.default',
-            cognitiveservices: 'https://cognitiveservices.azure.de/.default',
-            containerregistry: 'https://containerregistry.azure.de/.default',
-            devops: 'https://app.vssps.visualstudio.de/.default',
-            batch: 'https://batch.core.cloudapi.de/.default',
-            datafactory: 'https://datafactory.azure.de/.default'
+            resourcemanager: 'https://management.sovcloud-api.de/.default',
+            appservice: 'https://appservice.azure.sovcloud-api.de/.default',
+            storage: 'https://storage.azure.sovcloud-api.de/.default',
+            keyvalut: 'https://vault.azure.sovcloud-api.de/.default',
+            sqldatabase: 'https://database.sovcloud-api.de/.default',
+            cosmosdb: 'https://cosmos.azure.sovcloud-api.de/.default',
+            servicebus: 'https://servicebus.azure.sovcloud-api.de/.default',
+            eventhubs: 'https://eventhubs.azure.sovcloud-api.de/.default',
+            eventgrid: 'https://eventgrid.azure.sovcloud-api.de/.default',
+            cognitiveservices: 'https://cognitiveservices.azure.sovcloud-api.de/.default',
+            containerregistry: 'https://containerregistry.azure.sovcloud-api.de/.default',
+            devops: 'https://app.vssps.visualstudio.sovcloud-api.de/.default',
+            batch: 'https://batch.core.sovcloud-api.de/.default',
+            datafactory: 'https://datafactory.azure.sovcloud-api.de/.default'
+        },
+        // BEST-EFFORT / UPFRONT SUPPORT: AzureBleuCloud maps to the "Bleu" sovereign cloud
+        // (France), using the sovcloud-api.fr root domain. Same authoritative/placeholder
+        // split as AzureGermanCloud above — added ahead of full ARM + platform enablement
+        // (Bleu is not yet registered in the ADO SC environment enum) so the mapping is in
+        // place when the cloud comes online. Reconcile the non-appservice audiences against
+        // Bleu ARM /metadata/endpoints before any other feature relies on them.
+        AzureBleuCloud: {
+            resourcemanager: 'https://management.sovcloud-api.fr/.default',
+            appservice: 'https://appservice.azure.sovcloud-api.fr/.default',
+            storage: 'https://storage.azure.sovcloud-api.fr/.default',
+            keyvalut: 'https://vault.azure.sovcloud-api.fr/.default',
+            sqldatabase: 'https://database.sovcloud-api.fr/.default',
+            cosmosdb: 'https://cosmos.azure.sovcloud-api.fr/.default',
+            servicebus: 'https://servicebus.azure.sovcloud-api.fr/.default',
+            eventhubs: 'https://eventhubs.azure.sovcloud-api.fr/.default',
+            eventgrid: 'https://eventgrid.azure.sovcloud-api.fr/.default',
+            cognitiveservices: 'https://cognitiveservices.azure.sovcloud-api.fr/.default',
+            containerregistry: 'https://containerregistry.azure.sovcloud-api.fr/.default',
+            devops: 'https://app.vssps.visualstudio.sovcloud-api.fr/.default',
+            batch: 'https://batch.core.sovcloud-api.fr/.default',
+            datafactory: 'https://datafactory.azure.sovcloud-api.fr/.default'
         }
     }
 

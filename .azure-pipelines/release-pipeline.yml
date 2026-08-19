@@ -1,18 +1,25 @@
-# CI/Release pipeline - triggers on merge to main/releases, builds, tests, and publishes packages
-# This pipeline will be extended to the OneESPT template
-trigger:
-- main
-- releases/*
+# Manual-only release pipeline: build and pack first, then distribute through ESRP.
+name: $(Date:yyyyMMdd)$(Rev:.r)
+
+trigger: none
+pr: none
+
+parameters:
+- name: dryRun
+  displayName: Build and validate without publishing
+  type: boolean
+  default: false
+
 variables:
-- name: skipBuildTagsForGitHubPullRequests
-  value: true
-- group: npm-tokens
+- group: esrp-npm-release
+
 resources:
   repositories:
   - repository: 1ESPipelineTemplates
     type: git
     name: 1ESPipelineTemplates/1ESPipelineTemplates
     ref: refs/tags/release
+
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
@@ -31,24 +38,153 @@ extends:
     customBuildTags:
     - ES365AIMigrationTooling
     stages:
-    - stage: 'BuildAndPublish'
-      displayName: 'Build, Test & Publish Common Npm packages'
-      dependsOn: []
-      pool:
-        name: 1ES-ABTT-Shared-Pool
-        image: abtt-windows-2025
-        os: windows
-      condition: succeeded()
+    - stage: BuildAndPack
+      displayName: Build, test, and pack
       jobs:
-      - job: BuildAndPublishCommonNpmPackages
-        displayName: Build, Test and Publish Common Npm Packages
+      - job: pack
+        displayName: Build and pack common npm packages
+        pool:
+          name: 1ES-ABTT-Shared-Pool
+          image: abtt-ubuntu-2404
+          os: linux
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            targetPath: $(Build.ArtifactStagingDirectory)/npm-packages
+            artifactName: npm-packages
         steps:
         - template: /ci/build-common-packages.yml@self
 
-        - bash: npm run publish
-          condition: and(succeeded(), in(variables['build.reason'], 'IndividualCI', 'BatchedCI', 'Manual'))
-          env:
-            NPM_TOKEN: $(npm-automation.token)
-            GH_TOKEN: $(gh-automation.token)
-          displayName: Publish packages
-          enabled: true
+        - bash: |
+            set -euo pipefail
+            package_root="$(Build.SourcesDirectory)/common-npm-packages"
+            package_output="$(Build.ArtifactStagingDirectory)/npm-packages/packages"
+            mkdir -p "$package_output"
+
+            for package_dir in "$package_root"/*; do
+              package_name="$(basename "$package_dir")"
+              if [ ! -d "$package_dir" ] || [ "$package_name" = "build-scripts" ] || [ ! -f "$package_dir/package.json" ]; then
+                continue
+              fi
+
+              build_dir="$package_dir/_build"
+              if [ ! -f "$build_dir/package.json" ]; then
+                echo "ERROR: Fresh build output is missing for $package_name."
+                exit 1
+              fi
+
+              echo "Packing $package_name from $build_dir"
+              (
+                cd "$build_dir"
+                npm pack --pack-destination "$package_output"
+              )
+            done
+          displayName: Pack fresh package outputs
+
+        - bash: |
+            set -euo pipefail
+            package_root="$(Build.SourcesDirectory)/common-npm-packages"
+            package_output="$(Build.ArtifactStagingDirectory)/npm-packages/packages"
+            expected_count=0
+
+            for package_dir in "$package_root"/*; do
+              package_name="$(basename "$package_dir")"
+              if [ -d "$package_dir" ] && [ "$package_name" != "build-scripts" ] && [ -f "$package_dir/package.json" ]; then
+                expected_count=$((expected_count + 1))
+              fi
+            done
+
+            actual_count="$(find "$package_output" -maxdepth 1 -type f -name '*.tgz' | wc -l | tr -d ' ')"
+            echo "Found $actual_count .tgz file(s) for $expected_count package(s)."
+
+            if [ "$actual_count" -eq 0 ]; then
+              echo "ERROR: npm pack produced no .tgz files."
+              exit 1
+            fi
+            if [ "$expected_count" -ne 15 ]; then
+              echo "ERROR: Expected 15 publishable packages, found $expected_count."
+              exit 1
+            fi
+            if [ "$actual_count" -ne "$expected_count" ]; then
+              echo "ERROR: Expected $expected_count .tgz files, found $actual_count."
+              exit 1
+            fi
+          displayName: Verify package count
+
+        - bash: |
+            set -euo pipefail
+            package_output="$(Build.ArtifactStagingDirectory)/npm-packages/packages"
+
+            for tgz in "$package_output"/*.tgz; do
+              if tar -tzf "$tgz" | grep -E '(^|/)_manifest/'; then
+                echo "ERROR: $tgz contains an SBOM _manifest/ folder."
+                exit 1
+              fi
+            done
+          displayName: Verify packages exclude SBOM manifests
+
+    - ${{ if eq(parameters.dryRun, false) }}:
+      - stage: PublishToNpmViaESRP
+        displayName: Publish to npm via ESRP
+        dependsOn: BuildAndPack
+        jobs:
+        - job: esrp
+          displayName: Publish npm packages through ESRP
+          pool:
+            name: 1ES-ABTT-Shared-Pool
+            image: abtt-windows-2025
+            os: windows
+          templateContext:
+            type: releaseJob
+            isProduction: true
+            inputs:
+            - input: pipelineArtifact
+              artifactName: npm-packages
+              targetPath: $(Pipeline.Workspace)/npm-packages
+          steps:
+          - task: EsrpRelease@12
+            displayName: Publish packages to npm via ESRP
+            inputs:
+              connectedservicename: '$(EsrpServiceConnection)'
+              usemanagedidentity: true
+              keyvaultname: '$(EsrpKeyVault)'
+              signcertname: '$(EsrpSignCert)'
+              clientid: '$(EsrpClientId)'
+              intent: 'PackageDistribution'
+              contenttype: 'npm'
+              contentsource: 'Folder'
+              folderlocation: '$(Pipeline.Workspace)/npm-packages/packages'
+              waitforreleasecompletion: true
+              owners: '$(EsrpOwners)'
+              approvers: '$(EsrpApprovers)'
+              serviceendpointurl: '$(EsrpServiceEndpointUrl)'
+              mainpublisher: '$(EsrpMainPublisher)'
+              domaintenantid: '$(EsrpDomainTenantId)'
+
+        - job: createGitHubReleases
+          displayName: Create GitHub releases and tags
+          dependsOn: esrp
+          pool:
+            name: 1ES-ABTT-Shared-Pool
+            image: abtt-ubuntu-2404
+            os: linux
+          steps:
+          - checkout: self
+            clean: true
+
+          - task: UseNode@1
+            inputs:
+              version: 20.x
+
+          - task: NpmAuthenticate@0
+            inputs:
+              workingFile: .npmrc
+
+          - script: npm ci --omit=dev
+            displayName: Install release-note dependencies
+
+          - script: npm run create-releases
+            displayName: Create GitHub releases
+            env:
+              GH_TOKEN: $(gh-automation.token)
+              RELEASE_TARGET: $(Build.SourceVersion)

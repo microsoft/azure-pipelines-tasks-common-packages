@@ -31,6 +31,7 @@
         "handlebars": "^4.7.9"
     },
     "scripts": {
-        "build": "cd ../build-scripts && npm install && cd ../az-blobstorage-provider && node make.js"
+        "build": "cd ../build-scripts && npm install && cd ../az-blobstorage-provider && node make.js",
+        "build:ci": "node make.js"
     }
 }
