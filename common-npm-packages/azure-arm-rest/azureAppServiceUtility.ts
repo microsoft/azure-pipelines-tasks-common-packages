@@ -195,13 +195,7 @@ export class AzureAppServiceUtility {
         const password = publishingCredentials.properties["publishingPassword"];
 
         if (scmPolicyCheck === false) {
-            const credentials = this._appService._client.getCredentials();
-            if (tl.getPipelineFeature("ALLOWSCOPELEVELTOKEN")) {
-                token = await credentials.acquireTokenForScope("appservice");
-            } else {
-                tl.debug("ALLOWSCOPELEVELTOKEN is disabled; using the legacy ARM-audience token for Kudu.");
-                token = await credentials.getToken();
-            }
+            token = await this._appService._client.getCredentials().acquireTokenForScope("appservice");
             method = "Bearer";
             // Though bearer AuthN is used, lets try to set publish profile password for mask hints to maintain compat with old behavior for MSDEPLOY.
             // This needs to be cleaned up once MSDEPLOY suppport is removed. Safe handle the exception setting up mask hint as we dont want to fail here.
