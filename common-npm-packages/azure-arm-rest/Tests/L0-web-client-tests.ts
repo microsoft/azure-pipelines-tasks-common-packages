@@ -385,6 +385,45 @@ export function WebClientTests() {
         }
     });
 
+    it('returns the timeout error when request resource cleanup fails', async () => {
+        const debugOutput: string[] = [];
+
+        (tl as any).debug = (message: string) => debugOutput.push(message);
+        (httpClient as any).HttpClient = class {
+            public _keepAlive: boolean = false;
+
+            public _getAgent() {
+                return {
+                    destroy: () => {
+                        throw new Error('cleanup failed');
+                    }
+                };
+            }
+
+            public request() {
+                return new Promise(() => { });
+            }
+
+            public dispose() {
+            }
+        };
+
+        const request = Object.assign(new webClient.WebRequest(), {
+            method: 'GET',
+            uri: 'https://example.test',
+            headers: {}
+        });
+        const options = Object.assign(new webClient.WebRequestOptions(), {
+            retryCount: 1,
+            requestTimeout: 20,
+            suppressErrorIssue: true
+        });
+
+        await assert.rejects(webClient.sendRequest(request, options), (error: any) => error.code === 'ETIMEDOUT');
+
+        assert(debugOutput.some(message => message.includes('Failed to dispose timed-out request resource: cleanup failed')));
+    });
+
     it('terminates a proxy CONNECT request when the proxy does not respond', async () => {
         const proxyServer = http.createServer();
         proxyServer.on('connect', () => {

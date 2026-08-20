@@ -188,18 +188,28 @@ function prepareRequestResources(client: httpClient.HttpClient, request: WebRequ
     }
 
     return () => {
-        pendingProxyRequests.splice(0).forEach(proxyRequest => proxyRequest.destroy());
+        pendingProxyRequests.splice(0).forEach(proxyRequest => disposeRequestResource(() => proxyRequest.destroy()));
         if (isTunnelingAgent) {
-            agent.requests.splice(0).forEach(pendingRequest => pendingRequest.request.destroy());
+            agent.requests.splice(0).forEach(pendingRequest => disposeRequestResource(() => pendingRequest.request.destroy()));
             agent.sockets.splice(0).forEach(socket => {
-                if (socket && socket.destroy) {
-                    socket.destroy();
-                }
+                disposeRequestResource(() => {
+                    if (socket && socket.destroy) {
+                        socket.destroy();
+                    }
+                });
             });
         } else if (agent && typeof agent.destroy === 'function') {
-            agent.destroy();
+            disposeRequestResource(() => agent.destroy());
         }
     };
+}
+
+function disposeRequestResource(dispose: () => void): void {
+    try {
+        dispose();
+    } catch (error: any) {
+        tl.debug(`Failed to dispose timed-out request resource: ${error && error.message ? error.message : error}`);
+    }
 }
 
 async function toWebResponse(response: httpClient.HttpClientResponse): Promise<WebResponse> {
