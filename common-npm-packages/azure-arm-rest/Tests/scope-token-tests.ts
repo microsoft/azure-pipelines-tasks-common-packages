@@ -6,6 +6,8 @@ import os = require('os');
 import path = require('path');
 import tl = require('azure-pipelines-task-lib/task');
 
+const scopeFeatureVariable = "DISTRIBUTEDTASK_TASKS_ALLOWSCOPELEVELTOKEN";
+
 // Installs the ARM (ADAL) nock interceptor that answers the client-credentials token
 // request with "DUMMY_ACCESS_TOKEN". This is the ARM-audience token that acquireTokenForScope
 // must return whenever it falls back (feature disabled or scope unmapped).
@@ -36,7 +38,7 @@ function makeCreds(allowScopeLevelToken: boolean, scopes: any): ApplicationToken
     );
 }
 
-function makeManagedIdentityCreds(): any {
+function makeManagedIdentityCreds(allowScopeLevelToken = true): any {
     return new ApplicationTokenCredentials(
         "MOCK_SERVICE_CONNECTION",
         undefined,
@@ -53,7 +55,7 @@ function makeManagedIdentityCreds(): any {
         undefined,
         undefined,
         true,
-        true,
+        allowScopeLevelToken,
         { appservice: "https://appservice/.default" }
     );
 }
@@ -62,6 +64,7 @@ class ScopeTokenTests {
     // Feature enabled and scope mapped -> returns the App Service-audience token.
     public static async scopedTokenSuccess() {
         try {
+            process.env[scopeFeatureVariable] = "true";
             const creds: any = makeCreds(true, { appservice: "https://appservice/.default" });
             creds.buildCredentialByScheme = async () => ({
                 credential: {
@@ -83,19 +86,33 @@ class ScopeTokenTests {
 
     // Feature disabled -> returns the ARM-audience token, no warning.
     public static async fallbackWhenFeatureDisabled() {
+        const originalLog = console.log;
+        let emittedScopeTelemetry = false;
         try {
+            process.env[scopeFeatureVariable] = "false";
+            console.log = (...args: any[]) => {
+                if (args.join(" ").indexOf("feature=KuduScopeLevelToken") >= 0) {
+                    emittedScopeTelemetry = true;
+                }
+                originalLog.apply(console, args);
+            };
             const creds = makeCreds(false, undefined);
             const token = await creds.acquireTokenForScope("appservice");
-            console.log('FALLBACK_DISABLED_TOKEN: ' + token);
+            originalLog('FALLBACK_DISABLED_TOKEN: ' + token);
         } catch (error) {
-            console.log(error);
+            originalLog(error);
             tl.setResult(tl.TaskResult.Failed, 'fallbackWhenFeatureDisabled should have passed but failed');
+        } finally {
+            console.log = originalLog;
+            originalLog('FALLBACK_DISABLED_TELEMETRY: ' + emittedScopeTelemetry);
+            process.env[scopeFeatureVariable] = "true";
         }
     }
 
     // Feature enabled but no scope mapped for this environment -> warns, then falls back to ARM.
     public static async fallbackWhenScopeUnmapped() {
         try {
+            process.env[scopeFeatureVariable] = "true";
             const creds = makeCreds(true, {}); // no 'appservice' key
             const token = await creds.acquireTokenForScope("appservice");
             console.log('FALLBACK_UNMAPPED_TOKEN: ' + token);
@@ -110,6 +127,7 @@ class ScopeTokenTests {
     // Service-audience token, no ARM compromise.
     public static async scopedTokenSuccessOnLegacyNode() {
         try {
+            process.env[scopeFeatureVariable] = "true";
             const creds: any = makeCreds(true, { appservice: "https://appservice/.default" });
             creds.supportsModernIdentity = () => false;
             creds.getMSALToken = async (_force: boolean, _retryCount: number, _retryWaitMS: number, scopeOverride: string) => {
@@ -159,10 +177,45 @@ class ScopeTokenTests {
         }
     }
 
+    // Feature disabled -> preserve the previous Managed Identity resource even if MSAL supplies
+    // a different requested scope to the token provider.
+    public static async managedIdentityLegacyResourceWhenFeatureDisabled() {
+        try {
+            nock("http://169.254.169.254", {
+                reqheaders: {
+                    "Metadata": true
+                }
+            })
+                .get("/metadata/identity/oauth2/token")
+                .query({
+                    "api-version": "2018-02-01",
+                    "resource": "https://management.azure.com/"
+                })
+                .reply(200, {
+                    access_token: "DUMMY_ARM_TOKEN_FROM_MSI",
+                    expires_in: 3600
+                });
+
+            const creds = makeManagedIdentityCreds(false);
+            const msalClient = await creds.buildMSAL();
+            const result = await msalClient.acquireTokenByClientCredential({
+                scopes: ["https://appservice/.default"]
+            });
+            if (result.accessToken !== "DUMMY_ARM_TOKEN_FROM_MSI") {
+                throw new Error(`unexpected Managed Identity token: ${result.accessToken}`);
+            }
+            console.log('MSI_FEATURE_DISABLED_RESOURCE: https://management.azure.com/');
+        } catch (error) {
+            console.log(error);
+            tl.setResult(tl.TaskResult.Failed, 'managedIdentityLegacyResourceWhenFeatureDisabled should have passed but failed');
+        }
+    }
+
     public static async federatedTokenFileCleanup() {
         let tempDirectory: string;
         let cleanupFailurePath: string;
         try {
+            process.env[scopeFeatureVariable] = "true";
             const creds: any = makeCreds(true, { appservice: "https://appservice/.default" });
             tempDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'azure-arm-rest-'));
             const tokenFilePath = path.join(tempDirectory, 'token.jwt');
@@ -191,6 +244,7 @@ class ScopeTokenTests {
 
     public static async unknownKuduAuthMode() {
         try {
+            process.env[scopeFeatureVariable] = "true";
             publishKuduAuthModeTelemetry({
                 authMethod: "Bearer",
                 source: "test",
@@ -211,9 +265,35 @@ class ScopeTokenTests {
         }
     }
 
+    public static async kuduAuthModeFeatureDisabled() {
+        const originalLog = console.log;
+        let emittedKuduAuthModeTelemetry = false;
+        try {
+            process.env[scopeFeatureVariable] = "false";
+            console.log = (...args: any[]) => {
+                if (args.join(" ").indexOf("feature=KuduAuthMode") >= 0) {
+                    emittedKuduAuthModeTelemetry = true;
+                }
+                originalLog.apply(console, args);
+            };
+            publishKuduAuthModeTelemetry({
+                authMethod: "Basic",
+                source: "test"
+            });
+        } catch (error) {
+            originalLog(error);
+            tl.setResult(tl.TaskResult.Failed, 'kuduAuthModeFeatureDisabled should have passed but failed');
+        } finally {
+            console.log = originalLog;
+            originalLog('KUDU_AUTH_DISABLED_TELEMETRY: ' + emittedKuduAuthModeTelemetry);
+            process.env[scopeFeatureVariable] = "true";
+        }
+    }
+
     // Feature enabled and scope mapped, but scoped token acquisition fails -> fails without ARM fallback.
     public static async scopedTokenFailure() {
         try {
+            process.env[scopeFeatureVariable] = "true";
             const creds: any = makeCreds(true, { appservice: "https://appservice/.default" });
             creds.buildCredentialByScheme = async () => ({
                 credential: {
@@ -234,8 +314,10 @@ async function RUNTESTS() {
     await ScopeTokenTests.scopedTokenSuccess();
     await ScopeTokenTests.scopedTokenSuccessOnLegacyNode();
     await ScopeTokenTests.managedIdentityScopeResource();
+    await ScopeTokenTests.managedIdentityLegacyResourceWhenFeatureDisabled();
     await ScopeTokenTests.federatedTokenFileCleanup();
     await ScopeTokenTests.unknownKuduAuthMode();
+    await ScopeTokenTests.kuduAuthModeFeatureDisabled();
     await ScopeTokenTests.fallbackWhenFeatureDisabled();
     await ScopeTokenTests.fallbackWhenScopeUnmapped();
     await ScopeTokenTests.scopedTokenFailure();

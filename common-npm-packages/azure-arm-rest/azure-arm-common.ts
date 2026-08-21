@@ -398,10 +398,14 @@ export class ApplicationTokenCredentials {
                 let webRequest = new webClient.WebRequest();
                 webRequest.method = "GET";
                 let apiVersion = "2018-02-01";
-                let requestedScope = appTokenProviderParameters && appTokenProviderParameters.scopes
-                    ? appTokenProviderParameters.scopes[0]
-                    : undefined;
-                let resourceId = this.getResourceIdFromScope(requestedScope);
+                // Preserve the legacy ARM resource unless scoped tokens are enabled.
+                let resourceId = this.activeDirectoryResourceId;
+                if (this.allowScopeLevelToken) {
+                    const requestedScope = appTokenProviderParameters && appTokenProviderParameters.scopes
+                        ? appTokenProviderParameters.scopes[0]
+                        : undefined;
+                    resourceId = this.getResourceIdFromScope(requestedScope);
+                }
                 webRequest.uri = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=" + apiVersion + "&resource=" + resourceId;
                 webRequest.headers = {
                     "Metadata": true
@@ -543,8 +547,10 @@ export class ApplicationTokenCredentials {
             msalApp.clearCache();
         }
         try {
+            // Preserve the legacy ARM scope unless scoped tokens are enabled.
+            const effectiveScopeOverride = this.allowScopeLevelToken ? scopeOverride : undefined;
             const request: any /*msal.ClientCredentialRequest*/ = {
-                scopes: [scopeOverride || (this.activeDirectoryResourceId + "/.default")]
+                scopes: [effectiveScopeOverride || (this.activeDirectoryResourceId + "/.default")]
             };
             const response = await msalApp.acquireTokenByClientCredential(request);
             tl.debug(`MSAL - retrieved token - isFromCache?: ${response.fromCache}`);
@@ -628,6 +634,10 @@ export class ApplicationTokenCredentials {
     // metadata is recorded - never a token, secret, or credential material. authorityHost is a
     // public Entra login endpoint used to identify the cloud.
     private publishScopeTokenTelemetry(scopeKind: string, requestedAudience: string, outcome: string): void {
+        if (!this.allowScopeLevelToken) {
+            return;
+        }
+
         // Remember the most recent decision so getLastScopeTokenTelemetry() can expose it to the
         // Kudu auth layer for the unified KuduAuthMode event. Existing events below are unchanged.
         this._lastRequestedAudience = requestedAudience;
@@ -772,6 +782,10 @@ export class ApplicationTokenCredentials {
     }
 
     private publishFederatedTokenFileCleanupTelemetry(outcome: string): void {
+        if (!this.allowScopeLevelToken) {
+            return;
+        }
+
         try {
             console.log(`##vso[telemetry.publish area=TaskDeploymentMethod;feature=FederatedTokenFileCleanup]${JSON.stringify({ outcome: outcome })}`);
         } catch (error) {
