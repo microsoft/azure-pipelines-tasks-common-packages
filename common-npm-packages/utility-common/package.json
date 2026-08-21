@@ -19,11 +19,11 @@
     "homepage": "https://github.com/microsoft/azure-pipelines-tasks-common-packages#readme",
     "dependencies": {
         "@types/node": "^16.18.0",
-        "azure-pipelines-task-lib": "^5.278.2",
-        "azure-pipelines-tool-lib": "^2.0.12",
+        "azure-pipelines-task-lib": "^5.279.0",
+        "azure-pipelines-tool-lib": "^2.279.0",
         "js-yaml": "^3.15.1",
         "semver": "^5.7.2",
-        "typed-rest-client": "2.2.0"
+        "typed-rest-client": "^3.1.0"
     },
     "devDependencies": {
         "@types/mocha": "^8.2.3",
