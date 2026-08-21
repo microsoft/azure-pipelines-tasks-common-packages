@@ -163,7 +163,8 @@ function prepareRequestResources(client: httpClient.HttpClient, request: WebRequ
     }
 
     const internalClient: any = client;
-    if (typeof internalClient._getAgent !== 'function') {
+    if (typeof internalClient._getAgent !== 'function' || typeof internalClient._keepAlive !== 'boolean') {
+        tl.debug('Request timeout cleanup is unavailable because the typed-rest-client agent API has changed.');
         return () => { };
     }
 

@@ -424,6 +424,17 @@ export function WebClientTests() {
         assert(debugOutput.some(message => message.includes('Failed to dispose timed-out request resource: cleanup failed')));
     });
 
+    it('supports the typed-rest-client internals required for timeout cleanup', () => {
+        const client: any = new originalHttpClient('azure-arm-rest-tests', [], {});
+
+        try {
+            assert.strictEqual(typeof client._getAgent, 'function');
+            assert.strictEqual(typeof client._keepAlive, 'boolean');
+        } finally {
+            client.dispose();
+        }
+    });
+
     it('terminates a proxy CONNECT request when the proxy does not respond', async () => {
         const proxyServer = http.createServer();
         proxyServer.on('connect', () => {
