@@ -252,7 +252,14 @@ async function getLatestAzureModuleReleaseVersion(moduleName: string): Promise<s
         request.uri = `https://api.github.com/repos/Azure/${moduleName}/releases`;
         request.method = 'GET';
         request.headers = request.headers || {};
-        const response = await webClient.sendRequest(request);
+        const enableRequestTimeout = tl.getPipelineFeature("EnableAzureModuleVersionCheckRequestTimeout");
+        const response = enableRequestTimeout
+            ? await webClient.sendRequest(request, Object.assign(new webClient.WebRequestOptions(), {
+                retryCount: 1,
+                requestTimeout: 3000,
+                suppressErrorIssue: true
+            }))
+            : await webClient.sendRequest(request);
         const lastestCliRelease = moduleName === "azure-powershell" ? response?.body?.filter(x => x?.tag_name?.match(/^v\d+\.\d+\.0/))?.[0] : response?.body?.[0];
         return lastestCliRelease?.tag_name
     } catch (err) {
