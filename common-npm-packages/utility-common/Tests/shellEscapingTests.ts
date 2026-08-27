@@ -365,4 +365,37 @@ export function runShellSplitTests() {
         const escaped = tokens.map(t => neutralizeCommandSubstitution(t)!);
         assert.equal(escaped.join(' '), '-DFOO=bar -DBAZ=\\$\\(whoami\\)');
     });
+
+    it('preserves double quotes nested inside single quotes (JSON value)', () => {
+        assert.deepEqual(
+            shellSplit(`--extra-vars '{"a":"b"}'`),
+            ['--extra-vars', '{"a":"b"}']
+        );
+    });
+
+    it('preserves nested double quotes for a more complex JSON value', () => {
+        assert.deepEqual(
+            shellSplit(`-e '{"k":"v","n":1}'`),
+            ['-e', '{"k":"v","n":1}']
+        );
+    });
+
+    it('preserves single quotes nested inside double quotes', () => {
+        assert.deepEqual(
+            shellSplit(`--msg "it's fine"`),
+            ['--msg', "it's fine"]
+        );
+    });
+
+    it('workflow keeps JSON --extra-vars intact: split escapes quotes for the shell (regression: extra-vars corruption)', () => {
+        // The buggy tokenizer stripped the inner quotes, turning
+        // --extra-vars '{"a":"b"}' into --extra-vars {a:b}, which ansible-playbook
+        // silently mis-parsed as YAML. With quote context preserved, the double
+        // quotes survive and neutralizeCommandSubstitution escapes them so the
+        // shell hands the original JSON object back to ansible-playbook.
+        const tokens = shellSplit(`--extra-vars '{"a":"b"}'`);
+        assert.deepEqual(tokens, ['--extra-vars', '{"a":"b"}']);
+        const escaped = tokens.map(t => neutralizeCommandSubstitution(t)!).join(' ');
+        assert.equal(escaped, '--extra-vars {\\"a\\":\\"b\\"}');
+    });
 }

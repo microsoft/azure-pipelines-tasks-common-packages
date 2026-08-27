@@ -48,12 +48,69 @@ export function neutralizeCommandSubstitution(value: string | null | undefined):
 }
 
 /**
+ * Removes one level of POSIX shell quoting from a single, already-tokenized
+ * argument, honouring quote context so that quote characters nested inside a
+ * different quoting style survive as literals.
+ *
+ * Unlike a sequence of independent global regex replacements, this is a single
+ * left-to-right pass, so the double quotes inside a single-quoted JSON value are
+ * preserved: removeShellQuoting(`'{"a":"b"}'`) === `{"a":"b"}`.
+ *
+ * Rules (matching /bin/sh):
+ * - Single quotes '...'  : every character is literal until the next single quote.
+ * - Double quotes "..."  : a backslash only escapes $ ` " \ and newline; every
+ *                          other character (including ') is literal.
+ * - Unquoted backslash   : escapes the following character.
+ */
+function removeShellQuoting(raw: string): string {
+    let result = '';
+    let i = 0;
+
+    while (i < raw.length) {
+        const ch = raw[i];
+
+        if (ch === "'") {
+            i++;
+            while (i < raw.length && raw[i] !== "'") {
+                result += raw[i++];
+            }
+            i++; // consume the closing quote (if present)
+        } else if (ch === '"') {
+            i++;
+            while (i < raw.length && raw[i] !== '"') {
+                if (raw[i] === '\\' && i + 1 < raw.length && '$`"\\\n'.indexOf(raw[i + 1]) !== -1) {
+                    result += raw[i + 1];
+                    i += 2;
+                } else {
+                    result += raw[i++];
+                }
+            }
+            i++; // consume the closing quote (if present)
+        } else if (ch === '\\') {
+            if (i + 1 < raw.length) {
+                result += raw[i + 1];
+                i += 2;
+            } else {
+                i++;
+            }
+        } else {
+            result += raw[i++];
+        }
+    }
+
+    return result;
+}
+
+/**
  * @example
  * shellSplit('-DFOO=bar -DBAZ="hello world"')
  * // → ['-DFOO=bar', '-DBAZ=hello world']
  *
  * shellSplit("-DPATH='/usr/local/my app' -DVER=1.0")
  * // → ['-DPATH=/usr/local/my app', '-DVER=1.0']
+ *
+ * shellSplit(`--extra-vars '{"a":"b"}'`)
+ * // → ['--extra-vars', '{"a":"b"}']   (nested double quotes preserved)
  *
  * // Full workflow for multi-param inputs:
  * shellSplit(args).map(neutralizeCommandSubstitution).join(' ')
@@ -67,14 +124,7 @@ export function shellSplit(value: string | null | undefined): string[] {
     let match: RegExpExecArray | null;
 
     while ((match = tokenRegex.exec(value)) !== null) {
-        const token = match[0]
-            .replace(/'([^']*)'/g, '$1')
-            .replace(/"((?:[^"\\]|\\.)*)"/g, (_: string, content: string) =>
-                content.replace(/\\([$`"\\]|\n)/g, '$1')
-            )
-            .replace(/\\(.)/g, '$1');
-
-        tokens.push(token);
+        tokens.push(removeShellQuoting(match[0]));
     }
 
     return tokens;
