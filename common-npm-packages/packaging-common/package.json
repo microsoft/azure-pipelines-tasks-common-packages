@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-packaging-common",
-    "version": "3.279.0",
+    "version": "3.280.0",
     "description": "Azure Pipelines Packaging Tasks Common",
     "scripts": {
         "test": "mocha _build/Tests/L0.js",
@@ -19,10 +19,10 @@
         "@types/ltx": "2.8.0",
         "@types/node": "^16.18.0",
         "@types/q": "1.5.2",
-        "adm-zip": "^0.4.11",
+        "adm-zip": "^0.6.0",
         "azure-devops-node-api": "^17.0.0",
         "azure-pipelines-task-lib": "^5.279.0",
-        "azure-pipelines-tool-lib": "^2.279.0",
+        "azure-pipelines-tool-lib": "^2.279.1",
         "ini": "^1.3.8",
         "ip-address": "^10.4.0",
         "ltx": "^2.6.2",

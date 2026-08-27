@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-azurermdeploycommon",
-    "version": "3.279.2",
+    "version": "3.280.0",
     "description": "Common Lib for Azure ARM REST apis",
     "repository": {
         "type": "git",
@@ -35,6 +35,7 @@
     },
     "overrides": {
         "brace-expansion@1.x": { ".": "1.1.18" },
-        "brace-expansion@2.x": { ".": "2.1.4" }
+        "brace-expansion@2.x": { ".": "2.1.4" },
+        "picomatch": "^2.3.2"
     }
 }
