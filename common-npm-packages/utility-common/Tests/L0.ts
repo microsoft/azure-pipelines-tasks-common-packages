@@ -1,5 +1,5 @@
 import { runArgsSanitizerTelemetryTests, runArgsSanitizerTests } from './argsSanitizerTests';
-import { runShellQuoteTests, runNeutralizeCommandSubstitutionTests, runShellSplitTests } from './shellEscapingTests';
+import { runShellQuoteTests, runNeutralizeCommandSubstitutionTests, runShellSplitTests, runRealShellExecutionTests } from './shellEscapingTests';
 
 describe('codeanalysis-common suite', () => {
     describe('Args sanitizer tests', runArgsSanitizerTests);
@@ -11,4 +11,6 @@ describe('codeanalysis-common suite', () => {
     describe('neutralizeCommandSubstitution', runNeutralizeCommandSubstitutionTests);
 
     describe('shellSplit', runShellSplitTests);
+
+    describe('shell execution safety (real shell)', runRealShellExecutionTests);
 });

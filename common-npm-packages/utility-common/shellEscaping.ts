@@ -35,6 +35,15 @@ const SPECIAL_SEQUENCES: Record<string, string> = {
  * neutralizeCommandSubstitution("test;whoami")        // → "test\\;whoami"
  * neutralizeCommandSubstitution("test|curl evil.com") // → "test\\|curl evil.com"
  * neutralizeCommandSubstitution("'; whoami; echo '")  // → "\\'\\;\\ whoami\\;\\ echo\\ \\'"
+ *
+ * NOTE: This function deliberately preserves shell variable expansion ($VAR and
+ * ${VAR}) and therefore does NOT neutralize brace expansion ({a,b} / {1..5}),
+ * pathname globbing (* ? [ ]) or tilde expansion (~). For example bash expands
+ * an unquoted multi-key JSON value '{"a":"b","c":"d"}' via brace expansion into
+ * two words, corrupting the value. When the argument is fully untrusted and no
+ * variable expansion is required (e.g. an Ansible --extra-vars JSON blob), wrap
+ * each token with shellQuote() instead — single quoting keeps the value intact
+ * and inert against every form of shell interpretation.
  */
 export function neutralizeCommandSubstitution(value: string | null | undefined): string | null | undefined {
     if (!value) return value;
@@ -112,8 +121,13 @@ function removeShellQuoting(raw: string): string {
  * shellSplit(`--extra-vars '{"a":"b"}'`)
  * // → ['--extra-vars', '{"a":"b"}']   (nested double quotes preserved)
  *
- * // Full workflow for multi-param inputs:
- * shellSplit(args).map(neutralizeCommandSubstitution).join(' ')
+ * // Safe workflow for fully-untrusted, multi-param inputs — re-quote every token
+ * // so the shell treats each one as a single, literal argument:
+ * shellSplit(args).map(shellQuote).join(' ')
+ *
+ * // Use .map(neutralizeCommandSubstitution) instead only when shell variable
+ * // expansion ($VAR/${VAR}) must be preserved AND the input cannot contain
+ * // brace/glob/tilde metacharacters (see neutralizeCommandSubstitution notes).
  */
 export function shellSplit(value: string | null | undefined): string[] {
     if (!value) return [];

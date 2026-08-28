@@ -1,4 +1,6 @@
 import * as assert from 'assert';
+import { execFileSync } from 'child_process';
+import * as fs from 'fs';
 import { shellQuote, neutralizeCommandSubstitution, shellSplit } from "../shellEscaping";
 export function runShellQuoteTests() {
     it('wraps empty string', () => {
@@ -387,15 +389,93 @@ export function runShellSplitTests() {
         );
     });
 
-    it('workflow keeps JSON --extra-vars intact: split escapes quotes for the shell (regression: extra-vars corruption)', () => {
+    it('workflow keeps JSON --extra-vars intact via shellQuote (regression: extra-vars corruption)', () => {
         // The buggy tokenizer stripped the inner quotes, turning
         // --extra-vars '{"a":"b"}' into --extra-vars {a:b}, which ansible-playbook
-        // silently mis-parsed as YAML. With quote context preserved, the double
-        // quotes survive and neutralizeCommandSubstitution escapes them so the
-        // shell hands the original JSON object back to ansible-playbook.
-        const tokens = shellSplit(`--extra-vars '{"a":"b"}'`);
-        assert.deepEqual(tokens, ['--extra-vars', '{"a":"b"}']);
-        const escaped = tokens.map(t => neutralizeCommandSubstitution(t)!).join(' ');
-        assert.equal(escaped, '--extra-vars {\\"a\\":\\"b\\"}');
+        // silently mis-parsed as YAML. With quote context preserved the double
+        // quotes survive tokenization; wrapping each token with shellQuote then
+        // hands the original JSON object back to the shell as a single literal
+        // argument (and, unlike neutralizeCommandSubstitution, keeps multi-key
+        // JSON safe from brace expansion).
+        const tokens = shellSplit(`--extra-vars '{"a":"b","c":"d"}'`);
+        assert.deepEqual(tokens, ['--extra-vars', '{"a":"b","c":"d"}']);
+        const quoted = tokens.map(t => shellQuote(t)).join(' ');
+        assert.equal(quoted, `'--extra-vars' '{"a":"b","c":"d"}'`);
+    });
+}
+
+/**
+ * Locate a POSIX shell so the neutralized/quoted command lines can be parsed by a
+ * real shell. Returns null when none is available (e.g. a bare Windows agent), in
+ * which case the dependent tests self-skip.
+ */
+function findPosixShell(): string | null {
+    const candidates = process.platform === 'win32'
+        ? [
+            'C:\\Program Files\\Git\\bin\\bash.exe',
+            'C:\\Program Files\\Git\\usr\\bin\\bash.exe',
+            'C:\\Program Files (x86)\\Git\\bin\\bash.exe',
+        ]
+        : ['/bin/bash', '/usr/bin/bash', '/bin/sh'];
+
+    for (const candidate of candidates) {
+        try {
+            if (fs.existsSync(candidate)) {
+                return candidate;
+            }
+        } catch {
+            // ignore and try the next candidate
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Run `commandLine` through a real POSIX shell and return the argument vector the
+ * shell actually produced. A NUL delimiter is used so arguments never collide
+ * with the separator.
+ */
+function shellArgv(shell: string, commandLine: string): string[] {
+    const script = `__printer() { for __a in "$@"; do printf '%s\\0' "$__a"; done; }; __printer ${commandLine}`;
+    const out = execFileSync(shell, ['-c', script], { encoding: 'utf8' });
+    const parts = out.split('\0');
+    parts.pop(); // trailing empty element after the last delimiter
+    return parts;
+}
+
+export function runRealShellExecutionTests() {
+    const shell = findPosixShell();
+
+    it('shellQuote workflow: multi-key JSON --extra-vars survives as a single argument', function () {
+        if (!shell) { this.skip(); return; }
+        const input = `--extra-vars '{"a":"b","c":"d"}'`;
+        const commandLine = shellSplit(input).map(t => shellQuote(t)).join(' ');
+        assert.deepEqual(shellArgv(shell, commandLine), ['--extra-vars', '{"a":"b","c":"d"}']);
+    });
+
+    it('shellQuote workflow: nested single- and double-quoted JSON survives intact', function () {
+        if (!shell) { this.skip(); return; }
+        const input = `-e '{"path":"/tmp/*","list":"a,b,c","home":"~"}'`;
+        const commandLine = shellSplit(input).map(t => shellQuote(t)).join(' ');
+        assert.deepEqual(shellArgv(shell, commandLine), ['-e', '{"path":"/tmp/*","list":"a,b,c","home":"~"}']);
+    });
+
+    it('shellQuote workflow: command-injection metacharacters stay literal (no execution)', function () {
+        if (!shell) { this.skip(); return; }
+        const input = `--become-user 'root'; whoami`;
+        const commandLine = shellSplit(input).map(t => shellQuote(t)).join(' ');
+        // whoami must appear verbatim as an argument rather than running as a command.
+        assert.deepEqual(shellArgv(shell, commandLine), ['--become-user', 'root;', 'whoami']);
+    });
+
+    it('neutralizeCommandSubstitution workflow brace-expands multi-key JSON (documents why shellQuote is preferred)', function () {
+        if (!shell) { this.skip(); return; }
+        const input = `--extra-vars '{"a":"b","c":"d"}'`;
+        const commandLine = shellSplit(input).map(t => neutralizeCommandSubstitution(t)!).join(' ');
+        // Regression guard: the neutralize pattern leaves { , } unescaped, so bash
+        // brace-expands the JSON into two words and drops the braces. This is the
+        // exact corruption the Ansible task avoids by using shellQuote instead.
+        assert.deepEqual(shellArgv(shell, commandLine), ['--extra-vars', '"a":"b"', '"c":"d"']);
     });
 }
