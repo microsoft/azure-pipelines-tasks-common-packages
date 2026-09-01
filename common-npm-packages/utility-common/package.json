@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-utility-common",
-    "version": "3.279.1",
+    "version": "3.280.0",
     "description": "Common Library for Azure Rest Calls",
     "repository": {
         "type": "git",
@@ -20,7 +20,7 @@
     "dependencies": {
         "@types/node": "^16.18.0",
         "azure-pipelines-task-lib": "^5.279.0",
-        "azure-pipelines-tool-lib": "^2.279.0",
+        "azure-pipelines-tool-lib": "^2.279.2",
         "js-yaml": "^3.15.1",
         "semver": "^5.7.2",
         "typed-rest-client": "^3.1.0"
