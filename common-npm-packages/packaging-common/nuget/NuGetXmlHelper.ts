@@ -156,7 +156,7 @@ export class NuGetXmlHelper implements INuGetXmlHelper {
         }
 
         // replace the following
-        const invalidCharacters = [" ", ":"];
+        const invalidCharacters = [" ", ":", "@"];
         for (let i = 1; i < name.length; i++) {
             if (invalidCharacters.indexOf(name[i]) >= 0) {
                 name = name.substr(0, i) + NuGetXmlHelper._nuGetEncodeCharater(name[i]) + name.substr(i + 1);
