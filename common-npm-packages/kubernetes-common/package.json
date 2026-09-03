@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-kubernetes-common",
-    "version": "2.279.0",
+    "version": "2.280.0",
     "description": "Common Library for Kubernetes",
     "repository": {
         "type": "git",
@@ -20,7 +20,7 @@
         "@types/uuid": "8.3.0",
         "azure-devops-node-api": "^17.0.0",
         "azure-pipelines-task-lib": "^5.279.0",
-        "azure-pipelines-tool-lib": "^2.279.0",
+        "azure-pipelines-tool-lib": "^2.279.2",
         "js-yaml": "^3.15.1",
         "node-forge": "^1.4.0"
     },
