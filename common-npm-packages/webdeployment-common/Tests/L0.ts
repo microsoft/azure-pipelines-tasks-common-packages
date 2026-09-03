@@ -9,6 +9,7 @@ import { runL1JsonVarSubV2Tests } from "./L1JsonVarSubV2";
 import { runL1ValidateFileEncodingTests } from "./L1ValidateFileEncoding";
 import { runParameterParserUtilityTests } from "./L0ParameterParserUtility";
 import { runL1ZipUtilityTests } from "./L1ZipUtility";
+import { runValidateDatabaseNameTests } from "./L0ValidateDatabaseName";
 
 describe('Web deployment common tests', () => {
     describe('GetMSDeployCmdArgs tests', runGetMSDeployCmdArgsTests);
@@ -23,4 +24,5 @@ describe('Web deployment common tests', () => {
     describe("L1ValidateFileEncoding tests", runL1ValidateFileEncodingTests);
     describe("ParameterParserUtility tests", runParameterParserUtilityTests);
     describe("ZipUtility tests", runL1ZipUtilityTests);
+    describe("ValidateDatabaseName tests", runValidateDatabaseNameTests);
 });
