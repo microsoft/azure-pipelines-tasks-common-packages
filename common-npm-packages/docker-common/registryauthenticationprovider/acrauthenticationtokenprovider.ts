@@ -5,9 +5,13 @@ import { AzureRMEndpoint } from "azure-pipelines-tasks-azure-arm-rest/azure-arm-
 import * as webClient from "azure-pipelines-tasks-azure-arm-rest/webClient";
 import * as tl from "azure-pipelines-task-lib/task";
 import Q = require('q');
+import path = require('path');
 
 import AuthenticationTokenProvider from "./authenticationtokenprovider";
 import RegistryAuthenticationToken from "./registryauthenticationtoken";
+import { shouldBlockRegistryHost } from "./registryhostvalidation";
+
+tl.setResourcePath(path.join(__dirname, '..', 'module.json'), true);
 
 export default class ACRAuthenticationTokenProvider extends AuthenticationTokenProvider{
 
@@ -92,6 +96,10 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
     private static _getACRToken(AADToken: string, endpointName: string, registryURL: string, retryCount: number, timeToWait: number): Q.Promise<string> {
         tl.debug("Attempting to convert AAD Token to an ACR token");
         let deferred = Q.defer<string>();
+        if (shouldBlockRegistryHost(registryURL)) {
+            deferred.reject(new Error(tl.loc("InvalidRegistryHost", registryURL)));
+            return deferred.promise;
+        }
         let tenantID = tl.getEndpointAuthorizationParameter(endpointName, 'tenantid', true);
         let webRequest = new webClient.WebRequest();
         webRequest.method = "POST";
