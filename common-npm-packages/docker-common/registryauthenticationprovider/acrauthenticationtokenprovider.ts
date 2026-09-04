@@ -5,9 +5,13 @@ import { AzureRMEndpoint } from "azure-pipelines-tasks-azure-arm-rest/azure-arm-
 import * as webClient from "azure-pipelines-tasks-azure-arm-rest/webClient";
 import * as tl from "azure-pipelines-task-lib/task";
 import Q = require('q');
+import path = require('path');
 
 import AuthenticationTokenProvider from "./authenticationtokenprovider";
 import RegistryAuthenticationToken from "./registryauthenticationtoken";
+import { shouldBlockRegistryHost } from "./registryhostvalidation";
+
+tl.setResourcePath(path.join(__dirname, '..', 'module.json'), true);
 
 export default class ACRAuthenticationTokenProvider extends AuthenticationTokenProvider{
 
@@ -40,6 +44,9 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
     }
 
     public getAuthenticationToken(): RegistryAuthenticationToken {
+        if (shouldBlockRegistryHost(this.registryURL)) {
+            throw new Error(tl.loc("InvalidRegistryHost", this.registryURL));
+        }
         if (this.registryURL && this.endpointName) {
             return new RegistryAuthenticationToken(
                 tl.getEndpointAuthorizationParameter(this.endpointName, 'serviceprincipalid', true),
@@ -52,6 +59,9 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
     }
 
     public async getToken(): Promise<RegistryAuthenticationToken> {
+        if (shouldBlockRegistryHost(this.registryURL)) {
+            throw new Error(tl.loc("InvalidRegistryHost", this.registryURL));
+        }
         let authType: string;
         try {
             tl.debug("Attempting to get endpoint authorization scheme...");
@@ -89,6 +99,8 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
         }
     }
 
+    // Callers reach this only through getToken(), whose entry gate has already run
+    // shouldBlockRegistryHost(this.registryURL); keep that invariant for any new caller.
     private static _getACRToken(AADToken: string, endpointName: string, registryURL: string, retryCount: number, timeToWait: number): Q.Promise<string> {
         tl.debug("Attempting to convert AAD Token to an ACR token");
         let deferred = Q.defer<string>();
