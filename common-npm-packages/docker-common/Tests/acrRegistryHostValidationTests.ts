@@ -104,5 +104,11 @@ export function runAcrRegistryHostValidationTests() {
             setFeature(false);
             assert.strictEqual(shouldBlockRegistryHost("other.example.com"), false);
         });
+
+        it("feature ON + empty/absent host: does not block", () => {
+            setFeature(true);
+            assert.strictEqual(shouldBlockRegistryHost(""), false);
+            assert.strictEqual(shouldBlockRegistryHost(undefined as any), false);
+        });
     });
 }

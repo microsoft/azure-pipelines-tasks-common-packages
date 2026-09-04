@@ -55,7 +55,10 @@ export function isAllowedAcrHost(registryURL: string): boolean {
 // Enable with DistributedTask.Tasks.AcrRegistryHostValidation=true.
 export const AcrHostValidationFeatureName = "AcrRegistryHostValidation";
 
-/** Returns whether the feature gate requires this registry host to be blocked. */
+/**
+ * Returns whether the feature gate requires this registry host to be blocked.
+ * An empty or absent host is never blocked (there is no host to check).
+ */
 export function shouldBlockRegistryHost(registryURL: string): boolean {
-    return tl.getPipelineFeature(AcrHostValidationFeatureName) && !isAllowedAcrHost(registryURL);
+    return !!registryURL && tl.getPipelineFeature(AcrHostValidationFeatureName) && !isAllowedAcrHost(registryURL);
 }
