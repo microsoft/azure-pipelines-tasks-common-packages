@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-webdeployment-common",
-    "version": "4.279.1",
+    "version": "4.280.0",
     "description": "Common Lib for MSDeploy Utility",
     "repository": {
         "type": "git",
@@ -39,7 +39,7 @@
         "@types/winreg": "^1.2.34",
         "mocha": "^10.8.2",
         "nyc": "^15.1.0",
-        "sinon": "^19.0.2",
+        "sinon": "^19.0.5",
         "typescript": "^5.0.0"
     },
     "overrides": {
@@ -47,6 +47,7 @@
         "brace-expansion@1.x": { ".": "1.1.18" },
         "brace-expansion@2.x": { ".": "2.1.4" },
         "js-yaml@3.x": { ".": "3.15.1" },
-        "js-yaml@4.x": { ".": "4.3.1" }
+        "js-yaml@4.x": { ".": "4.3.1" },
+        "path-to-regexp": "^8.4.2"
     }
 }
