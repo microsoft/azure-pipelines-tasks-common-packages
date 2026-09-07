@@ -855,6 +855,42 @@ const VSO_COMMAND_NAME_REGEX = /##vso\[([a-zA-Z0-9_.]+)/gi;
 const KUDU_LOG_SANITIZER_TELEMETRY_AREA = 'TaskHub';
 const KUDU_LOG_SANITIZER_ENFORCE_PIPELINE_FEATURE = 'EnableKuduLogVsoCommandSanitization';
 
+// Whitelist-aware neutralization (aligns with azure-pipelines-tasks PR #22451 for AzureFileCopy).
+// The set of logging commands that must NOT be neutralized is delivered by the server as the
+// read-only pipeline variable 'agent.allowedLoggingCommands', surfaced on the agent as the
+// environment variable AGENT_ALLOWEDLOGGINGCOMMANDS (comma-separated, case-insensitive).
+//   - whitelist empty/unset   -> escape nothing; every "##vso[" command is allowed through
+//                                (consistent with AzureFileCopy #22451 feature-off semantics).
+//   - command NOT whitelisted -> its "##vso[" prefix is escaped to "##_vso[" so the agent does
+//                                not execute it (the line is still printed as readable text).
+//   - command whitelisted     -> left unchanged so legitimate usage keeps working.
+// This whitelist only ever narrows the set of "##vso[" commands that get escaped; it is consulted
+// only when enforcement (EnableKuduLogVsoCommandSanitization) is on. Leading "##[" sequences carry
+// no command name to match against the whitelist and are always neutralized when enforcing.
+const KUDU_LOG_SANITIZER_ALLOWED_COMMANDS_ENV_VAR = 'AGENT_ALLOWEDLOGGINGCOMMANDS';
+
+// Captures the command name after "##vso[" so it can be tested against the whitelist. The charset
+// matches VSO_COMMAND_NAME_REGEX; a "##vso[" with no following name yields an empty capture which
+// is never whitelisted (and is therefore escaped when a whitelist is present).
+const VSO_COMMAND_REPLACE_REGEX = /##vso\[([a-zA-Z0-9_.]*)/gi;
+
+// Parses AGENT_ALLOWEDLOGGINGCOMMANDS into a case-insensitive (lower-cased) set of command names.
+// Returns an empty set when the variable is unset/blank, which callers treat as "allow all".
+function getAllowedLoggingCommands(): Set<string> {
+    const allowed = new Set<string>();
+    const raw = process.env[KUDU_LOG_SANITIZER_ALLOWED_COMMANDS_ENV_VAR];
+    if (!raw || !raw.trim()) {
+        return allowed;
+    }
+    for (const command of raw.split(',')) {
+        const trimmed = command.trim().toLowerCase();
+        if (trimmed) {
+            allowed.add(trimmed);
+        }
+    }
+    return allowed;
+}
+
 // For telemetry naming only - see comment on VSO_COMMAND_NAME_REGEX above.
 function findVsoCommands(text: string): string[] {
     const found = new Set<string>();
@@ -897,8 +933,10 @@ function emitKuduLogSanitizerDetectionTelemetry(feature: string, enforced: boole
  *   always reported via telemetry.publish, regardless of the pipeline feature state.
  * - EnableKuduLogVsoCommandSanitization off (default today): text is returned completely
  *   unmodified - telemetry-only, zero behavior change for customers.
- * - EnableKuduLogVsoCommandSanitization on: enforce. Neutralizes the "##vso[" (and leading
- *   "##[") trigger sequences so the agent can no longer parse them as logging commands.
+ * - EnableKuduLogVsoCommandSanitization on: enforce, but whitelist-aware. Any leading "##["
+ *   sequence is neutralized. "##vso[" commands are neutralized only when they are NOT on the
+ *   allow-list delivered via AGENT_ALLOWEDLOGGINGCOMMANDS (agent.allowedLoggingCommands); when the
+ *   allow-list is empty/unset, no "##vso[" command is neutralized (allow all).
  */
 export function sanitizeKuduLogForConsole(text: string, telemetryFeature: string): string {
     if (!text || !VSO_COMMAND_PRESENCE_REGEX.test(text)) {
@@ -917,5 +955,20 @@ export function sanitizeKuduLogForConsole(text: string, telemetryFeature: string
         return text;
     }
 
-    return text.replace(/##vso\[/gi, '##_vso[').replace(/^##\[/gm, '##_[');
+    // Leading "##[" sequences carry no command name to match against the whitelist, so they are
+    // always neutralized when enforcing.
+    const sanitized = text.replace(/^##\[/gm, '##_[');
+
+    const allowedCommands = getAllowedLoggingCommands();
+    if (allowedCommands.size === 0) {
+        // Empty/unset whitelist: allow all "##vso[" commands (consistent with AzureFileCopy
+        // #22451). Only the always-on leading "##[" neutralization above is applied.
+        return sanitized;
+    }
+
+    // Escape only "##vso[" commands whose name is not on the whitelist; leave whitelisted
+    // commands (and their surrounding text) untouched.
+    return sanitized.replace(VSO_COMMAND_REPLACE_REGEX, (fullMatch: string, command: string) => {
+        return allowedCommands.has(command.toLowerCase()) ? fullMatch : '##_vso[' + command;
+    });
 }
