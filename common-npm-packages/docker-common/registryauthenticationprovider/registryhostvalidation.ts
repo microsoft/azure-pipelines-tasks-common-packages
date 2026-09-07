@@ -49,7 +49,6 @@ export function isAllowedAcrHost(registryURL: string): boolean {
     );
 }
 
-// Opt-in: Azure Stack Hub and other clouds use ACR suffixes the allow-list can't cover.
 export const AcrHostValidationFeatureName = "AcrRegistryHostValidation";
 
 // Empty/absent host is never blocked — nothing to validate.

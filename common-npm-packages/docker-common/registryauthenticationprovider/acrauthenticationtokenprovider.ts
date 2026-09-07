@@ -99,7 +99,6 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
         }
     }
 
-    // No host check here — callers must run shouldBlockRegistryHost(registryURL) first.
     private static _getACRToken(AADToken: string, endpointName: string, registryURL: string, retryCount: number, timeToWait: number): Q.Promise<string> {
         tl.debug("Attempting to convert AAD Token to an ACR token");
         let deferred = Q.defer<string>();
