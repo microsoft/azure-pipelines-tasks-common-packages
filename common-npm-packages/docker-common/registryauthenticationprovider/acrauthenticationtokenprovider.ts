@@ -9,7 +9,7 @@ import path = require('path');
 
 import AuthenticationTokenProvider from "./authenticationtokenprovider";
 import RegistryAuthenticationToken from "./registryauthenticationtoken";
-import { shouldBlockRegistryHost } from "./registryhostvalidation";
+import { guardRegistryHost } from "./registryhostvalidation";
 
 tl.setResourcePath(path.join(__dirname, '..', 'module.json'), true);
 
@@ -44,9 +44,7 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
     }
 
     public getAuthenticationToken(): RegistryAuthenticationToken {
-        if (shouldBlockRegistryHost(this.registryURL)) {
-            throw new Error(tl.loc("InvalidRegistryHost", this.registryURL));
-        }
+        guardRegistryHost(this.registryURL, this.endpointName, "ServicePrincipal");
         if (this.registryURL && this.endpointName) {
             return new RegistryAuthenticationToken(
                 tl.getEndpointAuthorizationParameter(this.endpointName, 'serviceprincipalid', true),
@@ -59,9 +57,6 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
     }
 
     public async getToken(): Promise<RegistryAuthenticationToken> {
-        if (shouldBlockRegistryHost(this.registryURL)) {
-            throw new Error(tl.loc("InvalidRegistryHost", this.registryURL));
-        }
         let authType: string;
         try {
             tl.debug("Attempting to get endpoint authorization scheme...");
@@ -79,11 +74,13 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
             }
         }
         if (authType == "ManagedServiceIdentity") {
+            guardRegistryHost(this.registryURL, this.endpointName, "ManagedServiceIdentity");
             // Parameter 1: retryCount - the current retry count of the method to get the ACR token through MSI authentication
             // Parameter 2: timeToWait - the current time wait of the method to get the ACR token through MSI authentication
             return await this._getMSIAuthenticationToken(0, 0);
         }
         else if (authType === 'WorkloadIdentityFederation') {
+            guardRegistryHost(this.registryURL, this.endpointName, "WorkloadIdentityFederation");
             const endpoint = await new AzureRMEndpoint(this.endpointName).getEndpoint();
             const aadToken = await endpoint.applicationTokenCredentials.getToken();
             let acrToken = await ACRAuthenticationTokenProvider._getACRToken(aadToken, this.endpointName, this.registryURL, 0, 0);

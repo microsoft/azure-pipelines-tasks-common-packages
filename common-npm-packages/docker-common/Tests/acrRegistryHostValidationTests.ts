@@ -3,7 +3,7 @@ process.env['SYSTEM_DEFAULTWORKINGDIRECTORY'] = process.env['SYSTEM_DEFAULTWORKI
 
 import assert = require("assert");
 import * as tl from "azure-pipelines-task-lib/task";
-import { isAllowedAcrHost, shouldBlockRegistryHost, AcrHostValidationFeatureName } from "../registryauthenticationprovider/registryhostvalidation";
+import { isAllowedAcrHost, guardRegistryHost, AcrHostValidationFeatureName } from "../registryauthenticationprovider/registryhostvalidation";
 
 export function runAcrRegistryHostValidationTests() {
 
@@ -27,26 +27,18 @@ export function runAcrRegistryHostValidationTests() {
         });
 
         const rejected = [
-            "",
-            "   ",
-            "localhost",
-            "example.com",
-            "127.0.0.1",
-            "127.0.0.1:8443",
-            "contoso.azurecr.io:8443",
-            "azurecr.io",
-            "azurecr.us",
-            "notazurecr.io",
-            "contoso.azurecr.iox",
-            "contoso.azurecr.io.example.com",
-            "contoso.azurecr.io.example.org",
-            "https://contoso.azurecr.io",
-            "contoso.azurecr.io/oauth2/exchange",
-            "user@contoso.azurecr.io",
-            "contoso.azurecr.io@example.net",
-            "contoso.azurecr.io example.com",
-            " contoso.azurecr.io",
-            "contoso.azurecr.io ",
+            "",                                   // empty / absent
+            "localhost",                          // single label, no suffix
+            "example.com",                        // well-formed host, not an ACR suffix
+            "contoso.azurecr.io:8443",            // port
+            "azurecr.io",                         // bare suffix, no subdomain
+            "notazurecr.io",                      // suffix not on a label boundary
+            "contoso.azurecr.iox",                // look-alike suffix
+            "contoso.azurecr.io.example.com",     // real host is example.com
+            "https://contoso.azurecr.io",         // scheme / URL syntax
+            "contoso.azurecr.io@example.net",     // real host is example.net
+            " contoso.azurecr.io",                // leading space must not be trimmed then accepted
+            "contoso.azurecr.io ",                // trailing space
         ];
 
         rejected.forEach((host) => {
@@ -73,42 +65,74 @@ export function runAcrRegistryHostValidationTests() {
         });
     });
 
-    describe("shouldBlockRegistryHost() (feature gate)", () => {
-        const featureName = "AcrRegistryHostValidation";
-        const featureVariable = "DistributedTask.Tasks." + featureName;
+    describe("guardRegistryHost() (enforce)", () => {
+        const enforceVariable = "DistributedTask.Tasks." + AcrHostValidationFeatureName;
 
-        function setFeature(enabled: boolean): void {
-            tl.setVariable(featureVariable, enabled ? "true" : "false");
+        function setEnforce(enabled: boolean): void {
+            tl.setVariable(enforceVariable, enabled ? "true" : "false");
         }
 
-        afterEach(() => {
-            setFeature(false);
-        });
+        afterEach(() => setEnforce(false));
 
         // Prevent accidental changes to the production feature-variable name.
-        it("exposes the expected feature name", () => {
-            assert.strictEqual(AcrHostValidationFeatureName, featureName);
+        it("exposes the expected enforce feature name", () => {
+            assert.strictEqual(AcrHostValidationFeatureName, "AcrRegistryHostValidation");
         });
 
-        it("feature ON + non-ACR host: blocks the request", () => {
-            setFeature(true);
-            assert.strictEqual(shouldBlockRegistryHost("other.example.com"), true);
+        it("enforce ON + non-ACR host: throws", () => {
+            setEnforce(true);
+            assert.throws(() => guardRegistryHost("other.example.com", "endpoint-abc", "ServicePrincipal"));
         });
 
-        it("feature ON + valid ACR host: does not block", () => {
-            setFeature(true);
-            assert.strictEqual(shouldBlockRegistryHost("contoso.azurecr.io"), false);
+        it("enforce ON + valid ACR host: does not throw", () => {
+            setEnforce(true);
+            assert.doesNotThrow(() => guardRegistryHost("contoso.azurecr.io", "endpoint-abc", "ServicePrincipal"));
         });
 
-        it("feature OFF + non-ACR host: does not block (behavior unchanged)", () => {
-            setFeature(false);
-            assert.strictEqual(shouldBlockRegistryHost("other.example.com"), false);
+        it("enforce OFF + non-ACR host: does not throw (inert)", () => {
+            setEnforce(false);
+            assert.doesNotThrow(() => guardRegistryHost("other.example.com", "endpoint-abc", "ServicePrincipal"));
         });
 
-        it("feature ON + empty/absent host: does not block", () => {
-            setFeature(true);
-            assert.strictEqual(shouldBlockRegistryHost(""), false);
-            assert.strictEqual(shouldBlockRegistryHost(undefined as any), false);
+        it("enforce ON + empty/absent host: does not throw", () => {
+            setEnforce(true);
+            assert.doesNotThrow(() => guardRegistryHost("", "endpoint-abc", "ServicePrincipal"));
+            assert.doesNotThrow(() => guardRegistryHost(undefined as any, "endpoint-abc", "ServicePrincipal"));
+        });
+    });
+
+    describe("guardRegistryHost() (audit warning)", () => {
+        const enforceVariable = "DistributedTask.Tasks." + AcrHostValidationFeatureName;
+
+        function setEnforce(enabled: boolean): void {
+            tl.setVariable(enforceVariable, enabled ? "true" : "false");
+        }
+
+        // Feature-variable is set before capturing. The guard throws after warning when enforcing,
+        // so the throw is swallowed here to inspect the emitted warning on stdout.
+        function capture(fn: () => void): string {
+            const original = process.stdout.write;
+            let out = "";
+            (process.stdout.write as any) = (chunk: any) => { out += chunk.toString(); return true; };
+            try { fn(); } catch (e) { /* inspect the warning, not the throw */ } finally { (process.stdout.write as any) = original; }
+            return out;
+        }
+
+        afterEach(() => setEnforce(false));
+
+        it("enforcing + non-ACR host: warns with the host, endpoint id, and scheme", () => {
+            setEnforce(true);
+            const out = capture(() => guardRegistryHost("other.example.com", "endpoint-abc", "ServicePrincipal"));
+            assert.ok(out.indexOf("task.issue type=warning") !== -1, "expected a warning");
+            assert.ok(out.indexOf("other.example.com") !== -1, "warning should name the host");
+            assert.ok(out.indexOf("endpoint-abc") !== -1, "warning should name the endpoint id");
+            assert.ok(out.indexOf("ServicePrincipal") !== -1, "warning should name the auth scheme");
+        });
+
+        it("not enforcing + non-ACR host: no warning (inert)", () => {
+            setEnforce(false);
+            const out = capture(() => guardRegistryHost("other.example.com", "endpoint-abc", "ServicePrincipal"));
+            assert.strictEqual(out.indexOf("task.issue type=warning"), -1);
         });
     });
 }

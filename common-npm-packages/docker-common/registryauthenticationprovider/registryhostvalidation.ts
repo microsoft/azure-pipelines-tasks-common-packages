@@ -51,7 +51,15 @@ export function isAllowedAcrHost(registryURL: string): boolean {
 
 export const AcrHostValidationFeatureName = "AcrRegistryHostValidation";
 
-// Empty/absent host is never blocked — nothing to validate.
-export function shouldBlockRegistryHost(registryURL: string): boolean {
-    return !!registryURL && tl.getPipelineFeature(AcrHostValidationFeatureName) && !isAllowedAcrHost(registryURL);
+// The feature flag turns the whole check on or off: when off, do nothing. When on, an unrecognized
+// host is recorded (host, service connection, and auth scheme) and then blocked.
+export function guardRegistryHost(registryURL: string, endpointId: string, scheme: string): void {
+    if (!tl.getPipelineFeature(AcrHostValidationFeatureName)) {
+        return;
+    }
+    if (!registryURL || isAllowedAcrHost(registryURL)) {
+        return;
+    }
+    tl.warning(tl.loc("UnrecognizedRegistryHost", registryURL, endpointId, scheme));
+    throw new Error(tl.loc("InvalidRegistryHost", registryURL));
 }

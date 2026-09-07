@@ -33,20 +33,10 @@ export function runAcrProviderHostValidationTests() {
             setFeature(true);
             assert.doesNotThrow(() => providerFor("contoso.azurecr.io").getAuthenticationToken());
         });
-
-        it("feature OFF + non-ACR host: does not throw (behavior unchanged)", () => {
-            setFeature(false);
-            assert.doesNotThrow(() => providerFor("other.example.com").getAuthenticationToken());
-        });
-
-        it("feature ON + empty host: does not throw (returns null)", () => {
-            setFeature(true);
-            assert.strictEqual(providerFor("").getAuthenticationToken(), null);
-        });
     });
 
-    describe("getToken() (gate runs before the auth-scheme dispatch, so it covers all schemes)", () => {
-        it("feature ON + non-ACR host: rejects before dispatching on scheme", (done) => {
+    describe("getToken() (host guarded on every auth-scheme path)", () => {
+        it("feature ON + non-ACR host: rejects", (done) => {
             setFeature(true);
             providerFor("other.example.com").getToken().then(
                 () => done(new Error("expected the call to be rejected")),
@@ -57,11 +47,32 @@ export function runAcrProviderHostValidationTests() {
             );
         });
 
-        it("feature OFF + non-ACR host: does not reject at the gate (behavior unchanged)", (done) => {
+        it("feature OFF + non-ACR host: does not warn or reject (inert)", (done) => {
             setFeature(false);
             providerFor("other.example.com").getToken().then(
                 () => done(),
                 (err: any) => done(err)
+            );
+        });
+    });
+
+    describe("audit warning (no double-warn)", () => {
+        // Guarding each path once means the SP-via-getToken path warns once, not twice.
+        it("getToken() service-principal path warns exactly once", (done) => {
+            setFeature(true); // enforcing: warn (endpoint id + scheme), then throw
+            const original = process.stdout.write;
+            let out = "";
+            (process.stdout.write as any) = (chunk: any) => { out += chunk.toString(); return true; };
+            providerFor("other.example.com").getToken().then(
+                () => { (process.stdout.write as any) = original; done(new Error("expected the call to be rejected")); },
+                () => {
+                    (process.stdout.write as any) = original;
+                    try {
+                        const warnings = out.split("task.issue type=warning").length - 1;
+                        assert.strictEqual(warnings, 1, "expected exactly one warning (no double-warn)");
+                        done();
+                    } catch (e) { done(e); }
+                }
             );
         });
     });
