@@ -2,7 +2,7 @@
 
 import * as tl from "azure-pipelines-task-lib/task";
 
-// Standard ACR login-server suffixes, including sovereign and air-gapped clouds.
+// A cloud whose suffix is missing here is blocked when the feature is on.
 const allowedAcrHostSuffixes: string[] = [
     ".azurecr.io",                 // Azure public
     ".azurecr.us",                 // Azure US Government
@@ -12,10 +12,8 @@ const allowedAcrHostSuffixes: string[] = [
     ".azurecr.microsoft.scloud",   // Azure US Sec (air-gapped)
 ];
 
-// Dotted DNS labels without leading or trailing hyphens.
 const hostShape = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
 
-/** Returns whether registryURL is a valid standard ACR login server. */
 export function isAllowedAcrHost(registryURL: string): boolean {
     if (!registryURL || typeof registryURL !== "string") {
         return false;
@@ -26,7 +24,7 @@ export function isAllowedAcrHost(registryURL: string): boolean {
         return false;
     }
 
-    // Reject URL syntax and whitespace; only a hostname is allowed.
+    // A login server is a plain hostname — reject anything with URL syntax.
     if (/[\s/\\?#@]/.test(host)) {
         return false;
     }
@@ -37,7 +35,7 @@ export function isAllowedAcrHost(registryURL: string): boolean {
 
     host = host.toLowerCase();
 
-    // Accept a fully qualified hostname with a trailing root dot.
+    // Tolerate the FQDN trailing dot.
     if (host.endsWith(".")) {
         host = host.slice(0, -1);
     }
@@ -51,14 +49,10 @@ export function isAllowedAcrHost(registryURL: string): boolean {
     );
 }
 
-// Opt-in because Azure Stack Hub and other environments can use custom ACR suffixes.
-// Enable with DistributedTask.Tasks.AcrRegistryHostValidation=true.
+// Opt-in: Azure Stack Hub and other clouds use ACR suffixes the allow-list can't cover.
 export const AcrHostValidationFeatureName = "AcrRegistryHostValidation";
 
-/**
- * Returns whether the feature gate requires this registry host to be blocked.
- * An empty or absent host is never blocked (there is no host to check).
- */
+// Empty/absent host is never blocked — nothing to validate.
 export function shouldBlockRegistryHost(registryURL: string): boolean {
     return !!registryURL && tl.getPipelineFeature(AcrHostValidationFeatureName) && !isAllowedAcrHost(registryURL);
 }

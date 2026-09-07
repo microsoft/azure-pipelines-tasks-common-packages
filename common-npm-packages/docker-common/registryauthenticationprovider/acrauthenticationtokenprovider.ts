@@ -99,8 +99,7 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
         }
     }
 
-    // Callers reach this only through getToken(), whose entry gate has already run
-    // shouldBlockRegistryHost(this.registryURL); keep that invariant for any new caller.
+    // Host is already validated at the getToken() entry point; new callers must preserve that.
     private static _getACRToken(AADToken: string, endpointName: string, registryURL: string, retryCount: number, timeToWait: number): Q.Promise<string> {
         tl.debug("Attempting to convert AAD Token to an ACR token");
         let deferred = Q.defer<string>();

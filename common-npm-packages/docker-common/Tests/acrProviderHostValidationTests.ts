@@ -1,6 +1,4 @@
-// Provider-level checks that the host gate is enforced at BOTH public entry points
-// (getToken and getAuthenticationToken). The agent temp/working-dir env must be set
-// before importing the provider, which transitively loads azure-arm-rest.
+// Set agent env before importing the provider (it transitively loads azure-arm-rest).
 process.env["SYSTEM_DEFAULTWORKINGDIRECTORY"] = process.env["SYSTEM_DEFAULTWORKINGDIRECTORY"] || require("os").tmpdir();
 process.env["AGENT_TEMPDIRECTORY"] = process.env["AGENT_TEMPDIRECTORY"] || require("os").tmpdir();
 
@@ -16,7 +14,7 @@ export function runAcrProviderHostValidationTests() {
         tl.setVariable(featureVariable, enabled ? "true" : "false");
     }
 
-    // registerNameValue is a raw host string (not JSON), so registryURL === host.
+    // Raw (non-JSON) host string, so registryURL === host.
     function providerFor(host: string): any {
         return new ACRAuthenticationTokenProvider("endpoint", host);
     }
