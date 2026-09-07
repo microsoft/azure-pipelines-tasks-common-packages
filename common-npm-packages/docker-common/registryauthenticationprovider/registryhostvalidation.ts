@@ -51,8 +51,6 @@ export function isAllowedAcrHost(registryURL: string): boolean {
 
 export const AcrHostValidationFeatureName = "AcrRegistryHostValidation";
 
-// The feature flag turns the whole check on or off: when off, do nothing. When on, an unrecognized
-// host is recorded (host, service connection, and auth scheme) and then blocked.
 export function guardRegistryHost(registryURL: string, endpointId: string, scheme: string): void {
     if (!tl.getPipelineFeature(AcrHostValidationFeatureName)) {
         return;

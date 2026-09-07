@@ -122,11 +122,11 @@ export function runAcrRegistryHostValidationTests() {
 
         it("enforcing + non-ACR host: warns with the host, endpoint id, and scheme", () => {
             setEnforce(true);
-            const out = capture(() => guardRegistryHost("other.example.com", "endpoint-abc", "ServicePrincipal"));
+            const host = "other.example.com";
+            const expected = tl.loc("UnrecognizedRegistryHost", host, "endpoint-abc", "ServicePrincipal");
+            const out = capture(() => guardRegistryHost(host, "endpoint-abc", "ServicePrincipal"));
             assert.ok(out.indexOf("task.issue type=warning") !== -1, "expected a warning");
-            assert.ok(out.indexOf("other.example.com") !== -1, "warning should name the host");
-            assert.ok(out.indexOf("endpoint-abc") !== -1, "warning should name the endpoint id");
-            assert.ok(out.indexOf("ServicePrincipal") !== -1, "warning should name the auth scheme");
+            assert.ok(out.indexOf(expected) !== -1, "warning should contain the host, endpoint id, and scheme");
         });
 
         it("not enforcing + non-ACR host: no warning (inert)", () => {
