@@ -463,7 +463,7 @@ const trailingPartialMarker = /#+(?:v(?:s(?:o)?)?)?$/i;
  * The replacement preserves the text for human readability while making it
  * invisible to the agent's command parser.
  */
-function sanitizeDockerOutput(data: string): string {
+export function sanitizeDockerOutput(data: string): string {
     return data.replace(vsoCommandPattern, "#vso[");
 }
 
@@ -478,7 +478,7 @@ function sanitizeDockerOutput(data: string): string {
  * is used to avoid mojibake when a multibyte UTF-8 sequence is split across
  * chunk boundaries.
  */
-function createSanitizedOutputStream(destination: NodeJS.WritableStream): NodeJS.WritableStream {
+export function createSanitizedOutputStream(destination: NodeJS.WritableStream): NodeJS.WritableStream {
     const decoder = new StringDecoder('utf8');
     let pending = "";
 
@@ -517,7 +517,7 @@ function createSanitizedOutputStream(destination: NodeJS.WritableStream): NodeJS
 // Creates fresh exec options for each docker command invocation.
 // Each call returns new stream instances so that stateful carry-over buffers
 // don't leak across commands and streams can be properly ended.
-function createSanitizedExecOptions(): { outStream: NodeJS.WritableStream; errStream: NodeJS.WritableStream } {
+export function createSanitizedExecOptions(): { outStream: NodeJS.WritableStream; errStream: NodeJS.WritableStream } {
     return {
         outStream: createSanitizedOutputStream(process.stdout),
         errStream: createSanitizedOutputStream(process.stderr)
