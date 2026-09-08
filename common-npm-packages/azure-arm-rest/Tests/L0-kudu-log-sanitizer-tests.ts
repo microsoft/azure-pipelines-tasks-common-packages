@@ -84,6 +84,8 @@ export function KuduLogSanitizerTests() {
             assert(telemetryLine.includes('area=TaskHub;feature=AzureRmWebAppDeployment'));
             assert(telemetryLine.includes('"event":"KuduLogVsoCommandsDetected"'));
             assert(telemetryLine.includes('"enforced":false'));
+            assert(telemetryLine.includes('"allowlistPresent":false'));
+            assert(telemetryLine.includes('"escapedCount":0'));
             assert(telemetryLine.includes('"commands":"task.setvariable"'));
         });
 
@@ -105,6 +107,8 @@ export function KuduLogSanitizerTests() {
             assert(telemetryLine, 'telemetry should still be emitted when enforcing');
             assert(telemetryLine.includes('"event":"KuduLogVsoCommandsSanitized"'));
             assert(telemetryLine.includes('"enforced":true'));
+            assert(telemetryLine.includes('"allowlistPresent":true'), 'a non-empty allow-list should be reported');
+            assert(telemetryLine.includes('"escapedCount":1'), 'exactly one non-whitelisted sequence was neutralized');
         });
 
         it('preserves whitelisted commands and escapes only non-whitelisted ones when the feature is on', () => {
@@ -147,6 +151,11 @@ export function KuduLogSanitizerTests() {
             const telemetryLine = consoleOutput.find(line => line.includes('telemetry.publish'));
             assert(telemetryLine, 'detection telemetry is still emitted');
             assert(telemetryLine.includes('"enforced":true'), 'telemetry still reports the feature as enforced');
+            // The whole point of allowlistPresent/escapedCount: with the feature on but an empty
+            // allow-list nothing is actually escaped, so the rollout signal must NOT look like
+            // active protection (see PR #659 review).
+            assert(telemetryLine.includes('"allowlistPresent":false'), 'an empty/unset allow-list must be reported as not present');
+            assert(telemetryLine.includes('"escapedCount":0'), 'an allow-all no-op must report zero escaped sequences');
         });
 
         it('always neutralizes a leading bracket sequence when enforcing, regardless of the whitelist', () => {
@@ -161,6 +170,13 @@ export function KuduLogSanitizerTests() {
             assert(result.includes(buildVsoCommand('task.setvariable variable=X]y')),
                 'empty whitelist leaves the ##vso[ command untouched');
             assert.strictEqual(/^##\[/m.test(result), false, 'a leading bracket sequence must always be neutralized when enforcing');
+
+            // Even with an empty allow-list, neutralizing a leading "##[" is real protection, so
+            // escapedCount must reflect it (escapedCount > 0) while allowlistPresent stays false.
+            const telemetryLine = consoleOutput.find(line => line.includes('telemetry.publish'));
+            assert(telemetryLine, 'telemetry should be emitted when enforcing');
+            assert(telemetryLine.includes('"allowlistPresent":false'), 'the empty allow-list must be reported as not present');
+            assert(telemetryLine.includes('"escapedCount":1'), 'neutralizing the leading bracket must count as one escaped sequence');
         });
 
         it('cannot be broken out of the telemetry command envelope by a crafted payload', () => {
