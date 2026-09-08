@@ -4,7 +4,7 @@ import { join } from 'path';
 import { MockTestRunner } from 'azure-pipelines-task-lib/mock-test';
 import { existsSync } from 'fs';
 
-export function OpenSSLCheck() {
+export function OpenSSLCheck(defaultTimeout = 2000) {
     if (process.platform !== 'win32') {
         console.log('Skipping OpenSSL tests on non-Windows platform');
         return;
@@ -17,7 +17,8 @@ export function OpenSSLCheck() {
         openSSLVersion: '3.5.8',
         featureFlagValue: true
     }].forEach(({ openSSLVersion, featureFlagValue }) => {
-        it(`azure-arm-rest check openssl path openssl${openSSLVersion}`, (done: Mocha.Done) => {
+        it(`azure-arm-rest check openssl path openssl${openSSLVersion}`, function (done: Mocha.Done) {
+            this.timeout(defaultTimeout);
             process.env['SYSTEM_DEBUG'] = 'true';
             process.env['DISTRIBUTEDTASK_TASKS_USELATESTOPENSSLINAZUREARMREST'] = featureFlagValue.toString();
 
