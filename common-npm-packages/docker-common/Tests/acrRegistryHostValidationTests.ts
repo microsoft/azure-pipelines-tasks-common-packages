@@ -3,7 +3,7 @@ process.env['SYSTEM_DEFAULTWORKINGDIRECTORY'] = process.env['SYSTEM_DEFAULTWORKI
 
 import assert = require("assert");
 import * as tl from "azure-pipelines-task-lib/task";
-import { isAllowedAcrHost, guardRegistryHost, AcrHostValidationFeatureName } from "../registryauthenticationprovider/registryhostvalidation";
+import { isAllowedAcrHost, guardRegistryHost, sanitizeUrl, AcrHostValidationFeatureName } from "../registryauthenticationprovider/registryhostvalidation";
 
 export function runAcrRegistryHostValidationTests() {
 
@@ -123,16 +123,43 @@ export function runAcrRegistryHostValidationTests() {
         it("enforcing + non-ACR host: warns with the host, endpoint id, and scheme", () => {
             setEnforce(true);
             const host = "other.example.com";
-            const expected = tl.loc("UnrecognizedRegistryHost", host, "endpoint-abc", "ServicePrincipal");
+            const expected = tl.loc("UnrecognizedRegistryHost", sanitizeUrl(host), "endpoint-abc", "ServicePrincipal");
             const out = capture(() => guardRegistryHost(host, "endpoint-abc", "ServicePrincipal"));
             assert.ok(out.indexOf("task.issue type=warning") !== -1, "expected a warning");
             assert.ok(out.indexOf(expected) !== -1, "warning should contain the host, endpoint id, and scheme");
+        });
+
+        it("enforcing + host with embedded userinfo: drops it, keeps the host", () => {
+            setEnforce(true);
+            const host = "user:pass@evil.example.com";
+            const expected = tl.loc("UnrecognizedRegistryHost", sanitizeUrl(host), "endpoint-abc", "ServicePrincipal");
+            const out = capture(() => guardRegistryHost(host, "endpoint-abc", "ServicePrincipal"));
+            assert.ok(out.indexOf(expected) !== -1, "warning should contain the sanitized host");
+            assert.strictEqual(out.indexOf("user:pass"), -1, "raw userinfo must not be logged");
         });
 
         it("not enforcing + non-ACR host: no warning (inert)", () => {
             setEnforce(false);
             const out = capture(() => guardRegistryHost("other.example.com", "endpoint-abc", "ServicePrincipal"));
             assert.strictEqual(out.indexOf("task.issue type=warning"), -1);
+        });
+    });
+
+    describe("sanitizeUrl()", () => {
+        const cases: Array<[string, string]> = [
+            ["contoso.azurecr.io", "contoso.azurecr.io"],                            // plain host unchanged
+            ["evil.example.com:8443", "evil.example.com:8443"],                      // port preserved
+            ["contoso.azurecr.io/v2/list?a=b", "contoso.azurecr.io"],                // path/query dropped
+            ["user@evil.example.com", "evil.example.com"],                           // userinfo dropped
+            ["user:pass@evil.example.com", "evil.example.com"],                      // user:pass userinfo dropped
+            ["https://user:pass@evil.example.com/p?a=b", "evil.example.com"],        // scheme + userinfo + path/query dropped
+            ["weird@@@", "***"],                                                     // unparseable -> redacted
+        ];
+
+        cases.forEach(([input, expected]) => {
+            it(`sanitizes ${JSON.stringify(input)}`, () => {
+                assert.strictEqual(sanitizeUrl(input), expected);
+            });
         });
     });
 }
