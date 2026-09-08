@@ -94,10 +94,15 @@ export function runAcrRegistryHostValidationTests() {
             assert.doesNotThrow(() => guardRegistryHost("other.example.com", "endpoint-abc", "ServicePrincipal"));
         });
 
-        it("enforce ON + empty/absent host: does not throw", () => {
+        it("enforce ON + empty/absent host: throws (empty is not a valid registry host)", () => {
             setEnforce(true);
+            assert.throws(() => guardRegistryHost("", "endpoint-abc", "ServicePrincipal"));
+            assert.throws(() => guardRegistryHost(undefined as any, "endpoint-abc", "ServicePrincipal"));
+        });
+
+        it("enforce OFF + empty host: does not throw (inert)", () => {
+            setEnforce(false);
             assert.doesNotThrow(() => guardRegistryHost("", "endpoint-abc", "ServicePrincipal"));
-            assert.doesNotThrow(() => guardRegistryHost(undefined as any, "endpoint-abc", "ServicePrincipal"));
         });
     });
 

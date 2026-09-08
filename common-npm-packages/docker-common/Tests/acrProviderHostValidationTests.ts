@@ -33,6 +33,12 @@ export function runAcrProviderHostValidationTests() {
             setFeature(true);
             assert.doesNotThrow(() => providerFor("contoso.azurecr.io").getAuthenticationToken());
         });
+
+        it("feature ON + empty loginServer: throws (empty is not a valid registry host)", () => {
+            setFeature(true);
+            const provider: any = new ACRAuthenticationTokenProvider("endpoint", '{"loginServer":""}');
+            assert.throws(() => provider.getAuthenticationToken());
+        });
     });
 
     describe("getToken() (host guarded on every auth-scheme path)", () => {

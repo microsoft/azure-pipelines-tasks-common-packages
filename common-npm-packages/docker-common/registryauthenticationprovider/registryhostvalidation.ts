@@ -72,13 +72,14 @@ export function sanitizeUrl(url: string): string {
 }
 
 export function guardRegistryHost(registryURL: string, endpointId: string, scheme: string): void {
-    if (!tl.getPipelineFeature(AcrHostValidationFeatureName) || !registryURL) {
+    if (!tl.getPipelineFeature(AcrHostValidationFeatureName)) {
         return;
     }
     if (isAllowedAcrHost(registryURL)) {
         return;
     }
-    const safeUrl = sanitizeUrl(registryURL);
+    // An empty/absent login server is not a legitimate ACR host, so it also lands here as invalid.
+    const safeUrl = sanitizeUrl(registryURL) || "";
     tl.warning(tl.loc("UnrecognizedRegistryHost", safeUrl, endpointId, scheme));
     throw new Error(tl.loc("InvalidRegistryHost", safeUrl));
 }
