@@ -844,8 +844,8 @@ export class Kudu {
 
 // Used only to decide whether there is anything to do at all (telemetry and/or enforcement).
 // Intentionally NOT restricted to any command-name charset, so the kill switch below does not
-// depend on the agent's current command-name parsing rules - any "##vso[" (or leading "##[")
-// occurrence is treated as something to neutralize when enforcement is on.
+// depend on the agent's current command-name parsing rules - any "##vso[" occurrence is treated
+// as something to neutralize when enforcement is on.
 const VSO_COMMAND_PRESENCE_REGEX = /##vso\[/i;
 
 // Used only to name detected commands for telemetry. This charset is a best-effort label and
@@ -865,8 +865,8 @@ const KUDU_LOG_SANITIZER_ENFORCE_PIPELINE_FEATURE = 'EnableKuduLogVsoCommandSani
 //                                not execute it (the line is still printed as readable text).
 //   - command whitelisted     -> left unchanged so legitimate usage keeps working.
 // This whitelist only ever narrows the set of "##vso[" commands that get escaped; it is consulted
-// only when enforcement (EnableKuduLogVsoCommandSanitization) is on. Leading "##[" sequences carry
-// no command name to match against the whitelist and are always neutralized when enforcing.
+// only when enforcement (EnableKuduLogVsoCommandSanitization) is on. Leading "##[" sequences are
+// never modified.
 const KUDU_LOG_SANITIZER_ALLOWED_COMMANDS_ENV_VAR = 'AGENT_ALLOWEDLOGGINGCOMMANDS';
 
 // Captures the command name after "##vso[" so it can be tested against the whitelist. The charset
@@ -911,7 +911,7 @@ function findVsoCommands(text: string): string[] {
 //   - enforced         : whether the EnableKuduLogVsoCommandSanitization feature is on.
 //   - allowlistPresent : whether a non-empty agent.allowedLoggingCommands allow-list was
 //                        configured. When the feature is on but this is false, "##vso[" commands
-//                        are allowed through (only leading "##[" sequences are neutralized).
+//                        are allowed through (nothing is neutralized).
 //   - escapedCount     : how many sequences were actually neutralized on this call. This is the
 //                        ground-truth "protection was applied" signal - enforced && escapedCount==0
 //                        means the run was an allow-all no-op that changed nothing.
@@ -945,10 +945,10 @@ function emitKuduLogSanitizerDetectionTelemetry(feature: string, enforced: boole
  *   always reported via telemetry.publish, regardless of the pipeline feature state.
  * - EnableKuduLogVsoCommandSanitization off (default today): text is returned completely
  *   unmodified - telemetry-only, zero behavior change for customers.
- * - EnableKuduLogVsoCommandSanitization on: enforce, but whitelist-aware. Any leading "##["
- *   sequence is neutralized. "##vso[" commands are neutralized only when they are NOT on the
- *   allow-list delivered via AGENT_ALLOWEDLOGGINGCOMMANDS (agent.allowedLoggingCommands); when the
- *   allow-list is empty/unset, no "##vso[" command is neutralized (allow all).
+ * - EnableKuduLogVsoCommandSanitization on: enforce, but whitelist-aware. "##vso[" commands are
+ *   neutralized only when they are NOT on the allow-list delivered via AGENT_ALLOWEDLOGGINGCOMMANDS
+ *   (agent.allowedLoggingCommands); when the allow-list is empty/unset, no "##vso[" command is
+ *   neutralized (allow all). Leading "##[" sequences are never modified.
  * - The emitted telemetry carries `enforced`, `allowlistPresent` and `escapedCount` so the rollout
  *   signal can tell "actively protecting" (escapedCount > 0) apart from an allow-all no-op
  *   (enforced but escapedCount == 0).
@@ -974,17 +974,12 @@ export function sanitizeKuduLogForConsole(text: string, telemetryFeature: string
 
     // Enforcing. Count how many sequences are actually neutralized so the telemetry can
     // distinguish "actively protecting" from an allow-all no-op (see PR #659 review): an empty
-    // allow-list lets every "##vso[" command through, so only leading "##[" sequences are escaped.
+    // allow-list lets every "##vso[" command through, so nothing is escaped.
     const allowedCommands = getAllowedLoggingCommands();
     const allowlistPresent = allowedCommands.size > 0;
     let escapedCount = 0;
 
-    // Leading "##[" sequences carry no command name to match against the whitelist, so they are
-    // always neutralized when enforcing.
-    let sanitized = text.replace(/^##\[/gm, () => {
-        escapedCount++;
-        return '##_[';
-    });
+    let sanitized = text;
 
     if (allowlistPresent) {
         // Escape only "##vso[" commands whose name is not on the whitelist; leave whitelisted
@@ -998,7 +993,7 @@ export function sanitizeKuduLogForConsole(text: string, telemetryFeature: string
         });
     }
     // else: empty/unset whitelist -> allow all "##vso[" commands (consistent with AzureFileCopy
-    // #22451). Only the always-on leading "##[" neutralization above is applied.
+    // #22451), so nothing is escaped.
 
     emitKuduLogSanitizerDetectionTelemetry(telemetryFeature, true, allowlistPresent, escapedCount, detectedCommands);
     return sanitized;

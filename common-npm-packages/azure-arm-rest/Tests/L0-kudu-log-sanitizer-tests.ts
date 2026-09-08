@@ -158,25 +158,39 @@ export function KuduLogSanitizerTests() {
             assert(telemetryLine.includes('"escapedCount":0'), 'an allow-all no-op must report zero escaped sequences');
         });
 
-        it('always neutralizes a leading bracket sequence when enforcing, regardless of the whitelist', () => {
+        it('never modifies a leading bracket sequence when enforcing with an empty whitelist', () => {
             process.env[FEATURE_ENV_VAR] = 'true';
-            // Even with an empty whitelist (allow all ##vso[), a leading ##[ has no command name and
-            // is always neutralized.
             delete process.env[ALLOWED_COMMANDS_ENV_VAR];
             const payload = `${buildVsoCommand('task.setvariable variable=X]y')}\n${buildLeadingBracketCommand('section]Starting: attacker section')}`;
 
             const result = sanitizeKuduLogForConsole(payload, 'AzureRmWebAppDeployment');
 
-            assert(result.includes(buildVsoCommand('task.setvariable variable=X]y')),
-                'empty whitelist leaves the ##vso[ command untouched');
-            assert.strictEqual(/^##\[/m.test(result), false, 'a leading bracket sequence must always be neutralized when enforcing');
+            assert.strictEqual(result, payload,
+                'leading bracket sequences are never touched, and the empty whitelist allows every ##vso[ command through');
+            assert(/^##\[/m.test(result), 'the leading bracket sequence must be left intact');
 
-            // Even with an empty allow-list, neutralizing a leading "##[" is real protection, so
-            // escapedCount must reflect it (escapedCount > 0) while allowlistPresent stays false.
             const telemetryLine = consoleOutput.find(line => line.includes('telemetry.publish'));
             assert(telemetryLine, 'telemetry should be emitted when enforcing');
             assert(telemetryLine.includes('"allowlistPresent":false'), 'the empty allow-list must be reported as not present');
-            assert(telemetryLine.includes('"escapedCount":1'), 'neutralizing the leading bracket must count as one escaped sequence');
+            assert(telemetryLine.includes('"escapedCount":0'), 'nothing is escaped: leading brackets are never touched and the empty allow-list allows all');
+        });
+
+        it('leaves leading bracket sequences untouched even while a whitelist is enforcing', () => {
+            process.env[FEATURE_ENV_VAR] = 'true';
+            process.env[ALLOWED_COMMANDS_ENV_VAR] = 'task.setvariable';
+            const payload = `${buildLeadingBracketCommand('section]Starting: attacker section')}\n${buildVsoCommand('task.setsecret]stolen')}`;
+
+            const result = sanitizeKuduLogForConsole(payload, 'AzureRmWebAppDeployment');
+
+            assert(result.includes(buildLeadingBracketCommand('section]Starting: attacker section')),
+                'leading bracket sequences must never be neutralized');
+            assert(/^##\[/m.test(result), 'the leading bracket sequence must be left intact');
+            assert.strictEqual(result.includes(buildVsoCommand('task.setsecret')), false,
+                'a non-whitelisted ##vso[ command is still neutralized');
+
+            const telemetryLine = consoleOutput.find(line => line.includes('telemetry.publish'));
+            assert(telemetryLine, 'telemetry should be emitted when enforcing');
+            assert(telemetryLine.includes('"escapedCount":1'), 'only the non-whitelisted ##vso[ command counts as escaped; the leading bracket does not');
         });
 
         it('cannot be broken out of the telemetry command envelope by a crafted payload', () => {
