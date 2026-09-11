@@ -18,15 +18,15 @@ const MAX_CREATE_OIDC_TOKEN_BACKOFF_TIMEOUT = 15000;
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
-export function setAzureCloudBasedOnServiceEndpoint(connectedService: string): void {
+export function setAzureCloudBasedOnServiceEndpoint(connectedService: string, azureCliPath: string = "az"): void {
     var environment = tl.getEndpointDataParameter(connectedService, 'environment', true);
     if (!!environment) {
         console.log(tl.loc('SettingAzureCloud', environment));
-        throwIfError(tl.execSync("az", "cloud set -n " + environment));
+        throwIfError(tl.execSync(azureCliPath, "cloud set -n " + environment));
     }
 }
 
-export async function loginAzureRM(connectedService: string): Promise<void> {
+export async function loginAzureRM(connectedService: string, azureCliPath: string = "az"): Promise<void> {
     var authScheme: string = tl.getEndpointAuthorizationScheme(connectedService, true);
 
     if (authScheme.toLowerCase() == "workloadidentityfederation") {
@@ -38,7 +38,7 @@ export async function loginAzureRM(connectedService: string): Promise<void> {
         const args = `login --service-principal -u "${servicePrincipalId}" --tenant "${tenantId}" --allow-no-subscriptions --federated-token "${federatedToken}"`;
 
         //login using OpenID Connect federation
-        throwIfError(tl.execSync("az", args), tl.loc("LoginFailed"));
+        throwIfError(tl.execSync(azureCliPath, args), tl.loc("LoginFailed"));
     }
     else if (authScheme.toLowerCase() == "serviceprincipal") {
         let authType: string = tl.getEndpointAuthorizationParameter(connectedService, 'authenticationType', true);
@@ -48,7 +48,7 @@ export async function loginAzureRM(connectedService: string): Promise<void> {
         let isCertificateParameterSupported: boolean = false;
         let authParam: string = "--password";
 
-        const azVersionResult: IExecSyncResult = tl.execSync("az", "--version");
+        const azVersionResult: IExecSyncResult = tl.execSync(azureCliPath, "--version");
         throwIfError(azVersionResult);
         isCertificateParameterSupported = isAzVersionGreaterOrEqual(azVersionResult.stdout, "2.66.0");
 
@@ -69,11 +69,11 @@ export async function loginAzureRM(connectedService: string): Promise<void> {
         let escapedCliPassword = cliPassword.replace(/"/g, '\\"');
         tl.setSecret(escapedCliPassword.replace(/\\/g, '\"'));
         //login using svn
-        throwIfError(tl.execSync("az", `login --service-principal -u "${servicePrincipalId}" ${authParam}="${escapedCliPassword}" --tenant "${tenantId}" --allow-no-subscriptions`), tl.loc("LoginFailed"));
+        throwIfError(tl.execSync(azureCliPath, `login --service-principal -u "${servicePrincipalId}" ${authParam}="${escapedCliPassword}" --tenant "${tenantId}" --allow-no-subscriptions`), tl.loc("LoginFailed"));
     }
     else if(authScheme.toLowerCase() == "managedserviceidentity") {
         //login using msi
-        throwIfError(tl.execSync("az", "login --identity"), tl.loc("MSILoginFailed"));
+        throwIfError(tl.execSync(azureCliPath, "login --identity"), tl.loc("MSILoginFailed"));
     }
     else {
         throw tl.loc('AuthSchemeNotSupported', authScheme);
@@ -82,7 +82,7 @@ export async function loginAzureRM(connectedService: string): Promise<void> {
     var subscriptionID: string = tl.getEndpointDataParameter(connectedService, "SubscriptionID", true);
     if (!!subscriptionID) {
         //set the subscription imported to the current subscription
-        throwIfError(tl.execSync("az", "account set --subscription \"" + subscriptionID + "\""), tl.loc("ErrorInSettingUpSubscription"));
+        throwIfError(tl.execSync(azureCliPath, "account set --subscription \"" + subscriptionID + "\""), tl.loc("ErrorInSettingUpSubscription"));
     }
 }
 
