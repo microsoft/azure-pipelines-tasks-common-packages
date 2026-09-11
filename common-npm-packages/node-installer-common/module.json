@@ -1,0 +1,10 @@
+{
+  "messages": {
+    "DisableCheckLatestExplicitVersion": "",
+    "TryRosettaLocal": "Unable to find Node for platform %s and architecture %s. Trying to install with Rosetta2",
+    "TryRosettaRemote": "",
+    "GettingExplicitNodeVersion": "",
+    "NodeVersionNotFound": "Unable to find Node version %s for platform %s and architecture %s.",
+    "UnexpectedOS": "Unexpected OS %s."
+  }
+}
