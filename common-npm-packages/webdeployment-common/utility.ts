@@ -3,6 +3,25 @@ import * as os from "os";
 import tl = require('azure-pipelines-task-lib/task');
 import { PackageType } from './packageUtility';
 import zipUtility = require('./ziputility');
+
+// ASCII alnum/_/-/$ plus the full Basic Multilingual Plane (U+0080-U+FFFF), EXCLUDING the
+// UTF-16 surrogate range (U+D800-U+DFFF) so that supplementary-plane characters (U+10000+,
+// e.g. emoji) are rejected -- MySQL never permits those in identifiers, quoted or not.
+const DATABASE_NAME_REGEX = /^[a-zA-Z0-9_\-$\u0080-\uD7FF\uE000-\uFFFF]+$/;
+
+/**
+ * Validates a database name against MySQL's identifier rules, allow-listing the character
+ * set MySQL itself permits in unquoted/quoted identifiers instead of block-listing unsafe
+ * characters, so callers get consistent, safe validation without duplicating this regex.
+ *
+ * @param databaseName Database name to validate
+ *
+ * @return true/false based on whether the name is a valid MySQL identifier.
+ */
+export function isValidDatabaseName(databaseName: string): boolean {
+    return DATABASE_NAME_REGEX.test(databaseName);
+}
+
 /**
  * Validates the input package and finds out input type
  *
