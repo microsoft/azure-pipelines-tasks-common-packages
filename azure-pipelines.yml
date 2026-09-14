@@ -17,7 +17,7 @@ extends:
   parameters:
     settings:
       skipBuildTagsForGitHubPullRequests: true
-      networkIsolationMode: Audit
+      networkIsolationPolicy: Monitored.Unrestricted,CFSClean,CFSClean2,CFSClean3,GitHub,NodeTool,NodeJsOrg
     featureFlags:
       autoBaseline: false
     sdl:
