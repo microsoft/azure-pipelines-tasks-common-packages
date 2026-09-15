@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-codeanalysis-common",
-    "version": "2.279.0",
+    "version": "2.280.0",
     "author": "Microsoft Corporation",
     "description": "Build with Gradle",
     "license": "MIT",
@@ -9,7 +9,7 @@
     },
     "dependencies": {
         "@types/node": "^16.11.39",
-        "azure-pipelines-task-lib": "^5.279.0",
+        "azure-pipelines-task-lib": "^5.280.1",
         "glob": "^7.1.0",
         "mocha": "^11.8.0",
         "rewire": "^6.0.0",
@@ -24,9 +24,9 @@
 	    "serialize-javascript": "^7.0.5",
         "brace-expansion@1.x": { ".": "1.1.18" },
         "brace-expansion@2.x": { ".": "2.1.4" },
-        "fast-uri": "^3.1.5",
-        "js-yaml@3.x": { ".": "3.15.1" },
-        "js-yaml@4.x": { ".": "4.3.1" }
+        "fast-uri": "^3.1.7",
+        "js-yaml@3.x": { ".": "^3.15.2" },
+        "js-yaml@4.x": { ".": "^4.3.2" }
     },
     "main": "VSTS Tasks Code Analysis",
     "scripts": {

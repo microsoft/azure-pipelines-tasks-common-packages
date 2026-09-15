@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-securefiles-common",
-    "version": "2.279.0",
+    "version": "2.280.0",
     "description": "Azure Pipelines tasks SecureFiles Common",
     "main": "securefiles-common.js",
     "scripts": {
@@ -22,8 +22,8 @@
         "@types/mocha": "^5.2.7",
         "@types/node": "^18.0.0",
         "@types/q": "^1.5.4",
-        "azure-devops-node-api": "^17.0.0",
-        "azure-pipelines-task-lib": "^5.279.0"
+        "azure-devops-node-api": "^17.0.1",
+        "azure-pipelines-task-lib": "^5.280.1"
     },
     "devDependencies": {
         "@types/sinon": "^21.0.0",
