@@ -24,9 +24,13 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
     // ACR fragment like /subscriptions/c00d16c7-6c1f-4c03-9be1-6934a4c49682/resourcegroups/jitekuma-RG/providers/Microsoft.ContainerRegistry/registries/jitekuma
     private acrFragmentUrl: string;
 
+    private readonly hasRegistryConfiguration: boolean;
+
     constructor(endpointName?: string, registerNameValue?: string) {
         super();
 
+        // Preserve the distinction between absent and incomplete configuration.
+        this.hasRegistryConfiguration = Boolean(endpointName || registerNameValue);
         if (endpointName && registerNameValue) {
             try {
               tl.debug("Reading the acr registry in old versions");
@@ -44,7 +48,9 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
     }
 
     public getAuthenticationToken(): RegistryAuthenticationToken {
-        guardRegistryHost(this.registryURL, this.endpointName, "ServicePrincipal");
+        if (this.hasRegistryConfiguration) {
+            guardRegistryHost(this.registryURL, this.endpointName, "ServicePrincipal");
+        }
         if (this.registryURL && this.endpointName) {
             return new RegistryAuthenticationToken(
                 tl.getEndpointAuthorizationParameter(this.endpointName, 'serviceprincipalid', true),
