@@ -3,7 +3,10 @@ import http = require('http');
 import httpClient = require('typed-rest-client/HttpClient');
 import * as tl from 'azure-pipelines-task-lib/task';
 
-import { validateAzModuleVersion } from '../azCliUtility';
+import {
+    USE_AZURE_CLI_VERSION_METADATA_SOURCE_FEATURE,
+    validateAzModuleVersion
+} from '../azCliUtility';
 import * as webClient from '../webClient';
 
 export function WebClientTests() {
@@ -489,6 +492,104 @@ export function WebClientTests() {
         assert.strictEqual(capturedOptions.requestTimeout, 3000);
         assert.strictEqual(capturedOptions.suppressErrorIssue, true);
         assert.strictEqual(warningCount, 1);
+    });
+
+    it('uses the Azure CLI metadata source when the feature is enabled', async () => {
+        let capturedRequest: webClient.WebRequest;
+        let capturedOptions: webClient.WebRequestOptions;
+        let warningCount = 0;
+
+        (tl as any).getPipelineFeature = (featureName: string) =>
+            featureName === 'ShowWarningOnOlderAzureModules' ||
+            featureName === USE_AZURE_CLI_VERSION_METADATA_SOURCE_FEATURE;
+        (tl as any).warning = () => warningCount++;
+        (webClient as any).sendRequest = async (
+            request: webClient.WebRequest,
+            options: webClient.WebRequestOptions
+        ) => {
+            capturedRequest = request;
+            capturedOptions = options;
+            return {
+                statusCode: 200,
+                body: 'name = "azure-cli"\r\n  VERSION = \'2.90.0\' # latest\r\n'
+            };
+        };
+
+        await validateAzModuleVersion('azure-cli', '2.80.0', 'Azure-Cli', 1);
+
+        assert.strictEqual(USE_AZURE_CLI_VERSION_METADATA_SOURCE_FEATURE, 'UseAzureCliVersionMetadataSource');
+        assert.strictEqual(capturedRequest.uri, 'https://azcliprod.blob.core.windows.net/cli/azure-cli/setup.py');
+        assert.strictEqual(capturedOptions.retryCount, 1);
+        assert.strictEqual(capturedOptions.requestTimeout, 3000);
+        assert.strictEqual(capturedOptions.suppressErrorIssue, true);
+        assert.strictEqual(warningCount, 1);
+    });
+
+    it('preserves the GitHub source when the Azure CLI metadata feature is disabled', async () => {
+        let capturedRequest: webClient.WebRequest;
+
+        (tl as any).getPipelineFeature = (featureName: string) =>
+            featureName === 'ShowWarningOnOlderAzureModules' ||
+            featureName === 'EnableAzureModuleVersionCheckRequestTimeout';
+        (webClient as any).sendRequest = async (request: webClient.WebRequest) => {
+            capturedRequest = request;
+            return { body: [{ tag_name: 'azure-cli-2.90.0' }] };
+        };
+
+        await validateAzModuleVersion('azure-cli', '2.90.0', 'Azure-Cli', 1);
+
+        assert.strictEqual(capturedRequest.uri, 'https://api.github.com/repos/Azure/azure-cli/releases');
+    });
+
+    it('preserves the Azure PowerShell source when the Azure CLI metadata feature is enabled', async () => {
+        let capturedRequest: webClient.WebRequest;
+
+        (tl as any).getPipelineFeature = (featureName: string) =>
+            featureName === 'ShowWarningOnOlderAzureModules' ||
+            featureName === 'EnableAzureModuleVersionCheckRequestTimeout' ||
+            featureName === USE_AZURE_CLI_VERSION_METADATA_SOURCE_FEATURE;
+        (webClient as any).sendRequest = async (request: webClient.WebRequest) => {
+            capturedRequest = request;
+            return { body: [{ tag_name: 'v15.0.0' }] };
+        };
+
+        await validateAzModuleVersion('azure-powershell', '15.0.0', 'Az', 3, true);
+
+        assert.strictEqual(capturedRequest.uri, 'https://api.github.com/repos/Azure/azure-powershell/releases');
+    });
+
+    it('skips the warning when Azure CLI metadata does not contain a version', async () => {
+        let warningCount = 0;
+
+        (tl as any).getPipelineFeature = (featureName: string) =>
+            featureName === 'ShowWarningOnOlderAzureModules' ||
+            featureName === USE_AZURE_CLI_VERSION_METADATA_SOURCE_FEATURE;
+        (tl as any).warning = () => warningCount++;
+        (webClient as any).sendRequest = async () => ({
+            statusCode: 200,
+            body: 'name = "azure-cli"\nVERSION = "latest"\n'
+        });
+
+        await validateAzModuleVersion('azure-cli', '2.80.0', 'Azure-Cli', 1);
+
+        assert.strictEqual(warningCount, 0);
+    });
+
+    it('does not trust Azure CLI metadata from a failed response', async () => {
+        let warningCount = 0;
+
+        (tl as any).getPipelineFeature = (featureName: string) =>
+            featureName === 'ShowWarningOnOlderAzureModules' ||
+            featureName === USE_AZURE_CLI_VERSION_METADATA_SOURCE_FEATURE;
+        (tl as any).warning = () => warningCount++;
+        (webClient as any).sendRequest = async () => ({
+            statusCode: 503,
+            body: 'VERSION = "2.90.0"'
+        });
+
+        await validateAzModuleVersion('azure-cli', '2.80.0', 'Azure-Cli', 1);
+
+        assert.strictEqual(warningCount, 0);
     });
 
     it('preserves the original advisory request when the request timeout feature is disabled', async () => {

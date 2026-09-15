@@ -16,6 +16,9 @@ const MAX_CREATE_OIDC_TOKEN_RETRIES = 3;
 // Maximum backoff timeout for creating OIDC token in milliseconds
 const MAX_CREATE_OIDC_TOKEN_BACKOFF_TIMEOUT = 15000;
 
+export const USE_AZURE_CLI_VERSION_METADATA_SOURCE_FEATURE = "UseAzureCliVersionMetadataSource";
+const AZURE_CLI_VERSION_METADATA_URL = "https://azcliprod.blob.core.windows.net/cli/azure-cli/setup.py";
+
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
 export function setAzureCloudBasedOnServiceEndpoint(connectedService: string, azureCliPath: string = "az"): void {
@@ -248,11 +251,18 @@ function isAzVersionGreaterOrEqual(azVersionResultOutput: string, versionToCompa
 
 async function getLatestAzureModuleReleaseVersion(moduleName: string): Promise<string> {
     try {
+        const useAzureCliVersionMetadataSource =
+            moduleName.toLowerCase() === "azure-cli" &&
+            tl.getPipelineFeature(USE_AZURE_CLI_VERSION_METADATA_SOURCE_FEATURE);
         let request = new webClient.WebRequest();
-        request.uri = `https://api.github.com/repos/Azure/${moduleName}/releases`;
+        request.uri = useAzureCliVersionMetadataSource
+            ? AZURE_CLI_VERSION_METADATA_URL
+            : `https://api.github.com/repos/Azure/${moduleName}/releases`;
         request.method = 'GET';
         request.headers = request.headers || {};
-        const enableRequestTimeout = tl.getPipelineFeature("EnableAzureModuleVersionCheckRequestTimeout");
+        const enableRequestTimeout =
+            useAzureCliVersionMetadataSource ||
+            tl.getPipelineFeature("EnableAzureModuleVersionCheckRequestTimeout");
         const response = enableRequestTimeout
             ? await webClient.sendRequest(request, Object.assign(new webClient.WebRequestOptions(), {
                 retryCount: 1,
@@ -260,11 +270,40 @@ async function getLatestAzureModuleReleaseVersion(moduleName: string): Promise<s
                 suppressErrorIssue: true
             }))
             : await webClient.sendRequest(request);
+
+        if (useAzureCliVersionMetadataSource) {
+            if (response?.statusCode !== 200) {
+                tl.debug(`Failed to get the latest Azure CLI version. Metadata request returned status code '${response?.statusCode}'.`);
+                return undefined;
+            }
+
+            const version = getAzureCliVersionFromMetadata(response.body);
+            if (!version) {
+                tl.debug("Failed to get the latest Azure CLI version. Metadata response did not contain a valid version.");
+            }
+            return version;
+        }
+
         const lastestCliRelease = moduleName === "azure-powershell" ? response?.body?.filter(x => x?.tag_name?.match(/^v\d+\.\d+\.0/))?.[0] : response?.body?.[0];
         return lastestCliRelease?.tag_name
     } catch (err) {
         tl.debug(`Error checking Azure version: ${err.message}. Hence skipping the check for latest version of ${moduleName}.`);
     }
+}
+
+function getAzureCliVersionFromMetadata(body: unknown): string | undefined {
+    if (typeof body !== "string") {
+        return undefined;
+    }
+
+    for (const line of body.split(/\r?\n/)) {
+        const match = line.match(/^\s*VERSION\s*=\s*(["'])(\d+\.\d+\.\d+)\1\s*(?:#.*)?$/);
+        if (match) {
+            return match[2];
+        }
+    }
+
+    return undefined;
 }
 
 export async function validateAzModuleVersion(moduleName: string, currentVersion: string, displayName: string, versionTolerance: number, checkOnlyMajorVersion: boolean = false): Promise<void> {
