@@ -75,7 +75,16 @@ export function guardRegistryHost(registryURL: string, endpointId: string, schem
     if (!tl.getPipelineFeature(AcrHostValidationFeatureName)) {
         return;
     }
-    if (isAllowedAcrHost(registryURL)) {
+
+    let host = registryURL;
+    // SP connections also accept HTTPS URLs; token exchanges still require a bare host.
+    if (scheme === "ServicePrincipal" && typeof host === "string" && host.toLowerCase().startsWith("https://")) {
+        host = host.slice("https://".length);
+        if (host.endsWith("/")) {
+            host = host.slice(0, -1);
+        }
+    }
+    if (isAllowedAcrHost(host)) {
         return;
     }
     // An empty/absent login server is not a legitimate ACR host, so it also lands here as invalid.
