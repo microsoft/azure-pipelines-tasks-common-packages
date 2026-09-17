@@ -625,7 +625,9 @@ export class ApplicationTokenCredentials {
         } catch (error) {
             tl.debug(`acquireTokenForScopes - error: ${error}`);
             this.publishScopeTokenTelemetry(scopeKind, "None", "error");
-            throw new Error(tl.loc('CouldNotFetchAccessTokenforAzureStatusCode', error.errorCode, error.errorMessage));
+            const errorCode = error && (error.errorCode || error.statusCode || error.name) || "Unknown";
+            const errorMessage = error && (error.errorMessage || error.message) || "Unknown";
+            throw new Error(tl.loc('CouldNotFetchAccessTokenforAzureStatusCode', errorCode, errorMessage));
         }
     }
 
@@ -714,7 +716,7 @@ export class ApplicationTokenCredentials {
         // public login.microsoftonline.com default. this.authorityUrl carries the per-cloud
         // authority (e.g. login.microsoftonline.us / login.chinacloudapi.cn) and is the same
         // value the ARM/MSAL path derives its authority from (see buildMSAL).
-        const credentialOptions = { authorityHost: this.authorityUrl };
+        const credentialOptions = this.getCredentialOptions();
 
         switch (this.scheme) {
             case AzureModels.Scheme.ManagedServiceIdentity:
@@ -764,6 +766,27 @@ export class ApplicationTokenCredentials {
                     };
                 }
         }
+    }
+
+    private getCredentialOptions(): any {
+        const credentialOptions: any = { authorityHost: this.authorityUrl };
+        const proxyConfiguration = tl.getHttpProxyConfiguration(this.authorityUrl);
+
+        if (!proxyConfiguration) {
+            return credentialOptions;
+        }
+
+        const proxyUrl = new URL(proxyConfiguration.proxyUrl);
+        credentialOptions.proxyOptions = {
+            host: `${proxyUrl.protocol}//${proxyUrl.hostname}`,
+            port: proxyUrl.port
+                ? parseInt(proxyUrl.port, 10)
+                : proxyUrl.protocol === "https:" ? 443 : 80,
+            username: proxyConfiguration.proxyUsername,
+            password: proxyConfiguration.proxyPassword
+        };
+
+        return credentialOptions;
     }
 
     private deleteFederatedTokenFile(tokenFilePath?: string): void {
