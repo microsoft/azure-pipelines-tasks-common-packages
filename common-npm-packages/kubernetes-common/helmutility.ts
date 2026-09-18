@@ -7,7 +7,7 @@ import * as tl from 'azure-pipelines-task-lib/task';
 import { getExecutableExtension } from './utility';
 import * as  osutil from './osutility';
 const semver = require('semver');
-const { v4: uuidV4 } = require('uuid')
+const { v4: uuidV4 } = require('uuid');
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
