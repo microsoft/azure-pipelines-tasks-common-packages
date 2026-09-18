@@ -22,7 +22,8 @@
         "azure-pipelines-task-lib": "^5.280.3",
         "azure-pipelines-tool-lib": "^2.281.0",
         "js-yaml": "^3.15.2",
-        "node-forge": "^1.4.0"
+        "node-forge": "^1.4.0",
+        "uuid": "^11.1.1"
     },
     "devDependencies": {
         "shelljs": "^0.8.5",

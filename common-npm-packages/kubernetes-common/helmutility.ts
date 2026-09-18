@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as toolLib from 'azure-pipelines-tool-lib/tool';
 import * as os from 'os';
 import * as util from 'util';
-import * as uuidV4 from 'uuid/v4';
+import { v4 as uuidV4 } from 'uuid';
 import * as tl from 'azure-pipelines-task-lib/task';
 import { getExecutableExtension } from './utility';
 import * as  osutil from './osutility';
