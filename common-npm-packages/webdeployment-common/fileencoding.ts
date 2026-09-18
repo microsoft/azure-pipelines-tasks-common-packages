@@ -4,6 +4,9 @@
 var fs = require('fs');
 import tl = require('azure-pipelines-task-lib');
 
+// XDT security validation relies on this function returning the exact decoder used to inspect
+// transform bytes. Keep unsupported encodings fail-closed unless the XDT validator is updated
+// to prove that the new decoder cannot disagree with ctt.exe about XML markup.
 function detectFileEncodingWithBOM(fileName: string, buffer: Buffer) {
     tl.debug('Detecting file encoding using BOM');
     if(buffer.slice(0,3).equals(Buffer.from([239, 187, 191]))) {
@@ -55,4 +58,3 @@ export function detectFileEncoding(fileName: string, buffer: Buffer) {
     var fileEncoding = detectFileEncodingWithBOM(fileName, buffer) || detectFileEncodingWithoutBOM(fileName, buffer);
     return fileEncoding;
 }
-
