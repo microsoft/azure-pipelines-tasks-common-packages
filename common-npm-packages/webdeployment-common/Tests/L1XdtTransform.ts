@@ -216,34 +216,15 @@ export function runL1XdtTransformTests(this: Mocha.Suite) {
         done();
     });
 
-    it('Rejects transforms when the source document declares a non ASCII-transparent encoding (MSRC 139444)', function(done: Mocha.Done) {
-        // The reported bypass: ctt.exe reads the transform file using the encoding declared by the
-        // *source* document, so a UTF-7 source declaration turns "+ADw-" into "<" for ctt.exe while
-        // the validator, which detects UTF-8 from the byte shape, only ever sees inert text.
-        const sourceFile = writeTemporaryFile('Web.SourceUTF7.config',
-            '<?xml version="1.0" encoding="utf-7"?>\r\n' +
-            '<configuration>\r\n' +
-            '  <appSettings>\r\n' +
-            '    <add key="Setting1" value="Value1" />\r\n' +
-            '  </appSettings>\r\n' +
-            '</configuration>\r\n');
-
+    it('Rejects transform files that declare a non ASCII-transparent encoding, hiding a smuggled xdt:Import (MSRC 139444)', function(done: Mocha.Done) {
+        // The reported bypass: an XDT transform file whose declared encoding this validator cannot
+        // safely model can smuggle markup that only a matching decoder resolves. A UTF-7 declaration
+        // turns "+ADw-...+AD4-" into "<xdt:Import .../>" for a UTF-7-aware decoder, while a decoder
+        // that does not honor the declaration only ever sees inert ASCII text. ctt.exe's
+        // XmlTransformation loads the transform document independently of the source document (see
+        // the comment above asciiTransparentEncodings in xdttransformationutility.ts), so the
+        // encoding that matters here is the one declared by the transform file itself.
         const transformFile = writeTemporaryTransformFile('Web.SmuggledImport.config',
-            '<?xml version="1.0"?>\r\n' +
-            '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">\r\n' +
-            '  +ADw-xdt:Import path="CustomTransform.dll" namespace="CustomTransform" /+AD4-\r\n' +
-            '  <appSettings xdt:Transform="SetAttributes" />\r\n' +
-            '</configuration>\r\n');
-
-        assert.throws(
-            () => applyXdtTransformation(sourceFile, transformFile),
-            /utf-7/i,
-            'Should reject a source document that declares an encoding the validator cannot model');
-        done();
-    });
-
-    it('Rejects transform files that declare a non ASCII-transparent encoding', function(done: Mocha.Done) {
-        const transformFile = writeTemporaryTransformFile('Web.TransformUTF7.config',
             '<?xml version="1.0" encoding="utf-7"?>\r\n' +
             '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">\r\n' +
             '  +ADw-xdt:Import path="CustomTransform.dll" namespace="CustomTransform" /+AD4-\r\n' +
@@ -253,7 +234,7 @@ export function runL1XdtTransformTests(this: Mocha.Suite) {
         assert.throws(
             () => applyXdtTransformation(getAbsolutePath('Web_test.config'), transformFile),
             /utf-7/i,
-            'Should reject a transform file that declares an encoding the validator cannot model');
+            'Should reject a transform document that declares an encoding the validator cannot model');
         done();
     });
 
@@ -320,26 +301,19 @@ export function runL1XdtTransformTests(this: Mocha.Suite) {
     });
 
     it('Rejects a declared encoding that disagrees with the transform file bytes', function(done: Mocha.Done) {
-        // A UTF-16 declaration over UTF-8 transform bytes means ctt.exe and the validator would read
-        // the transform at different byte alignments, so the validator cannot model what ctt.exe sees.
-        const sourceFile = writeTemporaryFile('Web.MismatchedSource.config',
-            '<?xml version="1.0" encoding="utf-16"?>\r\n' +
-            '<configuration>\r\n' +
-            '  <appSettings>\r\n' +
-            '    <add key="Setting1" value="Original" />\r\n' +
-            '  </appSettings>\r\n' +
-            '</configuration>\r\n');
-
+        // A UTF-16 declaration over plain-ASCII, un-BOM'd transform bytes means ctt.exe and the
+        // validator would read the transform at different byte alignments, so the validator cannot
+        // model what ctt.exe sees.
         const transformFile = writeTemporaryTransformFile('Web.MismatchedTransform.config',
-            '<?xml version="1.0"?>\r\n' +
+            '<?xml version="1.0" encoding="utf-16"?>\r\n' +
             '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">\r\n' +
             '  <appSettings xdt:Transform="SetAttributes" />\r\n' +
             '</configuration>\r\n');
 
         assert.throws(
-            () => applyXdtTransformation(sourceFile, transformFile),
+            () => applyXdtTransformation(getAbsolutePath('Web_test.config'), transformFile),
             /utf-16/i,
-            'Should reject a source declaration that disagrees with the transform file encoding');
+            'Should reject a transform declaration that disagrees with the transform file encoding');
         done();
     });
 
@@ -366,6 +340,39 @@ export function runL1XdtTransformTests(this: Mocha.Suite) {
             () => applyXdtTransformation(getAbsolutePath('Web_test.config'), transformFile),
             /XML declaration/i,
             'Should fail closed when the XML declaration cannot be read');
+        done();
+    });
+
+    it('Multi-byte CJK code pages in the encoding allowlist are verified ASCII-transparent', function(done: Mocha.Done) {
+        // The security guarantee of asciiTransparentEncodings depends on every multi-byte CJK entry
+        // genuinely being unable to synthesise an XML delimiter from non-ASCII bytes. That claim is
+        // verified empirically against .NET's own Encoding tables by
+        // Tests/CjkEncodingVerification/Program.cs; this test asserts that the checked-in verification
+        // result is still zero violations and still covers every CJK code page group referenced by
+        // xdttransformationutility.ts, so a future edit that adds a new multi-byte encoding without
+        // re-running that verification is caught here instead of silently weakening the allowlist.
+        const verificationResultsPath = path.join(__dirname, 'CjkEncodingVerification', 'verified-results.json');
+        const verification = JSON.parse(fs.readFileSync(verificationResultsPath, 'utf8'));
+
+        // Every multi-byte CJK encoding group accepted by asciiTransparentEncodings in
+        // xdttransformationutility.ts. Keep this list in sync with that allowlist.
+        const expectedEncodingGroups = ['shift_jis', 'gbk/gb18030', 'big5', 'euc-jp', 'euc-kr'];
+
+        assert(Array.isArray(verification.results) && verification.results.length > 0,
+            'verified-results.json must contain verification results');
+
+        const verifiedGroups = verification.results.map((result: { encodingGroup: string }) => result.encodingGroup);
+        expectedEncodingGroups.forEach(expectedGroup => {
+            assert(verifiedGroups.indexOf(expectedGroup) !== -1,
+                'Encoding group "' + expectedGroup + '" is allowed by the validator but has no recorded ' +
+                'verification result. Run Tests/CjkEncodingVerification/Program.cs and update verified-results.json.');
+        });
+
+        verification.results.forEach((result: { encodingGroup: string, delimiterViolations: number }) => {
+            assert.strictEqual(result.delimiterViolations, 0,
+                'Encoding group "' + result.encodingGroup + '" recorded ' + result.delimiterViolations +
+                ' delimiter violation(s) and must not be in the ASCII-transparent allowlist');
+        });
         done();
     });
 

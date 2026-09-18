@@ -41,24 +41,33 @@ const utf16EncodingAliases = {
     'unicode': true, 'ucs-2': true, 'ucs2': true, 'ucs-2le': true, 'iso-10646-ucs-2': true
 };
 
-// The bundled ctt.exe (Microsoft.Web.XmlTransform) loads the *source* document first and then reads
-// the *transform* file using the encoding declared by that source document, while this validator
-// decodes the transform file using BOM/byte-shape detection (detectFileEncoding). When those two
-// decoders disagree, markup can be hidden from validation yet revealed to ctt.exe - for example an
-// all-ASCII transform file whose bytes only decode to <xdt:Import .../> under a stateful encoding
-// such as UTF-7 ("+ADw-" -> "<"), or under EBCDIC (byte 0x4C -> "<").
+// The bundled ctt.exe (Microsoft.Web.XmlTransform) loads the *transform* document independently of
+// the source document: XmlTransformation(transformFile) reads the transform through its own
+// XmlFileInfoDocument.Load, which decodes using that file's own BOM / byte shape, exactly like this
+// validator's detectFileEncoding. (The *source* document's declared encoding is only ever used when
+// ctt.exe re-serialises the merged result via Save() - it has no bearing on how the transform is
+// decoded, so it is not part of this validator's attack surface and is intentionally not checked
+// here; see MSRC 139444 for the confirmed repro.) When this validator's decode of the transform file
+// disagrees with ctt.exe's own decode of that same file, markup can be hidden from validation yet
+// revealed to ctt.exe - for example an all-ASCII transform file whose bytes only decode to
+// <xdt:Import .../> under a stateful encoding such as UTF-7 ("+ADw-" -> "<"), or under EBCDIC (byte
+// 0x4C -> "<").
 //
 // The invariant enforced by validateXdtEncodingDeclaration removes that whole class of differential:
-// every encoding declared by the source or the transform document must be ASCII-transparent, i.e.
-// no XML delimiter can be either synthesised or swallowed by a decoder disagreement. Every XML
-// delimiter ('<' 0x3C, '>' 0x3E, '&' 0x26, '"' 0x22, '\'' 0x27, '=' 0x3D, '/' 0x2F) is ASCII, so
-// under an ASCII-transparent encoding no decoder disagreement can manufacture markup this validator
-// did not already see and inspect.
+// the encoding declared by the transform document must be ASCII-transparent, i.e. no XML delimiter
+// can be either synthesised or swallowed by a decoder disagreement. Every XML delimiter ('<' 0x3C,
+// '>' 0x3E, '&' 0x26, '"' 0x22, '\'' 0x27, '=' 0x3D, '/' 0x2F) is ASCII, so under an ASCII-transparent
+// encoding no decoder disagreement can manufacture markup this validator did not already see and
+// inspect. The source document's declared encoding is deliberately NOT checked: it plays no part in
+// how ctt.exe decodes the transform file, so rejecting it would only produce false-positive failures
+// for source files that legitimately declare an encoding this validator cannot model.
 //
 // The multi-byte CJK code pages qualify because none of their trail-byte ranges can hold an XML
 // delimiter (every delimiter is below 0x40, and GB18030's only sub-0x40 trail range is the digits
 // 0x30-0x39) and no multi-byte sequence in them maps below U+0080. Note that their trail ranges DO
 // cover ASCII letters and digits, so do not extend this list by assuming "no trail byte below 0x40".
+// Empirically verified against .NET's own Encoding tables for shift_jis/gbk/big5/euc-jp/euc-kr in
+// Tests/CjkEncodingVerification/Program.cs - rerun that harness if this list is extended.
 //
 // Deliberately excluded: utf-7 and the ISO-2022 / HZ-GB-2312 family (escape sequences synthesise
 // ASCII characters), every EBCDIC code page (0x00-0x7F map to entirely different characters), and
@@ -126,7 +135,7 @@ export function expandWildcardPattern(folderPath: string, wildcardPattern : stri
 */
 export function applyXdtTransformation(sourceFile: string, transformFile: string, destinationFile?: string) {
 
-    validateXdtTransformFile(sourceFile, transformFile);
+    validateXdtTransformFile(transformFile);
 
     var cttPath = path.join(__dirname, "ctt", "ctt", "ctt.exe"); 
     var cttArgsArray= [
@@ -149,7 +158,7 @@ export function applyXdtTransformation(sourceFile: string, transformFile: string
 // transform files does not emit repeated identical warnings and telemetry during a single task run.
 let unsafeXdtTransformBypassReported = false;
 
-function validateXdtTransformFile(sourceFile: string, transformFile: string): void {
+function validateXdtTransformFile(transformFile: string): void {
     if (isUnsafeXdtTransformAllowed()) {
         // Opt-out escape hatch: restores the pre-hardening behavior for pipeline authors who
         // legitimately depend on custom XDT transforms. Report the bypass (warning + telemetry)
@@ -162,10 +171,9 @@ function validateXdtTransformFile(sourceFile: string, transformFile: string): vo
         return;
     }
 
-    // ctt.exe decodes the transform file using the encoding declared by the *source* document, so the
-    // source declaration is part of this validator's attack surface even though only the transform
-    // file is inspected for xdt:Import and custom transform/locator types.
-    const sourceDeclaredEncoding = validateXdtEncodingDeclaration(sourceFile);
+    // ctt.exe loads the transform file independently of the source document (see the comment above
+    // asciiTransparentEncodings), so only the transform's own declared encoding is part of this
+    // validator's attack surface.
     const transformDeclaredEncoding = validateXdtEncodingDeclaration(transformFile);
 
     // Read the transform exactly once, so the bytes whose declaration was validated are provably the
@@ -173,7 +181,7 @@ function validateXdtTransformFile(sourceFile: string, transformFile: string): vo
     const transformBuffer = fs.readFileSync(transformFile);
     const transformEncoding = detectTransformFileEncoding(transformFile, transformBuffer);
 
-    validateUtf16DecoderAgreement(sourceFile, sourceDeclaredEncoding, transformFile, transformDeclaredEncoding, transformEncoding);
+    validateUtf16DecoderAgreement(transformFile, transformDeclaredEncoding, transformEncoding);
 
     const transformDocument = parseTransformFile(transformFile, transformBuffer.toString(transformEncoding as BufferEncoding));
     validateXdtNode(transformFile, transformDocument.documentElement);
@@ -181,20 +189,14 @@ function validateXdtTransformFile(sourceFile: string, transformFile: string): vo
 
 // UTF-16 is alignment-sensitive: the same bytes yield entirely different characters depending on
 // whether they are read one or two at a time. Unlike the ASCII-transparent encodings, allowing it
-// therefore requires proving that ctt.exe and this validator agree, rather than proving that no
-// disagreement can matter.
+// therefore requires proving that ctt.exe and this validator agree on the *transform* file's own
+// encoding, rather than proving that no disagreement can matter.
 function validateUtf16DecoderAgreement(
-    sourceFile: string,
-    sourceDeclaredEncoding: string,
     transformFile: string,
     transformDeclaredEncoding: string,
     transformEncoding: string): void {
 
     const transformIsUtf16 = transformEncoding == 'utf-16le';
-
-    if (sourceDeclaredEncoding && isUtf16EncodingAlias(sourceDeclaredEncoding) != transformIsUtf16) {
-        blockEncodingMismatch(sourceFile, sourceDeclaredEncoding, transformEncoding);
-    }
 
     if (transformDeclaredEncoding && isUtf16EncodingAlias(transformDeclaredEncoding) != transformIsUtf16) {
         blockEncodingMismatch(transformFile, transformDeclaredEncoding, transformEncoding);
