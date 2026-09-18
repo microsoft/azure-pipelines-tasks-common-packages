@@ -1,3 +1,4 @@
+import assert = require("assert");
 import { ApplicationTokenCredentials } from '../azure-arm-common';
 import { publishKuduAuthModeTelemetry } from '../azureAppServiceUtility';
 import { getMockEndpoint, nock } from './mock_utils';
@@ -6,7 +7,14 @@ import os = require('os');
 import path = require('path');
 import tl = require('azure-pipelines-task-lib/task');
 
+const azureIdentity = require("@azure/identity");
 const scopeFeatureVariable = "DISTRIBUTEDTASK_TASKS_ALLOWSCOPELEVELTOKEN";
+const proxyEnvironmentVariables = [
+    "AGENT_PROXYURL",
+    "AGENT_PROXYUSERNAME",
+    "AGENT_PROXYPASSWORD",
+    "AGENT_PROXYBYPASSLIST"
+];
 
 // Installs the ARM (ADAL) nock interceptor that answers the client-credentials token
 // request with "DUMMY_ACCESS_TOKEN". This is the ARM-audience token that acquireTokenForScope
@@ -81,6 +89,242 @@ class ScopeTokenTests {
         } catch (error) {
             console.log(error);
             tl.setResult(tl.TaskResult.Failed, 'scopedTokenSuccess should have passed but failed');
+        }
+    }
+
+    public static async authenticatedProxyOptions() {
+        const originalProxyEnvironment = ScopeTokenTests.captureProxyEnvironment();
+        try {
+            process.env["AGENT_PROXYURL"] = "http://proxy.example.test:8080";
+            process.env["AGENT_PROXYUSERNAME"] = "proxy-user";
+            process.env["AGENT_PROXYPASSWORD"] = "proxy-password";
+            process.env["AGENT_PROXYBYPASSLIST"] = "[]";
+
+            const creds: any = makeCreds(true, { appservice: "https://appservice/.default" });
+            const options = creds.getCredentialOptions();
+
+            assert.deepStrictEqual(options, {
+                authorityHost: "https://login.windows.net/",
+                proxyOptions: {
+                    host: "http://proxy.example.test",
+                    port: 8080,
+                    username: "proxy-user",
+                    password: "proxy-password"
+                }
+            });
+            console.log("AUTHENTICATED_PROXY_OPTIONS: applied");
+        } catch (error) {
+            console.log(error);
+            tl.setResult(tl.TaskResult.Failed, 'authenticatedProxyOptions should have passed but failed');
+        } finally {
+            ScopeTokenTests.restoreProxyEnvironment(originalProxyEnvironment);
+        }
+    }
+
+    public static async credentialConstructorsReceiveProxyOptions() {
+        const originalProxyEnvironment = ScopeTokenTests.captureProxyEnvironment();
+        const originalAgentTempDirectory = process.env["AGENT_TEMPDIRECTORY"];
+        const originalDescriptors = {
+            WorkloadIdentityCredential: Object.getOwnPropertyDescriptor(azureIdentity, "WorkloadIdentityCredential"),
+            ClientSecretCredential: Object.getOwnPropertyDescriptor(azureIdentity, "ClientSecretCredential"),
+            ClientCertificateCredential: Object.getOwnPropertyDescriptor(azureIdentity, "ClientCertificateCredential")
+        };
+        let tempDirectory: string;
+        let workloadIdentityOptions: any;
+        let clientSecretOptions: any;
+        let clientCertificateOptions: any;
+
+        try {
+            process.env["AGENT_PROXYURL"] = "http://proxy.example.test:8080";
+            process.env["AGENT_PROXYUSERNAME"] = "proxy-user";
+            process.env["AGENT_PROXYPASSWORD"] = "proxy-password";
+            process.env["AGENT_PROXYBYPASSLIST"] = "[]";
+            tempDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "azure-arm-rest-proxy-"));
+            process.env["AGENT_TEMPDIRECTORY"] = tempDirectory;
+
+            Object.defineProperty(azureIdentity, "WorkloadIdentityCredential", {
+                configurable: true,
+                value: class {
+                    constructor(options: any) {
+                        workloadIdentityOptions = options;
+                    }
+                }
+            });
+            Object.defineProperty(azureIdentity, "ClientSecretCredential", {
+                configurable: true,
+                value: class {
+                    constructor(_tenantId: string, _clientId: string, _secret: string, options: any) {
+                        clientSecretOptions = options;
+                    }
+                }
+            });
+            Object.defineProperty(azureIdentity, "ClientCertificateCredential", {
+                configurable: true,
+                value: class {
+                    constructor(_tenantId: string, _clientId: string, _certificatePath: string, options: any) {
+                        clientCertificateOptions = options;
+                    }
+                }
+            });
+
+            const workloadIdentityCreds: any = new ApplicationTokenCredentials(
+                "MOCK_SERVICE_CONNECTION",
+                "MOCK_SPN_ID",
+                "MOCK_TENANT_ID",
+                undefined,
+                "https://management.azure.com/",
+                "https://login.windows.net/",
+                "https://management.azure.com/",
+                false,
+                "WorkloadIdentityFederation",
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                true,
+                true,
+                { appservice: "https://appservice/.default" }
+            );
+            workloadIdentityCreds.getFederatedToken = async () => "DUMMY_FEDERATED_TOKEN";
+            const workloadIdentityCredential = await workloadIdentityCreds.buildCredentialByScheme();
+            workloadIdentityCreds.deleteFederatedTokenFile(workloadIdentityCredential.tokenFilePath);
+
+            const clientSecretCreds: any = makeCreds(true, { appservice: "https://appservice/.default" });
+            await clientSecretCreds.buildCredentialByScheme();
+
+            const clientCertificateCreds: any = new ApplicationTokenCredentials(
+                "MOCK_SERVICE_CONNECTION",
+                "MOCK_SPN_ID",
+                "MOCK_TENANT_ID",
+                undefined,
+                "https://management.azure.com/",
+                "https://login.windows.net/",
+                "https://management.azure.com/",
+                false,
+                "ServicePrincipal",
+                undefined,
+                "spnCertificate",
+                "MOCK_CERTIFICATE_PATH",
+                undefined,
+                undefined,
+                true,
+                true,
+                { appservice: "https://appservice/.default" }
+            );
+            await clientCertificateCreds.buildCredentialByScheme();
+
+            const expectedProxyOptions = {
+                host: "http://proxy.example.test",
+                port: 8080,
+                username: "proxy-user",
+                password: "proxy-password"
+            };
+            assert.deepStrictEqual(workloadIdentityOptions.proxyOptions, expectedProxyOptions);
+            assert.deepStrictEqual(clientSecretOptions.proxyOptions, expectedProxyOptions);
+            assert.deepStrictEqual(clientCertificateOptions.proxyOptions, expectedProxyOptions);
+            console.log("PROXY_CONSTRUCTOR_OPTIONS: applied");
+        } catch (error) {
+            console.log(error);
+            tl.setResult(tl.TaskResult.Failed, 'credentialConstructorsReceiveProxyOptions should have passed but failed');
+        } finally {
+            Object.defineProperty(azureIdentity, "WorkloadIdentityCredential", originalDescriptors.WorkloadIdentityCredential);
+            Object.defineProperty(azureIdentity, "ClientSecretCredential", originalDescriptors.ClientSecretCredential);
+            Object.defineProperty(azureIdentity, "ClientCertificateCredential", originalDescriptors.ClientCertificateCredential);
+            ScopeTokenTests.restoreProxyEnvironment(originalProxyEnvironment);
+            if (originalAgentTempDirectory === undefined) {
+                delete process.env["AGENT_TEMPDIRECTORY"];
+            } else {
+                process.env["AGENT_TEMPDIRECTORY"] = originalAgentTempDirectory;
+            }
+            if (tempDirectory && fs.existsSync(tempDirectory)) {
+                fs.rmdirSync(tempDirectory);
+            }
+        }
+    }
+
+    public static async proxyDefaultPorts() {
+        const originalProxyEnvironment = ScopeTokenTests.captureProxyEnvironment();
+        try {
+            process.env["AGENT_PROXYUSERNAME"] = "";
+            process.env["AGENT_PROXYPASSWORD"] = "";
+            process.env["AGENT_PROXYBYPASSLIST"] = "[]";
+
+            process.env["AGENT_PROXYURL"] = "http://proxy.example.test";
+            const httpCreds: any = makeCreds(true, { appservice: "https://appservice/.default" });
+            assert.strictEqual(httpCreds.getCredentialOptions().proxyOptions.port, 80);
+
+            process.env["AGENT_PROXYURL"] = "https://proxy.example.test";
+            const httpsCreds: any = makeCreds(true, { appservice: "https://appservice/.default" });
+            assert.strictEqual(httpsCreds.getCredentialOptions().proxyOptions.port, 443);
+
+            console.log("PROXY_DEFAULT_PORTS: http=80 https=443");
+        } catch (error) {
+            console.log(error);
+            tl.setResult(tl.TaskResult.Failed, 'proxyDefaultPorts should have passed but failed');
+        } finally {
+            ScopeTokenTests.restoreProxyEnvironment(originalProxyEnvironment);
+        }
+    }
+
+    public static async bypassedProxyOptions() {
+        const originalProxyEnvironment = ScopeTokenTests.captureProxyEnvironment();
+        try {
+            process.env["AGENT_PROXYURL"] = "http://proxy.example.test:8080";
+            process.env["AGENT_PROXYUSERNAME"] = "proxy-user";
+            process.env["AGENT_PROXYPASSWORD"] = "proxy-password";
+            process.env["AGENT_PROXYBYPASSLIST"] = JSON.stringify(["login\\.windows\\.net"]);
+
+            const creds: any = makeCreds(true, { appservice: "https://appservice/.default" });
+            const options = creds.getCredentialOptions();
+
+            assert.strictEqual(options.proxyOptions, undefined,
+                "Proxy options should be omitted when task-lib matches the authority URL to the bypass list");
+            console.log("BYPASSED_PROXY_OPTIONS: omitted");
+        } catch (error) {
+            console.log(error);
+            tl.setResult(tl.TaskResult.Failed, 'bypassedProxyOptions should have passed but failed');
+        } finally {
+            ScopeTokenTests.restoreProxyEnvironment(originalProxyEnvironment);
+        }
+    }
+
+    public static async noProxyOptions() {
+        const originalProxyEnvironment = ScopeTokenTests.captureProxyEnvironment();
+        try {
+            proxyEnvironmentVariables.forEach(variable => delete process.env[variable]);
+
+            const creds: any = makeCreds(true, { appservice: "https://appservice/.default" });
+            const options = creds.getCredentialOptions();
+
+            assert.strictEqual(options.proxyOptions, undefined,
+                "Proxy options should be omitted when the agent has no proxy configuration");
+            console.log("NO_PROXY_OPTIONS: omitted");
+        } catch (error) {
+            console.log(error);
+            tl.setResult(tl.TaskResult.Failed, 'noProxyOptions should have passed but failed');
+        } finally {
+            ScopeTokenTests.restoreProxyEnvironment(originalProxyEnvironment);
+        }
+    }
+
+    public static async featureDisabledDoesNotReadProxy() {
+        const taskLib: any = tl;
+        const originalGetHttpProxyConfiguration = taskLib.getHttpProxyConfiguration;
+        try {
+            taskLib.getHttpProxyConfiguration = () => {
+                throw new Error("Flag-off behavior must not read proxy configuration for Azure Identity");
+            };
+
+            const creds = makeCreds(false, undefined);
+            const token = await creds.acquireTokenForScope("appservice");
+            assert.strictEqual(token, "DUMMY_ACCESS_TOKEN");
+            console.log("FEATURE_DISABLED_PROXY_READ: false");
+        } catch (error) {
+            console.log(error);
+            tl.setResult(tl.TaskResult.Failed, 'featureDisabledDoesNotReadProxy should have passed but failed');
+        } finally {
+            taskLib.getHttpProxyConfiguration = originalGetHttpProxyConfiguration;
         }
     }
 
@@ -298,7 +542,9 @@ class ScopeTokenTests {
             creds.buildCredentialByScheme = async () => ({
                 credential: {
                     getToken: async () => {
-                        throw new Error("scoped token unavailable");
+                        const error = new Error("network_error");
+                        error.name = "AuthenticationRequiredError";
+                        throw error;
                     }
                 }
             });
@@ -308,10 +554,34 @@ class ScopeTokenTests {
             console.log('SCOPED_TOKEN_ERROR: ' + error.message);
         }
     }
+
+    private static captureProxyEnvironment(): { [key: string]: string } {
+        const values: { [key: string]: string } = {};
+        proxyEnvironmentVariables.forEach(variable => {
+            values[variable] = process.env[variable];
+        });
+        return values;
+    }
+
+    private static restoreProxyEnvironment(values: { [key: string]: string }): void {
+        proxyEnvironmentVariables.forEach(variable => {
+            if (values[variable] === undefined) {
+                delete process.env[variable];
+            } else {
+                process.env[variable] = values[variable];
+            }
+        });
+    }
 }
 
 async function RUNTESTS() {
     await ScopeTokenTests.scopedTokenSuccess();
+    await ScopeTokenTests.authenticatedProxyOptions();
+    await ScopeTokenTests.credentialConstructorsReceiveProxyOptions();
+    await ScopeTokenTests.proxyDefaultPorts();
+    await ScopeTokenTests.bypassedProxyOptions();
+    await ScopeTokenTests.noProxyOptions();
+    await ScopeTokenTests.featureDisabledDoesNotReadProxy();
     await ScopeTokenTests.scopedTokenSuccessOnLegacyNode();
     await ScopeTokenTests.managedIdentityScopeResource();
     await ScopeTokenTests.managedIdentityLegacyResourceWhenFeatureDisabled();
