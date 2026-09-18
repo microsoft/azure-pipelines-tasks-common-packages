@@ -83,6 +83,11 @@ if (options['test']) {
     console.log('Testing shared npm packages');
     util.cd('common-npm-packages');
     const suite = options['suite'] || defaultTestSuite;
+    const nycExecutableName = process.platform === 'win32' ? 'nyc.cmd' : 'nyc';
+    const mochaExecutableName = process.platform === 'win32' ? 'mocha.cmd' : 'mocha';
+    const rootNycPath = path.join(__dirname, 'node_modules', '.bin', nycExecutableName);
+    const packageNycPath = options['packageName'] && path.join(__dirname, 'common-npm-packages', options['packageName'], 'node_modules', '.bin', nycExecutableName);
+    const nycPath = [rootNycPath, packageNycPath].find(candidate => candidate && fs.existsSync(candidate)) || nycExecutableName;
     let testsFailed = false;
     util.cleanFolder(testResultsPath, [gitkeepName]);
 
@@ -101,8 +106,13 @@ if (options['test']) {
                     try {
                         const suitName = `${child}-suite`;
                         const mochaOptions = util.createMochaOptions(mochaReporterPath, junitPath, suitName);
+                        const packageNycPath = path.join(startPath, child, 'node_modules', '.bin', nycExecutableName);
+                        const packageNyc = [rootNycPath, packageNycPath].find(candidate => candidate && fs.existsSync(candidate)) || nycExecutableName;
+                        const rootMochaPath = path.join(__dirname, 'node_modules', '.bin', mochaExecutableName);
+                        const packageMochaPath = path.join(startPath, child, 'node_modules', '.bin', mochaExecutableName);
+                        const mochaPath = [rootMochaPath, packageMochaPath].find(candidate => candidate && fs.existsSync(candidate)) || mochaExecutableName;
 
-                        util.run(`nyc --all --src ${buildPath} --report-dir ${coveragePath} mocha ${mochaOptions} ${testPath}`, true);
+                        util.run(`"${packageNyc}" --all --src ${buildPath} --report-dir ${coveragePath} "${mochaPath}" ${mochaOptions} ${testPath}`, true);
                         util.renameFile(coveragePath, coverageBaseNameJson, `${child}-coverage.json`);
                     } catch (err) {
                         testsFailed = true;
@@ -118,8 +128,8 @@ if (options['test']) {
 
     try {
         util.rm(path.join(coveragePath, summaryBaseName));
-        util.run(`nyc merge ${coveragePath} ${path.join(testResultsPath, 'merged-coverage.json')}`, true);
-        util.run(`nyc report -t ${testResultsPath} --report-dir ${testResultsPath} --reporter=cobertura`, true);
+        util.run(`"${nycPath}" merge ${coveragePath} ${path.join(testResultsPath, 'merged-coverage.json')}`, true);
+        util.run(`"${nycPath}" report -t ${testResultsPath} --report-dir ${testResultsPath} --reporter=cobertura`, true);
     } catch (e) {
         console.log('Error while generating coverage report')
     }
