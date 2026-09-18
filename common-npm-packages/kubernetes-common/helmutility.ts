@@ -3,11 +3,11 @@ import * as fs from 'fs';
 import * as toolLib from 'azure-pipelines-tool-lib/tool';
 import * as os from 'os';
 import * as util from 'util';
-import { v4 as uuidV4 } from 'uuid';
 import * as tl from 'azure-pipelines-task-lib/task';
 import { getExecutableExtension } from './utility';
 import * as  osutil from './osutility';
 const semver = require('semver');
+const { v4: uuidV4 } = require('uuid')
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
