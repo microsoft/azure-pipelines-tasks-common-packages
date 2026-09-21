@@ -3,7 +3,7 @@ import { AzureAppService } from '../azure-arm-rest/azure-arm-app-service';
 import { AzureApplicationInsights, ApplicationInsightsResources} from '../azure-arm-rest/azure-arm-appinsights';
 import { AzureEndpoint } from '../azure-arm-rest/azureModels';
 
-var uuidV4 = require("uuid/v4");
+const { v4: uuidV4 } = require('uuid');
 
 export async function addReleaseAnnotation(endpoint: AzureEndpoint, azureAppService: AzureAppService, isDeploymentSuccess: boolean): Promise<void> {
     try {
