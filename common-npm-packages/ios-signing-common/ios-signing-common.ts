@@ -700,11 +700,28 @@ async function printFromPlist(itemToPrint: string, plistPath: string) {
 }
 
 function getProvisioningProfilePath(uuid: string, provProfilePath?: string): string {
+    const profileIdentifier: string = uuid.trim();
+    if (!profileIdentifier ||
+        profileIdentifier === '.' ||
+        profileIdentifier === '..' ||
+        profileIdentifier.indexOf('\0') >= 0 ||
+        profileIdentifier.indexOf('/') >= 0 ||
+        profileIdentifier.indexOf('\\') >= 0) {
+        throw new Error(tl.loc('ProvProfileIdentifierInvalid'));
+    }
+
     let profileExtension: string = '';
     if (provProfilePath) {
         profileExtension = path.extname(provProfilePath);
     }
-    return tl.resolve(getUserProvisioningProfilesPath(), uuid.trim().concat(profileExtension));
+
+    const profileDirectory: string = tl.resolve(getUserProvisioningProfilesPath());
+    const profilePath: string = tl.resolve(profileDirectory, profileIdentifier.concat(profileExtension));
+    if (path.dirname(profilePath) !== profileDirectory) {
+        throw new Error(tl.loc('ProvProfileIdentifierInvalid'));
+    }
+
+    return profilePath;
 }
 
 /**
