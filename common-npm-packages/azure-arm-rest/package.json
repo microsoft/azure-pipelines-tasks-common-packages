@@ -1,6 +1,6 @@
 {
     "name": "azure-pipelines-tasks-azure-arm-rest",
-    "version": "3.280.3",
+    "version": "3.281.0",
     "description": "Common Lib for Azure ARM REST apis",
     "repository": {
         "type": "git",
@@ -21,7 +21,7 @@
         "@types/q": "1.5.4",
         "async-mutex": "^0.4.0",
         "azure-devops-node-api": "^17.0.1",
-        "azure-pipelines-task-lib": "^5.280.1",
+        "azure-pipelines-task-lib": "^5.280.3",
         "https-proxy-agent": "^4.0.0",
         "jsonwebtoken": "^9.0.3",
         "msalv1": "npm:@azure/msal-node@^1.18.4",

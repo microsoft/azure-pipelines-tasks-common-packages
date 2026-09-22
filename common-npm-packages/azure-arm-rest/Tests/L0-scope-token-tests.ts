@@ -14,6 +14,18 @@ export function ScopeTokenTests(defaultTimeout = 2000) {
 
                 console.log("\tvalidating scoped token success");
                 scopedTokenSuccess(tr);
+                console.log("\tvalidating authenticated proxy options");
+                authenticatedProxyOptions(tr);
+                console.log("\tvalidating proxy options reach credential constructors");
+                credentialConstructorsReceiveProxyOptions(tr);
+                console.log("\tvalidating proxy default ports");
+                proxyDefaultPorts(tr);
+                console.log("\tvalidating bypassed proxy options");
+                bypassedProxyOptions(tr);
+                console.log("\tvalidating no-proxy options");
+                noProxyOptions(tr);
+                console.log("\tvalidating flag-off proxy behavior");
+                featureDisabledDoesNotReadProxy(tr);
                 console.log("\tvalidating scoped token success on Node <16 (MSAL path)");
                 scopedTokenSuccessOnLegacyNode(tr);
                 console.log("\tvalidating Managed Identity scope resource selection");
@@ -41,6 +53,36 @@ export function ScopeTokenTests(defaultTimeout = 2000) {
                 done(error);
             });
     });
+}
+
+function authenticatedProxyOptions(tr: ttm.MockTestRunner) {
+    assert(tr.stdOutContained('AUTHENTICATED_PROXY_OPTIONS: applied'),
+        'Should pass the authenticated agent proxy to Azure Identity');
+}
+
+function credentialConstructorsReceiveProxyOptions(tr: ttm.MockTestRunner) {
+    assert(tr.stdOutContained('PROXY_CONSTRUCTOR_OPTIONS: applied'),
+        'Should pass proxy options to WIF and SPN Azure Identity constructors');
+}
+
+function proxyDefaultPorts(tr: ttm.MockTestRunner) {
+    assert(tr.stdOutContained('PROXY_DEFAULT_PORTS: http=80 https=443'),
+        'Should select protocol-appropriate ports when the proxy URL omits one');
+}
+
+function bypassedProxyOptions(tr: ttm.MockTestRunner) {
+    assert(tr.stdOutContained('BYPASSED_PROXY_OPTIONS: omitted'),
+        'Should omit Azure Identity proxy options when the authority is bypassed');
+}
+
+function noProxyOptions(tr: ttm.MockTestRunner) {
+    assert(tr.stdOutContained('NO_PROXY_OPTIONS: omitted'),
+        'Should omit Azure Identity proxy options when no agent proxy is configured');
+}
+
+function featureDisabledDoesNotReadProxy(tr: ttm.MockTestRunner) {
+    assert(tr.stdOutContained('FEATURE_DISABLED_PROXY_READ: false'),
+        'Flag-off behavior should not read Azure Identity proxy configuration');
 }
 
 function scopedTokenSuccess(tr: ttm.MockTestRunner) {
@@ -113,6 +155,10 @@ function fallbackWhenScopeUnmapped(tr: ttm.MockTestRunner) {
 function scopedTokenFailure(tr: ttm.MockTestRunner) {
     assert(tr.stdOutContained('SCOPED_TOKEN_ERROR:'),
         'Should have surfaced the scoped token acquisition failure');
+    assert(tr.stdOutContained('Status code: AuthenticationRequiredError, status message: network_error'),
+        'Should preserve Azure Identity error details instead of reporting undefined values');
+    assert(!tr.stdOutContained('Status code: undefined, status message: undefined'),
+        'Should not discard Azure Identity error details');
     assert(tr.stdOutContained('"requestedAudience":"None"'),
         'Failure telemetry should not report an ARM audience');
     assert(tr.stdOutContained('"outcome":"error"'),
