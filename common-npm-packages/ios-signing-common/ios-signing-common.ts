@@ -701,6 +701,7 @@ async function printFromPlist(itemToPrint: string, plistPath: string) {
 
 function getProvisioningProfilePath(uuid: string, provProfilePath?: string): string {
     const profileIdentifier: string = uuid.trim();
+    // Only standalone "." and ".." navigate directories; names containing dots remain valid opaque identifiers.
     if (!profileIdentifier ||
         profileIdentifier === '.' ||
         profileIdentifier === '..' ||
