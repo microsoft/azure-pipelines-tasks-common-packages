@@ -20,6 +20,7 @@
     "typescript": "^1.8.10"
   },
   "overrides": {
-	    "serialize-javascript": "^7.0.4"
+	    "serialize-javascript": "^7.0.4",
+	    "brace-expansion": "2.1.3"
   }
 }
