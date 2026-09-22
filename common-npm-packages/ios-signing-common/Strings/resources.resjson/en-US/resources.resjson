@@ -3,5 +3,6 @@
   "loc.messages.TempKeychainSetupFailed": "Failed to add the temporary keychain to the keychains search path.",
   "loc.messages.ProvProfileDetailsNotFound": "Failed to find the details for provisioning profile: %s",
   "loc.messages.ProvProfileUUIDNotFound": "Failed to find provisioning profile UUID for provisioning profile: %s",
-  "loc.messages.ProvProfileNameNotFound": "Failed to find provisioning profile name for provisioning profile: %s"
+  "loc.messages.ProvProfileNameNotFound": "Failed to find provisioning profile name for provisioning profile: %s",
+  "loc.messages.ProvProfileIdentifierInvalid": "Provisioning profile identifier must be a file name and cannot contain path separators."
 }

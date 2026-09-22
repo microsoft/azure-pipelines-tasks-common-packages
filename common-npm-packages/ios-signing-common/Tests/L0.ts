@@ -12,6 +12,7 @@ import { getP12PropertiesTest } from "./L0GetP12Properties";
 import { getOSProvisioningProfileTypeTest } from "./L0GetmacOSProvisioningProfileType"
 import { getCloudEntitlementTest } from "./L0GetCloudEntitlement";
 import { getProvisioningProfileNameTest } from "./L0GetProvisioningProfileName";
+import { installProvisioningProfileTest } from "./L0InstallProvisioningProfile";
 
 describe("artifacts-common suite", async function() {
     describe("getTempKeychainPath", getTempKeychainPathTest);
@@ -41,4 +42,6 @@ describe("artifacts-common suite", async function() {
     describe("getCloudEntitlement", getCloudEntitlementTest);
 
     describe("getProvisioningProfileName", getProvisioningProfileNameTest);
+
+    describe("installProvisioningProfile", installProvisioningProfileTest);
 });
