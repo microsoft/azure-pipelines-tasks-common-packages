@@ -6,6 +6,13 @@ import * as winreg from 'winreg';
 import * as semver from 'semver';
 
 export const ERROR_FILE_NAME = "error.txt";
+
+function validateNoEmbeddedQuote(value: string, argumentName: string): void {
+    if (value && value.indexOf("'") !== -1) {
+        throw new Error(`Invalid character in ${argumentName}: single quotes are not allowed.`);
+    }
+}
+
 /**
  * Constructs argument for MSDeploy command
  * 
@@ -28,6 +35,13 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pr
                              removeAdditionalFilesFlag: boolean, excludeFilesFromAppDataFlag: boolean, takeAppOfflineFlag: boolean,
                              virtualApplication: string, setParametersFile: string, additionalArguments: string, isParamFilePresentInPacakge: boolean,
                              isFolderBasedDeployment: boolean, useWebDeploy: boolean, authType?: string) : string {
+
+    if (tl.getPipelineFeature('SecureMSDeployCommandExecution')) {
+        validateNoEmbeddedQuote(webAppPackage, 'package path');
+        validateNoEmbeddedQuote(webAppName, 'web app name');
+        validateNoEmbeddedQuote(virtualApplication, 'virtual application');
+        validateNoEmbeddedQuote(setParametersFile, 'set parameters file path');
+    }
 
     var msDeployCmdArgs: string = " -verb:sync";
 

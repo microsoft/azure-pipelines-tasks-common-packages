@@ -58,7 +58,7 @@ export async function DeployUsingMSDeploy(webDeployPkg, webAppName, publishingPr
         while(true) {
             try {
                 retryCount -= 1;
-                await executeMSDeploy(msDeployCmdArgs);
+                await executeMSDeploy(msDeployCmdArgs, msDeployPath);
                 break;
             }
             catch (error) {
@@ -95,7 +95,7 @@ export async function executeWebDeploy(webDeployArguments: WebDeployArguments): 
         const msDeployPath: string = await getMSDeployFullPath();
         const msDeployDirectory = msDeployPath.slice(0, msDeployPath.lastIndexOf('\\') + 1);
         process.env.PATH = msDeployDirectory + ";" + process.env.PATH;
-        await executeMSDeploy(args);
+        await executeMSDeploy(args, msDeployPath);
         return {
             isSuccess: true
         } as WebDeployResult;
@@ -164,7 +164,7 @@ function argStringToArray(argString): string[] {
     return args;
 }
 
-async function executeMSDeploy(msDeployCmdArgs: string): Promise<any> {
+async function executeMSDeploy(msDeployCmdArgs: string, msDeployFullPath: string): Promise<any> {
     return new Promise<any>(async (resolve, reject) => {
         const errorFile = path.join(tl.getVariable('System.DefaultWorkingDirectory'), ERROR_FILE_NAME);
         const fd = fs.openSync(errorFile, "w");
@@ -187,15 +187,12 @@ async function executeMSDeploy(msDeployCmdArgs: string): Promise<any> {
             for (let i = 0; i < msDeployCmdArgsArray.length; i++) {
                 tl.debug("arg#" + i + ": " + msDeployCmdArgsArray[i]);
             }
-            // set shell: true because C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe has folder with spaces 
-            // see https://github.com/microsoft/azure-pipelines-tasks/issues/17634
-            const options: IExecOptions = { 
-                failOnStdErr: true, 
-                errStream: errorStream, 
-                windowsVerbatimArguments: true, 
-                shell: true
-            };
-            await tl.exec("msdeploy", msDeployCmdArgsArray, options);
+            const secureInvocationEnabled = tl.getPipelineFeature('SecureMSDeployCommandExecution');
+            const options: IExecOptions = secureInvocationEnabled
+                ? { failOnStdErr: true, errStream: errorStream }
+                : { failOnStdErr: true, errStream: errorStream, windowsVerbatimArguments: true, shell: true };
+            const toolPath = secureInvocationEnabled ? msDeployFullPath : "msdeploy";
+            await tl.exec(toolPath, msDeployCmdArgsArray, options);
             resolve("Azure App service successfully deployed");
         } catch (error) {
             msDeployError = error;
