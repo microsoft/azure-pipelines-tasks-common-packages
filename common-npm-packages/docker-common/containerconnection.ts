@@ -12,6 +12,19 @@ import * as fileutils from "./fileutils";
 import * as os from "os";
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
+// Matches one or more # followed by vso[ - the prefix the Azure Pipelines agent
+// uses to detect logging commands (mirrors the pattern used for the streamed
+// stdout/stderr sanitizer in dockercommandutils.ts). Case-insensitive because
+// the agent accepts any casing.
+const vsoCommandPattern = /#+vso\[/gi;
+
+// Strips ##vso[ command prefixes from a single line of Docker output so the
+// Azure Pipelines agent does not interpret attacker-controlled Docker output
+// as a logging command (e.g. task.setvariable) when it is replayed through
+// tl.error()/console.log() below.
+function sanitizeDockerOutputLine(line: string): string {
+    return line.replace(vsoCommandPattern, "#vso[");
+}
 
 export default class ContainerConnection {
     private dockerPath: string;
@@ -48,8 +61,17 @@ export default class ContainerConnection {
             tl.debug(tl.loc('ConnectingToDockerHost', dockerHostVar));
         }
 
+        // "errline" is emitted from the raw child-process stderr regardless of
+        // any outStream/errStream sanitizer passed in via `options` - those
+        // streams are only consulted for data written through them, not for
+        // this event. Since these lines are replayed verbatim through
+        // tl.error()/console.log() below (an agent-command-aware channel) once
+        // the command fails, they must be sanitized here as well, otherwise
+        // attacker-controlled Docker output (e.g. from a remote Docker Engine)
+        // can inject ##vso[] logging commands on a nonzero exit even when the
+        // caller believes sanitization is already applied via `options`.
         command.on("errline", line => {
-            errlines.push(line);
+            errlines.push(sanitizeDockerOutputLine(line));
         });
         
         const hideDockerExecTaskLogIssueErrorOutput = tl.getPipelineFeature("hideDockerExecTaskLogIssueErrorOutput");
