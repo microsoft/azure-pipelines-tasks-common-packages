@@ -10,6 +10,7 @@ import * as imageUtils from "./containerimageutils";
 import AuthenticationToken from "./registryauthenticationprovider/registryauthenticationtoken"
 import * as fileutils from "./fileutils";
 import * as os from "os";
+import { sanitizeVsoCommandMarkers } from "./vsoCommandSanitizer";
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
@@ -48,8 +49,23 @@ export default class ContainerConnection {
             tl.debug(tl.loc('ConnectingToDockerHost', dockerHostVar));
         }
 
+        // "errline" is emitted from the raw child-process stderr regardless of
+        // any outStream/errStream sanitizer passed in via `options` - those
+        // streams are only consulted for data written through them, not for
+        // this event. Since these lines are replayed verbatim through
+        // tl.error()/console.log() below (an agent-command-aware channel) once
+        // the command fails, they must be sanitized here as well, otherwise
+        // attacker-controlled Docker output (e.g. from a remote Docker Engine)
+        // can inject ##vso[] logging commands on a nonzero exit even when the
+        // caller believes sanitization is already applied via `options`.
+        //
+        // A plain full-string replace (rather than the chunk-aware stream
+        // sanitizer in dockercommandutils.ts) is sufficient here: ToolRunner
+        // already splits stderr into complete, newline-terminated lines before
+        // emitting "errline", so there is no chunk boundary a marker could be
+        // split across.
         command.on("errline", line => {
-            errlines.push(line);
+            errlines.push(sanitizeVsoCommandMarkers(line));
         });
         
         const hideDockerExecTaskLogIssueErrorOutput = tl.getPipelineFeature("hideDockerExecTaskLogIssueErrorOutput");
