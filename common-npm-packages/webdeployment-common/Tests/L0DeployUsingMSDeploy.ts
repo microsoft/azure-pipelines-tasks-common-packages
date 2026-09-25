@@ -47,7 +47,7 @@ export function runDeployUsingMSDeployTests(): void {
         const [toolPath, argsArray, options] = execStub.firstCall.args;
 
         assert.strictEqual((options as any).shell, undefined, "shell option must not be enabled when the secure flag is on");
-        assert.strictEqual((options as any).windowsVerbatimArguments, undefined, "windowsVerbatimArguments must not be enabled when the secure flag is on");
+        assert.strictEqual((options as any).windowsVerbatimArguments, true, "windowsVerbatimArguments must stay enabled so msdeploy's own argument parsing is unaffected");
         assert.notStrictEqual(toolPath, "msdeploy", "the absolute msdeploy path should be used, not a PATH-resolved name");
         assert.ok(toolPath.toLowerCase().endsWith("msdeploy.exe"), "toolPath should point at msdeploy.exe");
 
@@ -74,13 +74,26 @@ export function runDeployUsingMSDeployTests(): void {
         assert.strictEqual(toolPath, "msdeploy");
     });
 
-    it("should reject a package name containing shell command-chaining characters when the secure flag is on", async () => {
-        const maliciousPackageName = "app&calc&payload.zip";
+    it("should reject a package name containing a quote character when the secure flag is on", async () => {
+        const maliciousPackageName = "app'payload.zip";
         const maliciousPackagePath = path.join(workingDirectory, maliciousPackageName);
         fs.writeFileSync(maliciousPackagePath, "");
 
         await assert.rejects(deploy(maliciousPackagePath, true));
         assert.strictEqual(execStub.called, false, "msdeploy should never be invoked when input validation rejects the package path");
+    });
+
+    it("should allow a package name containing legitimate shell metacharacters when the secure flag is on", async () => {
+        const packageName = "R&D 100%-release.zip";
+        const packagePath = path.join(workingDirectory, packageName);
+        fs.writeFileSync(packagePath, "");
+
+        await deploy(packagePath, true);
+
+        assert.strictEqual(execStub.calledOnce, true);
+        const [, argsArray] = execStub.firstCall.args;
+        const packageArg = argsArray.find((a: string) => a.indexOf(packageName) !== -1);
+        assert.ok(packageArg, "package path containing '&' and '%' should not be rejected and should remain intact");
     });
 
     it("should keep a package path containing spaces as a single argument", async () => {
@@ -112,6 +125,7 @@ export function runDeployUsingMSDeployTests(): void {
         assert.strictEqual(execStub.calledOnce, true);
         const [, argsArray, options] = execStub.firstCall.args;
         assert.strictEqual((options as any).shell, undefined, "shell option must not be enabled when the secure flag is on");
+        assert.strictEqual((options as any).windowsVerbatimArguments, true);
 
         const setParamArg = argsArray.find((a: string) => a.indexOf("-setParam:name=") !== -1);
         assert.ok(setParamArg, "expected a -setParam argument to be present");

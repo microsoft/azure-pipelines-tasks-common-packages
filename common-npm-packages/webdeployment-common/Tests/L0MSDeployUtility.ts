@@ -153,7 +153,7 @@ export function runSecureMSDeployValidationTests(): void {
         });
     }
 
-    const unsafeValues = ["it's", '"quoted"', "a&b", "a|b", "a;b", "a`b", "a$b", "a<b", "a>b", "a^b", "a%b", "a\nb", "a\rb"];
+    const unsafeValues = ["it's", '"quoted"', "a`b", "a\nb", "a\rb"];
 
     for (const unsafeValue of unsafeValues) {
         it(`should reject package path containing '${unsafeValue}' when the secure flag is on`, () => {
@@ -164,10 +164,22 @@ export function runSecureMSDeployValidationTests(): void {
         });
     }
 
-    it("should not reject package paths containing spaces, parentheses, or hyphens when the secure flag is on", () => {
+    const legitimateValues = ["my package (v1)-final.zip", "R&D 100%-release.zip", "a|b.zip", "a;b.zip", "a$b.zip", "a<b.zip", "a>b.zip", "a^b.zip"];
+
+    for (const legitimateValue of legitimateValues) {
+        it(`should not reject package path containing '${legitimateValue}' when the secure flag is on`, () => {
+            stubSecureFlag(true);
+            assert.doesNotThrow(() => {
+                getMSDeployCmdArgs(legitimateValue, 'webapp_name', null, false, false, false, null, null, null, false, false, false);
+            });
+        });
+    }
+
+    it("should reject a publish profile containing a quote character when the secure flag is on", () => {
         stubSecureFlag(true);
-        assert.doesNotThrow(() => {
-            getMSDeployCmdArgs("my package (v1)-final.zip", 'webapp_name', null, false, false, false, null, null, null, false, false, false);
+        const profile = { publishUrl: "webapp.scm.azurewebsites.net", userName: "it's-me", userPWD: "P@ss" };
+        assert.throws(() => {
+            getMSDeployCmdArgs("package.zip", 'webapp_name', profile, false, false, false, null, null, null, false, false, false);
         });
     });
 

@@ -37,24 +37,27 @@ export async function DeployUsingMSDeploy(webDeployPkg, webAppName, publishingPr
     var msDeployPath = await getMSDeployFullPath();
     var msDeployDirectory = msDeployPath.slice(0, msDeployPath.lastIndexOf('\\') + 1);
     var pathVar = process.env.PATH;
-    process.env.PATH = msDeployDirectory + ";" + process.env.PATH ;
+    var copiedSetParametersFile: string = null;
 
-    setParametersFile = copySetParamFileIfItExists(setParametersFile);
-    var setParametersFileName = null;
-
-    if(setParametersFile != null) {
-        setParametersFileName = setParametersFile.slice(setParametersFile.lastIndexOf('\\') + 1, setParametersFile.length);
-    }
-    var isParamFilePresentInPackage = isFolderBasedDeployment ? false : await isMSDeployPackage(webDeployPkg);
-
-    var msDeployCmdArgs = getMSDeployCmdArgs(webDeployPkg, webAppName, publishingProfile, removeAdditionalFilesFlag,
-        excludeFilesFromAppDataFlag, takeAppOfflineFlag, virtualApplication, setParametersFileName, additionalArguments, isParamFilePresentInPackage, isFolderBasedDeployment,
-        useWebDeploy, authType);
-
-    var retryCountParam = tl.getVariable("appservice.msdeployretrycount");
-    var retryCount = (retryCountParam && !(isNaN(Number(retryCountParam)))) ? Number(retryCountParam): DEFAULT_RETRY_COUNT; 
-    
     try {
+        process.env.PATH = msDeployDirectory + ";" + process.env.PATH;
+
+        setParametersFile = copySetParamFileIfItExists(setParametersFile);
+        copiedSetParametersFile = setParametersFile;
+        var setParametersFileName = null;
+
+        if(setParametersFile != null) {
+            setParametersFileName = setParametersFile.slice(setParametersFile.lastIndexOf('\\') + 1, setParametersFile.length);
+        }
+        var isParamFilePresentInPackage = isFolderBasedDeployment ? false : await isMSDeployPackage(webDeployPkg);
+
+        var msDeployCmdArgs = getMSDeployCmdArgs(webDeployPkg, webAppName, publishingProfile, removeAdditionalFilesFlag,
+            excludeFilesFromAppDataFlag, takeAppOfflineFlag, virtualApplication, setParametersFileName, additionalArguments, isParamFilePresentInPackage, isFolderBasedDeployment,
+            useWebDeploy, authType);
+
+        var retryCountParam = tl.getVariable("appservice.msdeployretrycount");
+        var retryCount = (retryCountParam && !(isNaN(Number(retryCountParam)))) ? Number(retryCountParam): DEFAULT_RETRY_COUNT;
+
         while(true) {
             try {
                 retryCount -= 1;
@@ -81,8 +84,8 @@ export async function DeployUsingMSDeploy(webDeployPkg, webAppName, publishingPr
     }
     finally {
         process.env.PATH = pathVar;
-        if(setParametersFile != null) {
-            tl.rmRF(setParametersFile);
+        if(copiedSetParametersFile != null) {
+            tl.rmRF(copiedSetParametersFile);
         }
     }
 }
@@ -189,7 +192,7 @@ async function executeMSDeploy(msDeployCmdArgs: string, msDeployFullPath: string
             }
             const secureInvocationEnabled = tl.getPipelineFeature('SecureMSDeployCommandExecution');
             const options: IExecOptions = secureInvocationEnabled
-                ? { failOnStdErr: true, errStream: errorStream }
+                ? { failOnStdErr: true, errStream: errorStream, windowsVerbatimArguments: true }
                 : { failOnStdErr: true, errStream: errorStream, windowsVerbatimArguments: true, shell: true };
             const toolPath = secureInvocationEnabled ? msDeployFullPath : "msdeploy";
             await tl.exec(toolPath, msDeployCmdArgsArray, options);

@@ -7,11 +7,11 @@ import * as semver from 'semver';
 
 export const ERROR_FILE_NAME = "error.txt";
 
-const UNSAFE_CHARACTER_PATTERN = /["'&|;`$<>^%\r\n]/;
+const UNSAFE_CHARACTER_PATTERN = /["'`\r\n]/;
 
 function validateNoUnsafeCharacters(value: string, argumentName: string): void {
     if (value && UNSAFE_CHARACTER_PATTERN.test(value)) {
-        throw new Error(`Invalid character in ${argumentName}: quotes and shell metacharacters are not allowed.`);
+        throw new Error(`Invalid character in ${argumentName}: quotes and newlines are not allowed.`);
     }
 }
 
@@ -43,6 +43,11 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pr
         validateNoUnsafeCharacters(webAppName, 'web app name');
         validateNoUnsafeCharacters(virtualApplication, 'virtual application');
         validateNoUnsafeCharacters(setParametersFile, 'set parameters file path');
+        if (profile != null) {
+            validateNoUnsafeCharacters(profile.publishUrl, 'publish URL');
+            validateNoUnsafeCharacters(profile.userName, 'user name');
+            validateNoUnsafeCharacters(profile.userPWD, 'password');
+        }
     }
 
     var msDeployCmdArgs: string = " -verb:sync";
