@@ -154,23 +154,7 @@ export function applyXdtTransformation(sourceFile: string, transformFile: string
     }
 }
 
-// Tracks whether the opt-out bypass has already been reported, so a package with many .config
-// transform files does not emit repeated identical warnings and telemetry during a single task run.
-let unsafeXdtTransformBypassReported = false;
-
 function validateXdtTransformFile(transformFile: string): void {
-    if (isUnsafeXdtTransformAllowed()) {
-        // Opt-out escape hatch: restores the pre-hardening behavior for pipeline authors who
-        // legitimately depend on custom XDT transforms. Report the bypass (warning + telemetry)
-        // once per task run to avoid noise when many .config files are transformed in a loop.
-        if (!unsafeXdtTransformBypassReported) {
-            tl.warning(tl.loc('XdtTransformationSecurityValidationDisabled', transformFile));
-            publishXdtSecurityTelemetry('bypassed', 'optOut');
-            unsafeXdtTransformBypassReported = true;
-        }
-        return;
-    }
-
     // ctt.exe loads the transform file independently of the source document (see the comment above
     // asciiTransparentEncodings), so only the transform's own declared encoding is part of this
     // validator's attack surface.
@@ -326,15 +310,6 @@ function removeNulBytes(buffer: Buffer): Buffer {
 
 function describeError(error: any): string {
     return error && error.message ? error.message : String(error);
-}
-
-function isUnsafeXdtTransformAllowed(): boolean {
-    const value = tl.getVariable('AZP_ALLOW_UNSAFE_XDT_TRANSFORMS');
-    if (!value) {
-        return false;
-    }
-
-    return value.trim().toLowerCase() === 'true';
 }
 
 function publishXdtSecurityTelemetry(result: string, reason: string): void {
