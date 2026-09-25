@@ -38,6 +38,7 @@ export function runContainerConnectionErrlineTests() {
     describe('ContainerConnection.execCommand() errline handling', () => {
 
         let originalError: typeof tl.error;
+        let originalGetPipelineFeature: typeof tl.getPipelineFeature;
         let errorCalls: string[];
 
         beforeEach(() => {
@@ -47,10 +48,23 @@ export function runContainerConnectionErrlineTests() {
             // errlines are ultimately written to on failure - capture what it
             // actually receives.
             (tl as any).error = (message: string) => { errorCalls.push(message); };
+
+            originalGetPipelineFeature = tl.getPipelineFeature;
+            // execCommand() branches to console.log('##[error]...') instead of
+            // tl.error() when this feature is on. These tests target the
+            // tl.error() path specifically, so force the flag off - otherwise
+            // the assertions below would depend on whatever this flag happens
+            // to be set to in the ambient environment the suite runs in (e.g.
+            // a real Azure Pipelines CI agent may have it on by default),
+            // which is exactly what caused these tests to fail in CI while
+            // passing locally.
+            (tl as any).getPipelineFeature = (featureName: string) =>
+                featureName === "hideDockerExecTaskLogIssueErrorOutput" ? false : originalGetPipelineFeature(featureName);
         });
 
         afterEach(() => {
             (tl as any).error = originalError;
+            (tl as any).getPipelineFeature = originalGetPipelineFeature;
         });
 
         it('sanitizes a ##vso[] marker replayed from stderr after a nonzero exit', (done) => {
