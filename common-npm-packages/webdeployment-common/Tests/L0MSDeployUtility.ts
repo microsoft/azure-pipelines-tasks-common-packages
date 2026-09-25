@@ -1,4 +1,6 @@
 import assert = require("assert");
+import sinon = require("sinon");
+import tl = require("azure-pipelines-task-lib/task");
 import { getMSDeployCmdArgs, getWebDeployErrorCode } from "../msdeployutility";
 
 export function runGetMSDeployCmdArgsTests() {
@@ -131,5 +133,48 @@ export function runGetWebDeployErrorCodeTests(): void {
         for (var errorMessage in errorMessages) {
             assert.strictEqual(getWebDeployErrorCode(errorMessage), errorMessages[errorMessage]);
         }
+    });
+}
+
+export function runSecureMSDeployValidationTests(): void {
+    let sandbox: sinon.SinonSandbox;
+
+    beforeEach(() => {
+        sandbox = sinon.createSandbox();
+    });
+
+    afterEach(() => {
+        sandbox.restore();
+    });
+
+    function stubSecureFlag(enabled: boolean): void {
+        sandbox.stub(tl, "getPipelineFeature").callsFake((feature: string) => {
+            return feature === "SecureMSDeployCommandExecution" ? enabled : false;
+        });
+    }
+
+    const unsafeValues = ["it's", '"quoted"', "a&b", "a|b", "a;b", "a`b", "a$b", "a<b", "a>b", "a^b", "a%b", "a\nb", "a\rb"];
+
+    for (const unsafeValue of unsafeValues) {
+        it(`should reject package path containing '${unsafeValue}' when the secure flag is on`, () => {
+            stubSecureFlag(true);
+            assert.throws(() => {
+                getMSDeployCmdArgs(unsafeValue, 'webapp_name', null, false, false, false, null, null, null, false, false, false);
+            });
+        });
+    }
+
+    it("should not reject package paths containing spaces, parentheses, or hyphens when the secure flag is on", () => {
+        stubSecureFlag(true);
+        assert.doesNotThrow(() => {
+            getMSDeployCmdArgs("my package (v1)-final.zip", 'webapp_name', null, false, false, false, null, null, null, false, false, false);
+        });
+    });
+
+    it("should not perform validation when the secure flag is off", () => {
+        stubSecureFlag(false);
+        assert.doesNotThrow(() => {
+            getMSDeployCmdArgs("a&b.zip", 'webapp_name', null, false, false, false, null, null, null, false, false, false);
+        });
     });
 }

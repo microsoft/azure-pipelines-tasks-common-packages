@@ -7,9 +7,15 @@ import * as semver from 'semver';
 
 export const ERROR_FILE_NAME = "error.txt";
 
-function validateNoEmbeddedQuote(value: string, argumentName: string): void {
-    if (value && value.indexOf("'") !== -1) {
-        throw new Error(`Invalid character in ${argumentName}: single quotes are not allowed.`);
+// Blocks quote characters (which would break out of MSDeploy's own "'value'" quoting)
+// as well as shell metacharacters and control characters, as defense-in-depth against
+// command-injection-style payloads even though these values are also passed with no
+// shell involved (see SecureMSDeployCommandExecution in executeMSDeploy).
+const UNSAFE_CHARACTER_PATTERN = /["'&|;`$<>^%\r\n]/;
+
+function validateNoUnsafeCharacters(value: string, argumentName: string): void {
+    if (value && UNSAFE_CHARACTER_PATTERN.test(value)) {
+        throw new Error(`Invalid character in ${argumentName}: quotes and shell metacharacters are not allowed.`);
     }
 }
 
@@ -37,10 +43,10 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pr
                              isFolderBasedDeployment: boolean, useWebDeploy: boolean, authType?: string) : string {
 
     if (tl.getPipelineFeature('SecureMSDeployCommandExecution')) {
-        validateNoEmbeddedQuote(webAppPackage, 'package path');
-        validateNoEmbeddedQuote(webAppName, 'web app name');
-        validateNoEmbeddedQuote(virtualApplication, 'virtual application');
-        validateNoEmbeddedQuote(setParametersFile, 'set parameters file path');
+        validateNoUnsafeCharacters(webAppPackage, 'package path');
+        validateNoUnsafeCharacters(webAppName, 'web app name');
+        validateNoUnsafeCharacters(virtualApplication, 'virtual application');
+        validateNoUnsafeCharacters(setParametersFile, 'set parameters file path');
     }
 
     var msDeployCmdArgs: string = " -verb:sync";
