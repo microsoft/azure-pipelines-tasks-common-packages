@@ -6,6 +6,15 @@ import * as winreg from 'winreg';
 import * as semver from 'semver';
 
 export const ERROR_FILE_NAME = "error.txt";
+
+const UNSAFE_CHARACTER_PATTERN = /["'`\r\n]/;
+
+function validateNoUnsafeCharacters(value: string, argumentName: string): void {
+    if (value && UNSAFE_CHARACTER_PATTERN.test(value)) {
+        throw new Error(`Invalid character in ${argumentName}: quotes and newlines are not allowed.`);
+    }
+}
+
 /**
  * Constructs argument for MSDeploy command
  * 
@@ -28,6 +37,18 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pr
                              removeAdditionalFilesFlag: boolean, excludeFilesFromAppDataFlag: boolean, takeAppOfflineFlag: boolean,
                              virtualApplication: string, setParametersFile: string, additionalArguments: string, isParamFilePresentInPacakge: boolean,
                              isFolderBasedDeployment: boolean, useWebDeploy: boolean, authType?: string) : string {
+
+    if (tl.getPipelineFeature('SecureMSDeployCommandExecution')) {
+        validateNoUnsafeCharacters(webAppPackage, 'package path');
+        validateNoUnsafeCharacters(webAppName, 'web app name');
+        validateNoUnsafeCharacters(virtualApplication, 'virtual application');
+        validateNoUnsafeCharacters(setParametersFile, 'set parameters file path');
+        if (profile != null) {
+            validateNoUnsafeCharacters(profile.publishUrl, 'publish URL');
+            validateNoUnsafeCharacters(profile.userName, 'user name');
+            validateNoUnsafeCharacters(profile.userPWD, 'password');
+        }
+    }
 
     var msDeployCmdArgs: string = " -verb:sync";
 

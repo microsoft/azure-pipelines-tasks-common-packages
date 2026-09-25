@@ -1,4 +1,5 @@
-import { runGetMSDeployCmdArgsTests, runGetWebDeployErrorCodeTests } from './L0MSDeployUtility';
+import { runGetMSDeployCmdArgsTests, runGetWebDeployErrorCodeTests, runSecureMSDeployValidationTests } from './L0MSDeployUtility';
+import { runDeployUsingMSDeployTests } from './L0DeployUsingMSDeploy';
 import { runCopyDirectoryTests } from "./L0CopyDirectory";
 import { runGenerateWebCongigTests } from "./L0GenerateWebConfig";
 import { runL1XmlVarSubTests } from "./L1XmlVarSub";
@@ -13,6 +14,8 @@ import { runL1ZipUtilityTests } from "./L1ZipUtility";
 describe('Web deployment common tests', () => {
     describe('GetMSDeployCmdArgs tests', runGetMSDeployCmdArgsTests);
     describe('GetWebDeployErrorCode tests', runGetWebDeployErrorCodeTests);
+    describe('SecureMSDeployValidation tests', runSecureMSDeployValidationTests);
+    describe('DeployUsingMSDeploy tests', runDeployUsingMSDeployTests);
     describe("CopyDirectory tests", runCopyDirectoryTests);
     describe("GenerateWebConfig tests", runGenerateWebCongigTests);
     describe("L1XmlVarSub tests", runL1XmlVarSubTests);
