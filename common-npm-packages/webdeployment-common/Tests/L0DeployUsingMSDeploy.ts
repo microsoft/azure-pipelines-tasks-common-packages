@@ -100,4 +100,34 @@ export function runDeployUsingMSDeployTests(): void {
         const packageArg = argsArray.find((a: string) => a.indexOf("my package.zip") !== -1);
         assert.ok(packageArg, "package path with a space should remain intact within a single argument");
     });
+
+    it("should pass a connection-string additionalArguments value through to msdeploy intact as a single argument (shell:false)", async () => {
+        const packagePath = path.join(workingDirectory, "package.zip");
+        fs.writeFileSync(packagePath, "");
+
+        const additionalArguments =
+            "-setParam:name='ConnectionString',value='Encrypt=True;TrustServerCertificate=False;" +
+            "Data Source=some-sql-server.database.windows.net,1433;Initial Catalog=some-database;" +
+            "User Id=someuser;Password=P@ss;'";
+
+        sandbox.stub(tl, "getPipelineFeature").callsFake((feature: string) => {
+            return feature === "SecureMSDeployCommandExecution" ? true : false;
+        });
+        await DeployUsingMSDeploy(packagePath, "webapp_name", null, false, false, false, null, null,
+            additionalArguments, false, false);
+
+        assert.strictEqual(execStub.calledOnce, true);
+        const [, argsArray, options] = execStub.firstCall.args;
+        assert.strictEqual((options as any).shell, undefined, "shell option must not be enabled when the secure flag is on");
+
+        const setParamArg = argsArray.find((a: string) => a.indexOf("-setParam:name=") !== -1);
+        assert.ok(setParamArg, "expected a -setParam argument to be present");
+        assert.strictEqual(
+            argsArray.filter((a: string) => a.indexOf("ConnectionString") !== -1).length,
+            1,
+            "the connection string must remain a single argv entry, never split at its embedded characters"
+        );
+        assert.ok(setParamArg.indexOf("Password=P@ss;") !== -1, "the connection string value must not be truncated");
+        assert.ok(!/\\$/.test(setParamArg), "the argument must not end with a stray trailing backslash");
+    });
 }
