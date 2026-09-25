@@ -7,10 +7,6 @@ import * as semver from 'semver';
 
 export const ERROR_FILE_NAME = "error.txt";
 
-// Blocks quote characters (which would break out of MSDeploy's own "'value'" quoting)
-// as well as shell metacharacters and control characters, as defense-in-depth against
-// command-injection-style payloads even though these values are also passed with no
-// shell involved (see SecureMSDeployCommandExecution in executeMSDeploy).
 const UNSAFE_CHARACTER_PATTERN = /["'&|;`$<>^%\r\n]/;
 
 function validateNoUnsafeCharacters(value: string, argumentName: string): void {

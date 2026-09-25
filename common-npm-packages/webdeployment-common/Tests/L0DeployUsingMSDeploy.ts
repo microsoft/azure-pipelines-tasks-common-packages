@@ -37,10 +37,6 @@ export function runDeployUsingMSDeployTests(): void {
     }
 
     it("should pass a package name containing spaces and parentheses as a single argument and never invoke a shell when the secure flag is on", async () => {
-        // Spaces in the msdeploy install path were the original justification for shell:true
-        // (issue #17634). This name (spaces + parentheses, both legitimate filename characters
-        // not blocked by validateNoUnsafeCharacters) exercises that same class of value end to
-        // end through the shell-free invocation path.
         const trickyPackageName = "My App (Release Build) v1.0.zip";
         const trickyPackagePath = path.join(workingDirectory, trickyPackageName);
         fs.writeFileSync(trickyPackagePath, "");
@@ -50,14 +46,11 @@ export function runDeployUsingMSDeployTests(): void {
         assert.strictEqual(execStub.calledOnce, true);
         const [toolPath, argsArray, options] = execStub.firstCall.args;
 
-        // No shell should be involved for the secure path.
         assert.strictEqual((options as any).shell, undefined, "shell option must not be enabled when the secure flag is on");
         assert.strictEqual((options as any).windowsVerbatimArguments, undefined, "windowsVerbatimArguments must not be enabled when the secure flag is on");
         assert.notStrictEqual(toolPath, "msdeploy", "the absolute msdeploy path should be used, not a PATH-resolved name");
         assert.ok(toolPath.toLowerCase().endsWith("msdeploy.exe"), "toolPath should point at msdeploy.exe");
 
-        // The filename must survive as a single argv element containing the full path,
-        // not be split apart at the embedded spaces.
         const packageArg = argsArray.find((a: string) => a.indexOf(trickyPackageName) !== -1);
         assert.ok(packageArg, "expected an argument containing the package path");
         assert.strictEqual(
