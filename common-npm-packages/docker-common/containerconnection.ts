@@ -10,21 +10,9 @@ import * as imageUtils from "./containerimageutils";
 import AuthenticationToken from "./registryauthenticationprovider/registryauthenticationtoken"
 import * as fileutils from "./fileutils";
 import * as os from "os";
+import { sanitizeVsoCommandMarkers } from "./vsoCommandSanitizer";
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
-// Matches one or more # followed by vso[ - the prefix the Azure Pipelines agent
-// uses to detect logging commands (mirrors the pattern used for the streamed
-// stdout/stderr sanitizer in dockercommandutils.ts). Case-insensitive because
-// the agent accepts any casing.
-const vsoCommandPattern = /#+vso\[/gi;
-
-// Strips ##vso[ command prefixes from a single line of Docker output so the
-// Azure Pipelines agent does not interpret attacker-controlled Docker output
-// as a logging command (e.g. task.setvariable) when it is replayed through
-// tl.error()/console.log() below.
-function sanitizeDockerOutputLine(line: string): string {
-    return line.replace(vsoCommandPattern, "#vso[");
-}
 
 export default class ContainerConnection {
     private dockerPath: string;
@@ -70,8 +58,14 @@ export default class ContainerConnection {
         // attacker-controlled Docker output (e.g. from a remote Docker Engine)
         // can inject ##vso[] logging commands on a nonzero exit even when the
         // caller believes sanitization is already applied via `options`.
+        //
+        // A plain full-string replace (rather than the chunk-aware stream
+        // sanitizer in dockercommandutils.ts) is sufficient here: ToolRunner
+        // already splits stderr into complete, newline-terminated lines before
+        // emitting "errline", so there is no chunk boundary a marker could be
+        // split across.
         command.on("errline", line => {
-            errlines.push(sanitizeDockerOutputLine(line));
+            errlines.push(sanitizeVsoCommandMarkers(line));
         });
         
         const hideDockerExecTaskLogIssueErrorOutput = tl.getPipelineFeature("hideDockerExecTaskLogIssueErrorOutput");
