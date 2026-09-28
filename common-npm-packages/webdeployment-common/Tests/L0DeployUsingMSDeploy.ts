@@ -50,6 +50,13 @@ export function runDeployUsingMSDeployTests(): void {
         assert.strictEqual((options as any).windowsVerbatimArguments, true, "windowsVerbatimArguments must stay enabled so msdeploy's own argument parsing is unaffected");
         assert.notStrictEqual(toolPath, "msdeploy", "the absolute msdeploy path should be used, not a PATH-resolved name");
         assert.ok(toolPath.toLowerCase().endsWith("msdeploy.exe"), "toolPath should point at msdeploy.exe");
+        assert.strictEqual(
+            toolPath.indexOf(" "),
+            -1,
+            "toolPath must not contain spaces: with windowsVerbatimArguments and no shell, a spaced tool path " +
+            "(e.g. the default 'Microsoft Web Deploy V3' install location) gets split at the space and msdeploy " +
+            "receives fragments of its own path as arguments"
+        );
 
         const packageArg = argsArray.find((a: string) => a.indexOf(trickyPackageName) !== -1);
         assert.ok(packageArg, "expected an argument containing the package path");

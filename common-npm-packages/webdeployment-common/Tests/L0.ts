@@ -1,4 +1,4 @@
-import { runGetMSDeployCmdArgsTests, runGetWebDeployErrorCodeTests, runSecureMSDeployValidationTests } from './L0MSDeployUtility';
+import { runGetMSDeployCmdArgsTests, runGetWebDeployErrorCodeTests, runSecureMSDeployValidationTests, runGetSpaceSafeToolPathTests } from './L0MSDeployUtility';
 import { runDeployUsingMSDeployTests } from './L0DeployUsingMSDeploy';
 import { runCopyDirectoryTests } from "./L0CopyDirectory";
 import { runGenerateWebCongigTests } from "./L0GenerateWebConfig";
@@ -15,6 +15,7 @@ describe('Web deployment common tests', () => {
     describe('GetMSDeployCmdArgs tests', runGetMSDeployCmdArgsTests);
     describe('GetWebDeployErrorCode tests', runGetWebDeployErrorCodeTests);
     describe('SecureMSDeployValidation tests', runSecureMSDeployValidationTests);
+    describe('GetSpaceSafeToolPath tests', runGetSpaceSafeToolPathTests);
     describe('DeployUsingMSDeploy tests', runDeployUsingMSDeployTests);
     describe("CopyDirectory tests", runCopyDirectoryTests);
     describe("GenerateWebConfig tests", runGenerateWebCongigTests);

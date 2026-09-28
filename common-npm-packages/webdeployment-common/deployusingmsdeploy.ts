@@ -12,6 +12,7 @@ import {
     getWebDeployErrorCode,
     getMSDeployCmdArgs,
     redirectMSDeployErrorToConsole,
+    getSpaceSafeToolPath,
     ERROR_FILE_NAME
 } from './msdeployutility';
 
@@ -191,10 +192,27 @@ async function executeMSDeploy(msDeployCmdArgs: string, msDeployFullPath: string
                 tl.debug("arg#" + i + ": " + msDeployCmdArgsArray[i]);
             }
             const secureInvocationEnabled = tl.getPipelineFeature('SecureMSDeployCommandExecution');
-            const options: IExecOptions = secureInvocationEnabled
-                ? { failOnStdErr: true, errStream: errorStream, windowsVerbatimArguments: true }
-                : { failOnStdErr: true, errStream: errorStream, windowsVerbatimArguments: true, shell: true };
-            const toolPath = secureInvocationEnabled ? msDeployFullPath : "msdeploy";
+            let options: IExecOptions;
+            let toolPath: string;
+            if (secureInvocationEnabled) {
+                // windowsVerbatimArguments:true is required so msdeploy's own quoted
+                // arguments (e.g. -setParam:name='...',value='...') pass through intact.
+                // With verbatim on, task-lib's tool-path quoting does not reliably engage
+                // on newer Node versions, so a spaced tool path (e.g. the default
+                // "...\Microsoft Web Deploy V3\msdeploy.exe" install path) would otherwise
+                // be split at the space. Resolve a space-free short path to avoid that.
+                toolPath = getSpaceSafeToolPath(msDeployFullPath);
+                if (toolPath.indexOf(' ') >= 0) {
+                    tl.warning('Unable to resolve a space-free path for msdeploy.exe; falling back to shell-based invocation for this deployment.');
+                    options = { failOnStdErr: true, errStream: errorStream, windowsVerbatimArguments: true, shell: true };
+                    toolPath = msDeployFullPath;
+                } else {
+                    options = { failOnStdErr: true, errStream: errorStream, windowsVerbatimArguments: true };
+                }
+            } else {
+                options = { failOnStdErr: true, errStream: errorStream, windowsVerbatimArguments: true, shell: true };
+                toolPath = "msdeploy";
+            }
             await tl.exec(toolPath, msDeployCmdArgsArray, options);
             resolve("Azure App service successfully deployed");
         } catch (error) {

@@ -1,7 +1,10 @@
 import assert = require("assert");
 import sinon = require("sinon");
 import tl = require("azure-pipelines-task-lib/task");
-import { getMSDeployCmdArgs, getWebDeployErrorCode } from "../msdeployutility";
+import fs = require("fs");
+import os = require("os");
+import path = require("path");
+import { getMSDeployCmdArgs, getWebDeployErrorCode, getSpaceSafeToolPath } from "../msdeployutility";
 
 export function runGetMSDeployCmdArgsTests() {
     it('Should produce default valid args', () => {
@@ -188,5 +191,30 @@ export function runSecureMSDeployValidationTests(): void {
         assert.doesNotThrow(() => {
             getMSDeployCmdArgs("a&b.zip", 'webapp_name', null, false, false, false, null, null, null, false, false, false);
         });
+    });
+}
+
+export function runGetSpaceSafeToolPathTests(): void {
+    it("should return the path unchanged when it contains no spaces", () => {
+        const noSpacePath = "C:\\Tools\\msdeploy.exe";
+        assert.strictEqual(getSpaceSafeToolPath(noSpacePath), noSpacePath);
+    });
+
+    it("should resolve a space-free short path for a real spaced directory (falls back to the original path if 8.3 names are unavailable)", () => {
+        const spacedDir = fs.mkdtempSync(path.join(os.tmpdir(), "space safe test "));
+        const spacedFile = path.join(spacedDir, "my tool.exe");
+        fs.writeFileSync(spacedFile, "");
+
+        try {
+            const result = getSpaceSafeToolPath(spacedFile);
+            assert.ok(fs.existsSync(result), "the resolved path must still point at a real, existing file");
+            if (result.indexOf(" ") !== -1) {
+                // 8.3 short name generation is disabled/unavailable on this volume; getSpaceSafeToolPath
+                // must fail safe by returning the original path rather than a broken/partial one.
+                assert.strictEqual(result, spacedFile);
+            }
+        } finally {
+            tl.rmRF(spacedDir);
+        }
     });
 }
