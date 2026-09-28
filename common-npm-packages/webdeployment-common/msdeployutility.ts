@@ -16,17 +16,6 @@ function validateNoUnsafeCharacters(value: string, argumentName: string): void {
     }
 }
 
-/**
- * When invoking a tool with windowsVerbatimArguments:true and no shell, task-lib's
- * tool-path quoting (an args-array unshift() hijack in toolrunner.js meant to quote the
- * resolved tool path when it contains spaces) does not reliably engage on newer Node
- * versions. If the tool path has a space (e.g. the default "C:\Program Files\IIS\Microsoft
- * Web Deploy V3\msdeploy.exe" install location) and is passed through unquoted, Windows
- * splits it at the space and the tool receives fragments of its own path as arguments.
- * Resolving the equivalent 8.3 short path removes the spaces entirely, sidestepping the
- * issue without needing a shell. Returns the original path unchanged if it has no spaces,
- * or if short-path resolution is unavailable/fails (e.g. 8.3 name generation disabled).
- */
 export function getSpaceSafeToolPath(toolPath: string): string {
     if (!toolPath || toolPath.indexOf(' ') === -1) {
         return toolPath;

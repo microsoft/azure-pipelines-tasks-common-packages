@@ -209,8 +209,6 @@ export function runGetSpaceSafeToolPathTests(): void {
             const result = getSpaceSafeToolPath(spacedFile);
             assert.ok(fs.existsSync(result), "the resolved path must still point at a real, existing file");
             if (result.indexOf(" ") !== -1) {
-                // 8.3 short name generation is disabled/unavailable on this volume; getSpaceSafeToolPath
-                // must fail safe by returning the original path rather than a broken/partial one.
                 assert.strictEqual(result, spacedFile);
             }
         } finally {

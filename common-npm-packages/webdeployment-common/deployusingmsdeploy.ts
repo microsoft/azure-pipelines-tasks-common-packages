@@ -195,12 +195,6 @@ async function executeMSDeploy(msDeployCmdArgs: string, msDeployFullPath: string
             let options: IExecOptions;
             let toolPath: string;
             if (secureInvocationEnabled) {
-                // windowsVerbatimArguments:true is required so msdeploy's own quoted
-                // arguments (e.g. -setParam:name='...',value='...') pass through intact.
-                // With verbatim on, task-lib's tool-path quoting does not reliably engage
-                // on newer Node versions, so a spaced tool path (e.g. the default
-                // "...\Microsoft Web Deploy V3\msdeploy.exe" install path) would otherwise
-                // be split at the space. Resolve a space-free short path to avoid that.
                 toolPath = getSpaceSafeToolPath(msDeployFullPath);
                 if (toolPath.indexOf(' ') >= 0) {
                     tl.warning('Unable to resolve a space-free path for msdeploy.exe; falling back to shell-based invocation for this deployment.');
