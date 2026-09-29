@@ -3,15 +3,14 @@ process.env["SYSTEM_DEFAULTWORKINGDIRECTORY"] = process.env["SYSTEM_DEFAULTWORKI
 process.env["AGENT_TEMPDIRECTORY"] = process.env["AGENT_TEMPDIRECTORY"] || require("os").tmpdir();
 
 import assert = require("assert");
-import * as tl from "azure-pipelines-task-lib/task";
 import ACRAuthenticationTokenProvider from "../registryauthenticationprovider/acrauthenticationtokenprovider";
 
 export function runAcrProviderHostValidationTests() {
 
-    const featureVariable = "DistributedTask.Tasks.AcrRegistryHostValidation";
+    const featureEnvironmentKey = "DISTRIBUTEDTASK_TASKS_ACRREGISTRYHOSTVALIDATION";
 
     function setFeature(enabled: boolean): void {
-        tl.setVariable(featureVariable, enabled ? "true" : "false");
+        process.env[featureEnvironmentKey] = enabled ? "true" : "false";
     }
 
     // Raw (non-JSON) host string, so registryURL === host.

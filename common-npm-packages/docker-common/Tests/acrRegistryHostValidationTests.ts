@@ -6,6 +6,7 @@ import * as tl from "azure-pipelines-task-lib/task";
 import { isAllowedAcrHost, guardRegistryHost, sanitizeUrl, AcrHostValidationFeatureName } from "../registryauthenticationprovider/registryhostvalidation";
 
 export function runAcrRegistryHostValidationTests() {
+    const featureEnvironmentKey = "DISTRIBUTEDTASK_TASKS_ACRREGISTRYHOSTVALIDATION";
 
     describe("isAllowedAcrHost()", () => {
 
@@ -66,10 +67,8 @@ export function runAcrRegistryHostValidationTests() {
     });
 
     describe("guardRegistryHost() (enforce)", () => {
-        const enforceVariable = "DistributedTask.Tasks." + AcrHostValidationFeatureName;
-
         function setEnforce(enabled: boolean): void {
-            tl.setVariable(enforceVariable, enabled ? "true" : "false");
+            process.env[featureEnvironmentKey] = enabled ? "true" : "false";
         }
 
         afterEach(() => setEnforce(false));
@@ -107,10 +106,8 @@ export function runAcrRegistryHostValidationTests() {
     });
 
     describe("guardRegistryHost() (audit warning)", () => {
-        const enforceVariable = "DistributedTask.Tasks." + AcrHostValidationFeatureName;
-
         function setEnforce(enabled: boolean): void {
-            tl.setVariable(enforceVariable, enabled ? "true" : "false");
+            process.env[featureEnvironmentKey] = enabled ? "true" : "false";
         }
 
         // Feature-variable is set before capturing. The guard throws after warning when enforcing,
