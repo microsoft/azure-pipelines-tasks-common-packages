@@ -197,12 +197,12 @@ async function executeMSDeploy(msDeployCmdArgs: string, msDeployFullPath: string
             if (secureInvocationEnabled) {
                 toolPath = getSpaceSafeToolPath(msDeployFullPath);
                 if (toolPath.indexOf(' ') >= 0) {
-                    tl.warning('Unable to resolve a space-free path for msdeploy.exe; falling back to shell-based invocation for this deployment.');
-                    options = { failOnStdErr: true, errStream: errorStream, windowsVerbatimArguments: true, shell: true };
-                    toolPath = msDeployFullPath;
-                } else {
-                    options = { failOnStdErr: true, errStream: errorStream, windowsVerbatimArguments: true };
+                    console.log('##vso[telemetry.publish area=TaskHub;feature=AzureRmWebAppDeployment]' +
+                        JSON.stringify({ event: 'SecureMSDeployCommandExecution', outcome: 'SpaceFreeToolPathUnavailable' }));
+                    throw new Error('Secure MSDeploy execution could not resolve a space-free path for msdeploy.exe. ' +
+                        'The deployment was stopped instead of falling back to shell-based execution.');
                 }
+                options = { failOnStdErr: true, errStream: errorStream, windowsVerbatimArguments: true };
             } else {
                 options = { failOnStdErr: true, errStream: errorStream, windowsVerbatimArguments: true, shell: true };
                 toolPath = "msdeploy";

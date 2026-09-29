@@ -5,6 +5,7 @@ import path = require("path");
 import sinon = require("sinon");
 import tl = require("azure-pipelines-task-lib/task");
 import utility = require("../utility");
+import msDeployUtility = require("../msdeployutility");
 
 import { DeployUsingMSDeploy } from "../deployusingmsdeploy";
 
@@ -101,6 +102,25 @@ export function runDeployUsingMSDeployTests(): void {
         const [, argsArray] = execStub.firstCall.args;
         const packageArg = argsArray.find((a: string) => a.indexOf(packageName) !== -1);
         assert.ok(packageArg, "package path containing '&' and '%' should not be rejected and should remain intact");
+    });
+
+    it("should fail closed when a space-free msdeploy path cannot be resolved", async () => {
+        const packageName = "R&D 100%-release.zip";
+        const packagePath = path.join(workingDirectory, packageName);
+        fs.writeFileSync(packagePath, "");
+        sandbox.stub(msDeployUtility, "getSpaceSafeToolPath").returns("C:\\Program Files\\IIS\\Microsoft Web Deploy V3\\msdeploy.exe");
+        const consoleLogStub = sandbox.stub(console, "log");
+
+        await assert.rejects(
+            deploy(packagePath, true),
+            /stopped instead of falling back to shell-based execution/
+        );
+
+        assert.strictEqual(execStub.called, false, "msdeploy must not be invoked through a shell when secure execution cannot be guaranteed");
+        assert.ok(
+            consoleLogStub.calledWithMatch(/"outcome":"SpaceFreeToolPathUnavailable"/),
+            "the blocked invocation should emit rollout telemetry"
+        );
     });
 
     it("should keep a package path containing spaces as a single argument", async () => {
