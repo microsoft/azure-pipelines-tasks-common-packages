@@ -1,11 +1,40 @@
 import tl = require('azure-pipelines-task-lib/task');
 import fs = require('fs');
 import path = require('path');
+import { spawnSync } from 'child_process';
 import { Package } from './packageUtility';
 import * as winreg from 'winreg';
 import * as semver from 'semver';
 
 export const ERROR_FILE_NAME = "error.txt";
+
+const UNSAFE_CHARACTER_PATTERN = /["'`\r\n]/;
+
+function validateNoUnsafeCharacters(value: string, argumentName: string): void {
+    if (value && UNSAFE_CHARACTER_PATTERN.test(value)) {
+        throw new Error(`Invalid character in ${argumentName}: quotes and newlines are not allowed.`);
+    }
+}
+
+export function getSpaceSafeToolPath(toolPath: string): string {
+    if (!toolPath || toolPath.indexOf(' ') === -1) {
+        return toolPath;
+    }
+    try {
+        validateNoUnsafeCharacters(toolPath, 'toolPath');
+        const result = spawnSync('cmd.exe', ['/c', 'for %A in ("' + toolPath + '") do @echo %~sA'], { encoding: 'utf8', windowsVerbatimArguments: true });
+        const output = result.status === 0 ? result.stdout : '';
+        const shortPath = output && output.trim();
+        if (shortPath && shortPath.indexOf(' ') === -1 && fs.existsSync(shortPath)) {
+            return shortPath;
+        }
+        tl.debug(`Unable to resolve a space-free short path for '${toolPath}'; falling back to original path.`);
+    } catch (err) {
+        tl.debug(`Failed to resolve short path for '${toolPath}': ${err}`);
+    }
+    return toolPath;
+}
+
 /**
  * Constructs argument for MSDeploy command
  * 
@@ -28,6 +57,18 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pr
                              removeAdditionalFilesFlag: boolean, excludeFilesFromAppDataFlag: boolean, takeAppOfflineFlag: boolean,
                              virtualApplication: string, setParametersFile: string, additionalArguments: string, isParamFilePresentInPacakge: boolean,
                              isFolderBasedDeployment: boolean, useWebDeploy: boolean, authType?: string) : string {
+
+    if (tl.getPipelineFeature('SecureMSDeployCommandExecution')) {
+        validateNoUnsafeCharacters(webAppPackage, 'package path');
+        validateNoUnsafeCharacters(webAppName, 'web app name');
+        validateNoUnsafeCharacters(virtualApplication, 'virtual application');
+        validateNoUnsafeCharacters(setParametersFile, 'set parameters file path');
+        if (profile != null) {
+            validateNoUnsafeCharacters(profile.publishUrl, 'publish URL');
+            validateNoUnsafeCharacters(profile.userName, 'user name');
+            validateNoUnsafeCharacters(profile.userPWD, 'password');
+        }
+    }
 
     var msDeployCmdArgs: string = " -verb:sync";
 

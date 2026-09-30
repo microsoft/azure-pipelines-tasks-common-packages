@@ -398,10 +398,14 @@ export class ApplicationTokenCredentials {
                 let webRequest = new webClient.WebRequest();
                 webRequest.method = "GET";
                 let apiVersion = "2018-02-01";
-                let requestedScope = appTokenProviderParameters && appTokenProviderParameters.scopes
-                    ? appTokenProviderParameters.scopes[0]
-                    : undefined;
-                let resourceId = this.getResourceIdFromScope(requestedScope);
+                // Preserve the legacy ARM resource unless scoped tokens are enabled.
+                let resourceId = this.activeDirectoryResourceId;
+                if (this.allowScopeLevelToken) {
+                    const requestedScope = appTokenProviderParameters && appTokenProviderParameters.scopes
+                        ? appTokenProviderParameters.scopes[0]
+                        : undefined;
+                    resourceId = this.getResourceIdFromScope(requestedScope);
+                }
                 webRequest.uri = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=" + apiVersion + "&resource=" + resourceId;
                 webRequest.headers = {
                     "Metadata": true
@@ -543,8 +547,10 @@ export class ApplicationTokenCredentials {
             msalApp.clearCache();
         }
         try {
+            // Preserve the legacy ARM scope unless scoped tokens are enabled.
+            const effectiveScopeOverride = this.allowScopeLevelToken ? scopeOverride : undefined;
             const request: any /*msal.ClientCredentialRequest*/ = {
-                scopes: [scopeOverride || (this.activeDirectoryResourceId + "/.default")]
+                scopes: [effectiveScopeOverride || (this.activeDirectoryResourceId + "/.default")]
             };
             const response = await msalApp.acquireTokenByClientCredential(request);
             tl.debug(`MSAL - retrieved token - isFromCache?: ${response.fromCache}`);
@@ -619,7 +625,9 @@ export class ApplicationTokenCredentials {
         } catch (error) {
             tl.debug(`acquireTokenForScopes - error: ${error}`);
             this.publishScopeTokenTelemetry(scopeKind, "None", "error");
-            throw new Error(tl.loc('CouldNotFetchAccessTokenforAzureStatusCode', error.errorCode, error.errorMessage));
+            const errorCode = error && (error.errorCode || error.statusCode || error.name) || "Unknown";
+            const errorMessage = error && (error.errorMessage || error.message) || "Unknown";
+            throw new Error(tl.loc('CouldNotFetchAccessTokenforAzureStatusCode', errorCode, errorMessage));
         }
     }
 
@@ -628,6 +636,10 @@ export class ApplicationTokenCredentials {
     // metadata is recorded - never a token, secret, or credential material. authorityHost is a
     // public Entra login endpoint used to identify the cloud.
     private publishScopeTokenTelemetry(scopeKind: string, requestedAudience: string, outcome: string): void {
+        if (!this.allowScopeLevelToken) {
+            return;
+        }
+
         // Remember the most recent decision so getLastScopeTokenTelemetry() can expose it to the
         // Kudu auth layer for the unified KuduAuthMode event. Existing events below are unchanged.
         this._lastRequestedAudience = requestedAudience;
@@ -704,7 +716,7 @@ export class ApplicationTokenCredentials {
         // public login.microsoftonline.com default. this.authorityUrl carries the per-cloud
         // authority (e.g. login.microsoftonline.us / login.chinacloudapi.cn) and is the same
         // value the ARM/MSAL path derives its authority from (see buildMSAL).
-        const credentialOptions = { authorityHost: this.authorityUrl };
+        const credentialOptions = this.getCredentialOptions();
 
         switch (this.scheme) {
             case AzureModels.Scheme.ManagedServiceIdentity:
@@ -756,6 +768,27 @@ export class ApplicationTokenCredentials {
         }
     }
 
+    private getCredentialOptions(): any {
+        const credentialOptions: any = { authorityHost: this.authorityUrl };
+        const proxyConfiguration = tl.getHttpProxyConfiguration(this.authorityUrl);
+
+        if (!proxyConfiguration) {
+            return credentialOptions;
+        }
+
+        const proxyUrl = new URL(proxyConfiguration.proxyUrl);
+        credentialOptions.proxyOptions = {
+            host: `${proxyUrl.protocol}//${proxyUrl.hostname}`,
+            port: proxyUrl.port
+                ? parseInt(proxyUrl.port, 10)
+                : proxyUrl.protocol === "https:" ? 443 : 80,
+            username: proxyConfiguration.proxyUsername,
+            password: proxyConfiguration.proxyPassword
+        };
+
+        return credentialOptions;
+    }
+
     private deleteFederatedTokenFile(tokenFilePath?: string): void {
         if (!tokenFilePath || !fs.existsSync(tokenFilePath)) {
             return;
@@ -772,6 +805,10 @@ export class ApplicationTokenCredentials {
     }
 
     private publishFederatedTokenFileCleanupTelemetry(outcome: string): void {
+        if (!this.allowScopeLevelToken) {
+            return;
+        }
+
         try {
             console.log(`##vso[telemetry.publish area=TaskDeploymentMethod;feature=FederatedTokenFileCleanup]${JSON.stringify({ outcome: outcome })}`);
         } catch (error) {
@@ -909,7 +946,7 @@ export class ApplicationTokenCredentials {
     public getOpenSSLPath() {
         if (tl.osType().match(/^Win/)) {
             if (tl.getPipelineFeature("UseLatestOpenSSLInAzureArmRest")) {
-                return tl.which(path.join(__dirname, 'openssl3.5.7', 'openssl'));
+                return tl.which(path.join(__dirname, 'openssl3.5.8', 'openssl'));
             } else {
                 return tl.which(path.join(__dirname, 'openssl3.4.2', 'openssl'));
             }

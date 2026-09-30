@@ -1,0 +1,12 @@
+{
+    "description": "Empirical verification (via Program.cs, run against .NET's own System.Text.Encoding tables - the same runtime family ctt.exe/Microsoft.Web.XmlTransform executes under) that no non-ASCII byte pair in these multi-byte CJK code pages decodes to an XML delimiter ('<', '>', '&', '\"', '\\'', '=', '/'). Every lead byte 0x80-0xFF was paired with every trail byte 0x00-0xFF; only pairs where both bytes genuinely combine into a single decoded character were considered (a lead byte that decodes standalone never swallows the following byte, so it cannot hide markup from this validator). Rerun Program.cs (via csc.exe against the classic .NET Framework, e.g. C:\\Windows\\Microsoft.Net\\Framework\\v4.0.30319\\csc.exe) and refresh this file whenever a multi-byte CJK encoding is added to asciiTransparentEncodings in ../../xdttransformationutility.ts.",
+    "verifiedOn": "2026-09-18",
+    "runtime": ".NET Framework 4.0.30319 (System.Text.Encoding.GetEncoding by code page)",
+    "results": [
+        { "encodingGroup": "shift_jis", "codePage": 932, "delimiterViolations": 0 },
+        { "encodingGroup": "gbk/gb18030", "codePage": 936, "delimiterViolations": 0 },
+        { "encodingGroup": "big5", "codePage": 950, "delimiterViolations": 0 },
+        { "encodingGroup": "euc-jp", "codePage": 51932, "delimiterViolations": 0 },
+        { "encodingGroup": "euc-kr", "codePage": 51949, "delimiterViolations": 0 }
+    ]
+}

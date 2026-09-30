@@ -5,9 +5,13 @@ import { AzureRMEndpoint } from "azure-pipelines-tasks-azure-arm-rest/azure-arm-
 import * as webClient from "azure-pipelines-tasks-azure-arm-rest/webClient";
 import * as tl from "azure-pipelines-task-lib/task";
 import Q = require('q');
+import path = require('path');
 
 import AuthenticationTokenProvider from "./authenticationtokenprovider";
 import RegistryAuthenticationToken from "./registryauthenticationtoken";
+import { guardRegistryHost } from "./registryhostvalidation";
+
+tl.setResourcePath(path.join(__dirname, '..', 'module.json'), true);
 
 export default class ACRAuthenticationTokenProvider extends AuthenticationTokenProvider{
 
@@ -20,9 +24,13 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
     // ACR fragment like /subscriptions/c00d16c7-6c1f-4c03-9be1-6934a4c49682/resourcegroups/jitekuma-RG/providers/Microsoft.ContainerRegistry/registries/jitekuma
     private acrFragmentUrl: string;
 
+    private readonly hasRegistryConfiguration: boolean;
+
     constructor(endpointName?: string, registerNameValue?: string) {
         super();
 
+        // Preserve the distinction between absent and incomplete configuration.
+        this.hasRegistryConfiguration = Boolean(endpointName || registerNameValue);
         if (endpointName && registerNameValue) {
             try {
               tl.debug("Reading the acr registry in old versions");
@@ -40,6 +48,9 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
     }
 
     public getAuthenticationToken(): RegistryAuthenticationToken {
+        if (this.hasRegistryConfiguration) {
+            guardRegistryHost(this.registryURL, this.endpointName, "ServicePrincipal");
+        }
         if (this.registryURL && this.endpointName) {
             return new RegistryAuthenticationToken(
                 tl.getEndpointAuthorizationParameter(this.endpointName, 'serviceprincipalid', true),
@@ -69,11 +80,13 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
             }
         }
         if (authType == "ManagedServiceIdentity") {
+            guardRegistryHost(this.registryURL, this.endpointName, "ManagedServiceIdentity");
             // Parameter 1: retryCount - the current retry count of the method to get the ACR token through MSI authentication
             // Parameter 2: timeToWait - the current time wait of the method to get the ACR token through MSI authentication
             return await this._getMSIAuthenticationToken(0, 0);
         }
         else if (authType === 'WorkloadIdentityFederation') {
+            guardRegistryHost(this.registryURL, this.endpointName, "WorkloadIdentityFederation");
             const endpoint = await new AzureRMEndpoint(this.endpointName).getEndpoint();
             const aadToken = await endpoint.applicationTokenCredentials.getToken();
             let acrToken = await ACRAuthenticationTokenProvider._getACRToken(aadToken, this.endpointName, this.registryURL, 0, 0);

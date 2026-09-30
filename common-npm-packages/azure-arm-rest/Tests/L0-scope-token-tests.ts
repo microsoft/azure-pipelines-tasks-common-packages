@@ -3,7 +3,7 @@ import * as ttm from 'azure-pipelines-task-lib/mock-test';
 import * as path from 'path';
 
 export function ScopeTokenTests(defaultTimeout = 2000) {
-    it('acquireTokenForScope falls back to an ARM-audience token and emits telemetry', function (done: Mocha.Done) {
+    it('acquireTokenForScope honors scoped-token behavior and feature gating', function (done: Mocha.Done) {
         this.timeout(defaultTimeout);
         let tp = path.join(__dirname, 'scope-token-tests.js');
         let tr: ttm.MockTestRunner = new ttm.MockTestRunner(tp);
@@ -14,14 +14,30 @@ export function ScopeTokenTests(defaultTimeout = 2000) {
 
                 console.log("\tvalidating scoped token success");
                 scopedTokenSuccess(tr);
+                console.log("\tvalidating authenticated proxy options");
+                authenticatedProxyOptions(tr);
+                console.log("\tvalidating proxy options reach credential constructors");
+                credentialConstructorsReceiveProxyOptions(tr);
+                console.log("\tvalidating proxy default ports");
+                proxyDefaultPorts(tr);
+                console.log("\tvalidating bypassed proxy options");
+                bypassedProxyOptions(tr);
+                console.log("\tvalidating no-proxy options");
+                noProxyOptions(tr);
+                console.log("\tvalidating flag-off proxy behavior");
+                featureDisabledDoesNotReadProxy(tr);
                 console.log("\tvalidating scoped token success on Node <16 (MSAL path)");
                 scopedTokenSuccessOnLegacyNode(tr);
                 console.log("\tvalidating Managed Identity scope resource selection");
                 managedIdentityScopeResource(tr);
+                console.log("\tvalidating Managed Identity legacy resource when feature is disabled");
+                managedIdentityLegacyResourceWhenFeatureDisabled(tr);
                 console.log("\tvalidating federated token file cleanup");
                 federatedTokenFileCleanup(tr);
                 console.log("\tvalidating unknown Kudu auth mode");
                 unknownKuduAuthMode(tr);
+                console.log("\tvalidating Kudu auth telemetry is disabled with the feature");
+                kuduAuthModeFeatureDisabled(tr);
                 console.log("\tvalidating fallback when the feature is disabled");
                 fallbackWhenFeatureDisabled(tr);
                 console.log("\tvalidating fallback (with warning) when the scope is unmapped");
@@ -37,6 +53,36 @@ export function ScopeTokenTests(defaultTimeout = 2000) {
                 done(error);
             });
     });
+}
+
+function authenticatedProxyOptions(tr: ttm.MockTestRunner) {
+    assert(tr.stdOutContained('AUTHENTICATED_PROXY_OPTIONS: applied'),
+        'Should pass the authenticated agent proxy to Azure Identity');
+}
+
+function credentialConstructorsReceiveProxyOptions(tr: ttm.MockTestRunner) {
+    assert(tr.stdOutContained('PROXY_CONSTRUCTOR_OPTIONS: applied'),
+        'Should pass proxy options to WIF and SPN Azure Identity constructors');
+}
+
+function proxyDefaultPorts(tr: ttm.MockTestRunner) {
+    assert(tr.stdOutContained('PROXY_DEFAULT_PORTS: http=80 https=443'),
+        'Should select protocol-appropriate ports when the proxy URL omits one');
+}
+
+function bypassedProxyOptions(tr: ttm.MockTestRunner) {
+    assert(tr.stdOutContained('BYPASSED_PROXY_OPTIONS: omitted'),
+        'Should omit Azure Identity proxy options when the authority is bypassed');
+}
+
+function noProxyOptions(tr: ttm.MockTestRunner) {
+    assert(tr.stdOutContained('NO_PROXY_OPTIONS: omitted'),
+        'Should omit Azure Identity proxy options when no agent proxy is configured');
+}
+
+function featureDisabledDoesNotReadProxy(tr: ttm.MockTestRunner) {
+    assert(tr.stdOutContained('FEATURE_DISABLED_PROXY_READ: false'),
+        'Flag-off behavior should not read Azure Identity proxy configuration');
 }
 
 function scopedTokenSuccess(tr: ttm.MockTestRunner) {
@@ -60,6 +106,11 @@ function managedIdentityScopeResource(tr: ttm.MockTestRunner) {
         'Managed Identity should request the App Service resource for an App Service scope');
 }
 
+function managedIdentityLegacyResourceWhenFeatureDisabled(tr: ttm.MockTestRunner) {
+    assert(tr.stdOutContained('MSI_FEATURE_DISABLED_RESOURCE: https://management.azure.com/'),
+        'Managed Identity should preserve the ARM resource when the feature is disabled');
+}
+
 function federatedTokenFileCleanup(tr: ttm.MockTestRunner) {
     assert(tr.stdOutContained('FEDERATED_TOKEN_CLEANUP_TEST: completed'),
         'Federated token file cleanup test should have completed');
@@ -76,14 +127,17 @@ function unknownKuduAuthMode(tr: ttm.MockTestRunner) {
         'Missing scope metadata should be classified as unknown');
 }
 
-// Feature disabled: returns the ARM-audience token, records outcome "fallbackDisabled", no warning.
+function kuduAuthModeFeatureDisabled(tr: ttm.MockTestRunner) {
+    assert(tr.stdOutContained('KUDU_AUTH_DISABLED_TELEMETRY: false'),
+        'Should not emit KuduAuthMode telemetry when the feature is disabled');
+}
+
+// Feature disabled: returns the ARM-audience token and emits no new scope-token telemetry.
 function fallbackWhenFeatureDisabled(tr: ttm.MockTestRunner) {
     assert(tr.stdOutContained('FALLBACK_DISABLED_TOKEN: DUMMY_ACCESS_TOKEN'),
         'Should have returned the ARM-audience token when the feature is disabled');
-    assert(tr.stdOutContained('"outcome":"fallbackDisabled"'),
-        'Should have emitted telemetry with outcome fallbackDisabled');
-    assert(tr.stdOutContained('feature=KuduScopeLevelToken'),
-        'Should have emitted KuduScopeLevelToken telemetry');
+    assert(tr.stdOutContained('FALLBACK_DISABLED_TELEMETRY: false'),
+        'Should not emit KuduScopeLevelToken telemetry when the feature is disabled');
 }
 
 // Feature enabled but no scope mapped: warns, then returns the ARM-audience token, outcome "fallbackUnmapped".
@@ -101,6 +155,10 @@ function fallbackWhenScopeUnmapped(tr: ttm.MockTestRunner) {
 function scopedTokenFailure(tr: ttm.MockTestRunner) {
     assert(tr.stdOutContained('SCOPED_TOKEN_ERROR:'),
         'Should have surfaced the scoped token acquisition failure');
+    assert(tr.stdOutContained('Status code: AuthenticationRequiredError, status message: network_error'),
+        'Should preserve Azure Identity error details instead of reporting undefined values');
+    assert(!tr.stdOutContained('Status code: undefined, status message: undefined'),
+        'Should not discard Azure Identity error details');
     assert(tr.stdOutContained('"requestedAudience":"None"'),
         'Failure telemetry should not report an ARM audience');
     assert(tr.stdOutContained('"outcome":"error"'),

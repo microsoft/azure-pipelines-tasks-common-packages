@@ -8,6 +8,7 @@ import { sanitizeKuduLogForConsole } from '../azure-arm-app-service-kudu';
 // folder - no HTTP mocking is needed and env var manipulation is all that's required to flip
 // the feature on/off between cases.
 const FEATURE_ENV_VAR = 'DISTRIBUTEDTASK_TASKS_ENABLEKUDULOGVSOCOMMANDSANITIZATION';
+const ALLOWED_COMMANDS_ENV_VAR = 'AGENT_ALLOWEDLOGGINGCOMMANDS';
 
 // IMPORTANT: mocha's reporter prints `it(...)` titles (and any failed assertion message) to the
 // real process stdout, which - unlike a plain local `mocha`/`node` run - IS scanned by the actual
@@ -28,12 +29,15 @@ function buildLeadingBracketCommand(command: string): string {
 export function KuduLogSanitizerTests() {
     describe('sanitizeKuduLogForConsole', () => {
         let originalFeatureValue: string | undefined;
+        let originalAllowedCommandsValue: string | undefined;
         let originalConsoleLog: (...args: any[]) => void;
         let consoleOutput: string[];
 
         beforeEach(() => {
             originalFeatureValue = process.env[FEATURE_ENV_VAR];
             delete process.env[FEATURE_ENV_VAR];
+            originalAllowedCommandsValue = process.env[ALLOWED_COMMANDS_ENV_VAR];
+            delete process.env[ALLOWED_COMMANDS_ENV_VAR];
 
             consoleOutput = [];
             originalConsoleLog = console.log;
@@ -47,6 +51,11 @@ export function KuduLogSanitizerTests() {
                 delete process.env[FEATURE_ENV_VAR];
             } else {
                 process.env[FEATURE_ENV_VAR] = originalFeatureValue;
+            }
+            if (originalAllowedCommandsValue === undefined) {
+                delete process.env[ALLOWED_COMMANDS_ENV_VAR];
+            } else {
+                process.env[ALLOWED_COMMANDS_ENV_VAR] = originalAllowedCommandsValue;
             }
             console.log = originalConsoleLog;
         });
@@ -75,16 +84,20 @@ export function KuduLogSanitizerTests() {
             assert(telemetryLine.includes('area=TaskHub;feature=AzureRmWebAppDeployment'));
             assert(telemetryLine.includes('"event":"KuduLogVsoCommandsDetected"'));
             assert(telemetryLine.includes('"enforced":false'));
+            assert(telemetryLine.includes('"allowlistPresent":false'));
+            assert(telemetryLine.includes('"escapedCount":0'));
             assert(telemetryLine.includes('"commands":"task.setvariable"'));
         });
 
-        it('neutralizes the trigger sequence and leaves the rest of the text intact when the feature is on', () => {
+        it('neutralizes a non-whitelisted trigger sequence and leaves the rest of the text intact when the feature is on', () => {
             process.env[FEATURE_ENV_VAR] = 'true';
+            // Whitelist that does NOT contain task.setvariable, so it must be neutralized.
+            process.env[ALLOWED_COMMANDS_ENV_VAR] = 'task.complete';
             const payload = `Oryx build log line one\n${buildVsoCommand('task.setvariable variable=ORYX_INJECTED]true')}\nOryx build log line two`;
 
             const result = sanitizeKuduLogForConsole(payload, 'AzureRmWebAppDeployment');
 
-            assert.strictEqual(result.includes(buildVsoCommand('')), false, 'the trigger sequence must be neutralized');
+            assert.strictEqual(result.includes(buildVsoCommand('task.setvariable')), false, 'the non-whitelisted trigger sequence must be neutralized');
             assert(result.includes('##_vso[task.setvariable variable=ORYX_INJECTED]true'),
                 'the neutralized text should still be readable/diagnosable in the log');
             assert(result.includes('Oryx build log line one'));
@@ -94,16 +107,90 @@ export function KuduLogSanitizerTests() {
             assert(telemetryLine, 'telemetry should still be emitted when enforcing');
             assert(telemetryLine.includes('"event":"KuduLogVsoCommandsSanitized"'));
             assert(telemetryLine.includes('"enforced":true'));
+            assert(telemetryLine.includes('"allowlistPresent":true'), 'a non-empty allow-list should be reported');
+            assert(telemetryLine.includes('"escapedCount":1'), 'exactly one non-whitelisted sequence was neutralized');
         });
 
-        it('also neutralizes a leading bracket (non task-prefixed) logging command sequence when the feature is on', () => {
+        it('preserves whitelisted commands and escapes only non-whitelisted ones when the feature is on', () => {
             process.env[FEATURE_ENV_VAR] = 'true';
+            process.env[ALLOWED_COMMANDS_ENV_VAR] = 'task.setvariable';
+            const payload = `${buildVsoCommand('task.setvariable variable=OK]yes')}\n${buildVsoCommand('task.setsecret]stolen')}`;
+
+            const result = sanitizeKuduLogForConsole(payload, 'AzureRmWebAppDeployment');
+
+            assert(result.includes(buildVsoCommand('task.setvariable variable=OK]yes')),
+                'whitelisted command (task.setvariable) must be preserved verbatim');
+            assert.strictEqual(result.includes(buildVsoCommand('task.setsecret')), false,
+                'non-whitelisted command (task.setsecret) must be neutralized');
+            assert(result.includes('##_vso[task.setsecret]stolen'),
+                'the neutralized non-whitelisted command should still be readable');
+        });
+
+        it('matches the whitelist case-insensitively', () => {
+            process.env[FEATURE_ENV_VAR] = 'true';
+            // Whitelist delivered upper-cased; injected command is lower-case.
+            process.env[ALLOWED_COMMANDS_ENV_VAR] = 'TASK.SETVARIABLE';
+            const payload = `${buildVsoCommand('task.setvariable variable=OK]yes')}\n${buildVsoCommand('task.complete result=Failed]')}`;
+
+            const result = sanitizeKuduLogForConsole(payload, 'AzureRmWebAppDeployment');
+
+            assert(result.includes(buildVsoCommand('task.setvariable variable=OK]yes')),
+                'upper-cased whitelist entry must whitelist the lower-case command');
+            assert.strictEqual(result.includes(buildVsoCommand('task.complete')), false,
+                'non-whitelisted command must still be neutralized');
+        });
+
+        it('allows all logging commands when the whitelist is empty even though the feature is on', () => {
+            process.env[FEATURE_ENV_VAR] = 'true';
+            delete process.env[ALLOWED_COMMANDS_ENV_VAR];
+            const payload = `${buildVsoCommand('task.setvariable variable=X]y')}\n${buildVsoCommand('task.setsecret]stolen')}`;
+
+            const result = sanitizeKuduLogForConsole(payload, 'AzureRmWebAppDeployment');
+
+            assert.strictEqual(result, payload, 'empty whitelist must leave every ##vso[ command untouched (allow all)');
+            const telemetryLine = consoleOutput.find(line => line.includes('telemetry.publish'));
+            assert(telemetryLine, 'detection telemetry is still emitted');
+            assert(telemetryLine.includes('"enforced":true'), 'telemetry still reports the feature as enforced');
+            // The whole point of allowlistPresent/escapedCount: with the feature on but an empty
+            // allow-list nothing is actually escaped, so the rollout signal must NOT look like
+            // active protection (see PR #659 review).
+            assert(telemetryLine.includes('"allowlistPresent":false'), 'an empty/unset allow-list must be reported as not present');
+            assert(telemetryLine.includes('"escapedCount":0'), 'an allow-all no-op must report zero escaped sequences');
+        });
+
+        it('never modifies a leading bracket sequence when enforcing with an empty whitelist', () => {
+            process.env[FEATURE_ENV_VAR] = 'true';
+            delete process.env[ALLOWED_COMMANDS_ENV_VAR];
             const payload = `${buildVsoCommand('task.setvariable variable=X]y')}\n${buildLeadingBracketCommand('section]Starting: attacker section')}`;
 
             const result = sanitizeKuduLogForConsole(payload, 'AzureRmWebAppDeployment');
 
-            assert.strictEqual(result.includes(buildVsoCommand('')), false);
-            assert.strictEqual(/^##\[/m.test(result), false, 'a leading bracket sequence must also be neutralized');
+            assert.strictEqual(result, payload,
+                'leading bracket sequences are never touched, and the empty whitelist allows every ##vso[ command through');
+            assert(/^##\[/m.test(result), 'the leading bracket sequence must be left intact');
+
+            const telemetryLine = consoleOutput.find(line => line.includes('telemetry.publish'));
+            assert(telemetryLine, 'telemetry should be emitted when enforcing');
+            assert(telemetryLine.includes('"allowlistPresent":false'), 'the empty allow-list must be reported as not present');
+            assert(telemetryLine.includes('"escapedCount":0'), 'nothing is escaped: leading brackets are never touched and the empty allow-list allows all');
+        });
+
+        it('leaves leading bracket sequences untouched even while a whitelist is enforcing', () => {
+            process.env[FEATURE_ENV_VAR] = 'true';
+            process.env[ALLOWED_COMMANDS_ENV_VAR] = 'task.setvariable';
+            const payload = `${buildLeadingBracketCommand('section]Starting: attacker section')}\n${buildVsoCommand('task.setsecret]stolen')}`;
+
+            const result = sanitizeKuduLogForConsole(payload, 'AzureRmWebAppDeployment');
+
+            assert(result.includes(buildLeadingBracketCommand('section]Starting: attacker section')),
+                'leading bracket sequences must never be neutralized');
+            assert(/^##\[/m.test(result), 'the leading bracket sequence must be left intact');
+            assert.strictEqual(result.includes(buildVsoCommand('task.setsecret')), false,
+                'a non-whitelisted ##vso[ command is still neutralized');
+
+            const telemetryLine = consoleOutput.find(line => line.includes('telemetry.publish'));
+            assert(telemetryLine, 'telemetry should be emitted when enforcing');
+            assert(telemetryLine.includes('"escapedCount":1'), 'only the non-whitelisted ##vso[ command counts as escaped; the leading bracket does not');
         });
 
         it('cannot be broken out of the telemetry command envelope by a crafted payload', () => {

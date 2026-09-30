@@ -6,7 +6,7 @@ import * as util from "util";
 import { WebRequest, sendRequest } from "./restutilities";
 import * as tl from "azure-pipelines-task-lib/task";
 
-const uuidV4 = require('uuid/v4');
+const { v4: uuidV4 } = require('uuid');
 const helmToolName = "helm"
 const helmLatestReleaseUrl = "https://api.github.com/repos/helm/helm/releases/latest";
 const stableHelmVersion = "v2.9.1"

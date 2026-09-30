@@ -6,7 +6,7 @@ import * as tl from "azure-pipelines-task-lib/task";
 import * as downloadutility from "./downloadutility";
 import * as util from "util";
 import * as yaml from "js-yaml";
-const uuidV4 = require('uuid/v4');
+const { v4: uuidV4 } = require('uuid');
 const kubectlToolName = "kubectl";
 export const stableKubectlVersion = "v1.32.0";
 import { WebRequest, sendRequest } from "./restutilities";

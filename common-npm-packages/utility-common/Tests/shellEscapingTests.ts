@@ -365,4 +365,75 @@ export function runShellSplitTests() {
         const escaped = tokens.map(t => neutralizeCommandSubstitution(t)!);
         assert.equal(escaped.join(' '), '-DFOO=bar -DBAZ=\\$\\(whoami\\)');
     });
+
+    it('preserves double quotes nested inside single quotes (JSON value)', () => {
+        assert.deepEqual(
+            shellSplit(`--extra-vars '{"a":"b"}'`),
+            ['--extra-vars', '{"a":"b"}']
+        );
+    });
+
+    it('preserves nested double quotes for a more complex JSON value', () => {
+        assert.deepEqual(
+            shellSplit(`-e '{"k":"v","n":1}'`),
+            ['-e', '{"k":"v","n":1}']
+        );
+    });
+
+    it('preserves single quotes nested inside double quotes', () => {
+        assert.deepEqual(
+            shellSplit(`--msg "it's fine"`),
+            ['--msg', "it's fine"]
+        );
+    });
+
+    it('workflow keeps JSON --extra-vars intact via shellQuote (regression: extra-vars corruption)', () => {
+        // The buggy tokenizer stripped the inner quotes, turning
+        // --extra-vars '{"a":"b"}' into --extra-vars {a:b}, which ansible-playbook
+        // silently mis-parsed as YAML. With quote context preserved the double
+        // quotes survive tokenization; wrapping each token with shellQuote then
+        // hands the original JSON object back to the shell as a single literal
+        // argument (and, unlike neutralizeCommandSubstitution, keeps multi-key
+        // JSON safe from brace expansion).
+        const tokens = shellSplit(`--extra-vars '{"a":"b","c":"d"}'`);
+        assert.deepEqual(tokens, ['--extra-vars', '{"a":"b","c":"d"}']);
+        const quoted = tokens.map(t => shellQuote(t)).join(' ');
+        assert.equal(quoted, `'--extra-vars' '{"a":"b","c":"d"}'`);
+    });
+}
+
+export function runShellQuoteWorkflowTests() {
+    // These expectations were each verified once by piping the produced command
+    // line through a real POSIX shell (bash -c) and inspecting argv; they are
+    // asserted here as deterministic strings so the suite stays hermetic (no
+    // dependency on an installed shell, no silent skips on shell-less agents).
+
+    it('shellQuote workflow: multi-key JSON --extra-vars stays one single-quoted, inert argument', () => {
+        const commandLine = shellSplit(`--extra-vars '{"a":"b","c":"d"}'`).map(t => shellQuote(t)).join(' ');
+        // Single-quoting the whole JSON keeps the braces/commas literal, so bash
+        // does NOT brace-expand it — it is handed back as one argument.
+        assert.equal(commandLine, `'--extra-vars' '{"a":"b","c":"d"}'`);
+    });
+
+    it('shellQuote workflow: nested quotes, globs, commas and tilde survive intact', () => {
+        const commandLine = shellSplit(`-e '{"path":"/tmp/*","list":"a,b,c","home":"~"}'`).map(t => shellQuote(t)).join(' ');
+        assert.equal(commandLine, `'-e' '{"path":"/tmp/*","list":"a,b,c","home":"~"}'`);
+    });
+
+    it('shellQuote workflow: command-injection metacharacters are single-quoted, not executable', () => {
+        const commandLine = shellSplit(`--become-user 'root'; whoami`).map(t => shellQuote(t)).join(' ');
+        // The ';' lives inside single quotes and 'whoami' is its own quoted token,
+        // so the shell treats both as literal arguments rather than a new command.
+        assert.equal(commandLine, `'--become-user' 'root;' 'whoami'`);
+    });
+
+    it('neutralizeCommandSubstitution leaves brace/comma unescaped for multi-key JSON (documents why shellQuote is preferred)', () => {
+        const commandLine = shellSplit(`--extra-vars '{"a":"b","c":"d"}'`).map(t => neutralizeCommandSubstitution(t)!).join(' ');
+        // Regression guard: neutralize escapes the quotes but NOT { , }, so bash
+        // brace-expands this into two words and drops the braces at runtime. This
+        // is the exact corruption the Ansible task avoids by using shellQuote.
+        assert.equal(commandLine, '--extra-vars {\\"a\\":\\"b\\",\\"c\\":\\"d\\"}');
+        assert.ok(!commandLine.includes('\\{') && !commandLine.includes('\\,'),
+            'neutralize does not escape brace-expansion characters');
+    });
 }
