@@ -1,5 +1,10 @@
 import assert = require("assert");
-import { getMSDeployCmdArgs, getWebDeployErrorCode } from "../msdeployutility";
+import sinon = require("sinon");
+import tl = require("azure-pipelines-task-lib/task");
+import fs = require("fs");
+import os = require("os");
+import path = require("path");
+import { getMSDeployCmdArgs, getWebDeployErrorCode, getSpaceSafeToolPath } from "../msdeployutility";
 
 export function runGetMSDeployCmdArgsTests() {
     it('Should produce default valid args', () => {
@@ -130,6 +135,84 @@ export function runGetWebDeployErrorCodeTests(): void {
 
         for (var errorMessage in errorMessages) {
             assert.strictEqual(getWebDeployErrorCode(errorMessage), errorMessages[errorMessage]);
+        }
+    });
+}
+
+export function runSecureMSDeployValidationTests(): void {
+    let sandbox: sinon.SinonSandbox;
+
+    beforeEach(() => {
+        sandbox = sinon.createSandbox();
+    });
+
+    afterEach(() => {
+        sandbox.restore();
+    });
+
+    function stubSecureFlag(enabled: boolean): void {
+        sandbox.stub(tl, "getPipelineFeature").callsFake((feature: string) => {
+            return feature === "SecureMSDeployCommandExecution" ? enabled : false;
+        });
+    }
+
+    const unsafeValues = ["it's", '"quoted"', "a`b", "a\nb", "a\rb"];
+
+    for (const unsafeValue of unsafeValues) {
+        it(`should reject package path containing '${unsafeValue}' when the secure flag is on`, () => {
+            stubSecureFlag(true);
+            assert.throws(() => {
+                getMSDeployCmdArgs(unsafeValue, 'webapp_name', null, false, false, false, null, null, null, false, false, false);
+            });
+        });
+    }
+
+    const legitimateValues = ["my package (v1)-final.zip", "R&D 100%-release.zip", "a|b.zip", "a;b.zip", "a$b.zip", "a<b.zip", "a>b.zip", "a^b.zip"];
+
+    for (const legitimateValue of legitimateValues) {
+        it(`should not reject package path containing '${legitimateValue}' when the secure flag is on`, () => {
+            stubSecureFlag(true);
+            assert.doesNotThrow(() => {
+                getMSDeployCmdArgs(legitimateValue, 'webapp_name', null, false, false, false, null, null, null, false, false, false);
+            });
+        });
+    }
+
+    it("should reject a publish profile containing a quote character when the secure flag is on", () => {
+        stubSecureFlag(true);
+        const profile = { publishUrl: "webapp.scm.azurewebsites.net", userName: "it's-me", userPWD: "P@ss" };
+        assert.throws(() => {
+            getMSDeployCmdArgs("package.zip", 'webapp_name', profile, false, false, false, null, null, null, false, false, false);
+        });
+    });
+
+    it("should not perform validation when the secure flag is off", () => {
+        stubSecureFlag(false);
+        assert.doesNotThrow(() => {
+            getMSDeployCmdArgs("a&b.zip", 'webapp_name', null, false, false, false, null, null, null, false, false, false);
+        });
+    });
+}
+
+export function runGetSpaceSafeToolPathTests(): void {
+    it("should return the path unchanged when it contains no spaces", () => {
+        const noSpacePath = "C:\\Tools\\msdeploy.exe";
+        assert.strictEqual(getSpaceSafeToolPath(noSpacePath), noSpacePath);
+    });
+
+    it("should resolve a space-free short path for a real spaced directory (falls back to the original path if 8.3 names are unavailable)", () => {
+        const spacedDir = fs.mkdtempSync(path.join(os.tmpdir(), "space safe test "));
+        const spacedFile = path.join(spacedDir, "my tool.exe");
+        fs.writeFileSync(spacedFile, "");
+
+        try {
+            const result = getSpaceSafeToolPath(spacedFile);
+            assert.ok(fs.existsSync(result), "the resolved path must still point at a real, existing file");
+            if (result.indexOf(" ") !== -1) {
+                assert.strictEqual(result, spacedFile);
+            }
+        } finally {
+            tl.rmRF(spacedDir);
         }
     });
 }
