@@ -8,6 +8,7 @@ import * as path from "path";
 import * as crypto from "crypto";
 import { Writable } from "stream";
 import { StringDecoder } from "string_decoder";
+import { sanitizeVsoCommandMarkers } from "./vsoCommandSanitizer";
 
 const matchPatternForSize = new RegExp(/[\d\.]+/);
 const orgUrl = tl.getVariable('System.TeamFoundationCollectionUri');
@@ -441,13 +442,6 @@ function isBuildKitBuild(): boolean {
     return isBuildKitBuildValue && Number(isBuildKitBuildValue) == 1;
 }
 
-// Matches one or more # followed by vso[ — the prefix the Azure Pipelines agent
-// uses to detect logging commands.  We match #+  (not just ##) so that inputs
-// like "####vso[" are fully neutralised in a single pass rather than leaving a
-// residual "##vso[" after replacing the inner match.
-// Case-insensitive because the agent accepts any casing.
-const vsoCommandPattern = /#+vso\[/gi;
-
 // Regex that matches a trailing suffix which could be the START of a #+vso[
 // sequence split across chunks.  We carry over:
 //   - any run of # characters at the end, and
@@ -464,7 +458,7 @@ const trailingPartialMarker = /#+(?:v(?:s(?:o)?)?)?$/i;
  * invisible to the agent's command parser.
  */
 export function sanitizeDockerOutput(data: string): string {
-    return data.replace(vsoCommandPattern, "#vso[");
+    return sanitizeVsoCommandMarkers(data);
 }
 
 /**
