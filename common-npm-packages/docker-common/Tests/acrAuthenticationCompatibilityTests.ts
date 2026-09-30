@@ -16,7 +16,6 @@ import { getDockerRegistryEndpointAuthenticationToken } from "../registryauthent
 import { sanitizeUrl } from "../registryauthenticationprovider/registryhostvalidation";
 
 export function runAcrAuthenticationCompatibilityTests(): void {
-    const featureVariable = "DistributedTask.Tasks.AcrRegistryHostValidation";
     const featureEnvironmentKey = "DISTRIBUTEDTASK_TASKS_ACRREGISTRYHOSTVALIDATION";
     const endpointId = "test-endpoint";
     const originalTaskMethods = {
@@ -37,6 +36,10 @@ export function runAcrAuthenticationCompatibilityTests(): void {
     let warnings: string[];
     let credentialReads: number;
     let schemeInParameter: boolean;
+
+    function setFeature(enabled: boolean): void {
+        process.env[featureEnvironmentKey] = String(enabled);
+    }
 
     beforeEach(() => {
         previousFeature = process.env[featureEnvironmentKey];
@@ -124,9 +127,10 @@ export function runAcrAuthenticationCompatibilityTests(): void {
         AzureRMEndpoint.prototype.getEndpoint = originalGetEndpoint;
         ApplicationTokenCredentials.getMSIAuthorizationToken = originalGetMsiToken;
         Object.assign(webClient, { sendRequest: originalSendRequest });
-        tl.setVariable(featureVariable, previousFeature || "");
         if (previousFeature === undefined) {
             delete process.env[featureEnvironmentKey];
+        } else {
+            process.env[featureEnvironmentKey] = previousFeature;
         }
         Object.assign(tl, originalTaskMethods);
     });
@@ -174,7 +178,7 @@ export function runAcrAuthenticationCompatibilityTests(): void {
 
     for (const enabled of [false, true]) {
         describe(`feature ${enabled ? "on" : "off"}`, () => {
-            beforeEach(() => tl.setVariable(featureVariable, String(enabled)));
+            beforeEach(() => setFeature(enabled));
 
             supportedSpServers.forEach((server) => {
                 it(`preserves SP credentials and registry representation for ${server}`, async () => {
@@ -226,7 +230,7 @@ export function runAcrAuthenticationCompatibilityTests(): void {
     }
 
     describe("feature on rejects configured unsupported values", () => {
-        beforeEach(() => tl.setVariable(featureVariable, "true"));
+        beforeEach(() => setFeature(true));
 
         unsupportedSpServers.forEach((server) => {
             it(`rejects SP registry syntax ${JSON.stringify(server)} before credential reads`, async () => {
@@ -271,7 +275,7 @@ export function runAcrAuthenticationCompatibilityTests(): void {
     });
 
     describe("feature off preserves existing configured behavior", () => {
-        beforeEach(() => tl.setVariable(featureVariable, "false"));
+        beforeEach(() => setFeature(false));
 
         unsupportedSpServers.forEach((server) => {
             it(`preserves the SP result for ${JSON.stringify(server)}`, async () => {
