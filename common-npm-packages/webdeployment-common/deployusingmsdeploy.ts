@@ -7,7 +7,8 @@ import { copySetParamFileIfItExists, isMSDeployPackage } from './utility';
 import { 
     WebDeployArguments, 
     WebDeployResult, 
-    getMSDeployFullPath, 
+    MsDeployInvocation,
+    resolveMsDeployInvocation, 
     getWebDeployArgumentsString, 
     getWebDeployErrorCode,
     getMSDeployCmdArgs,
@@ -34,10 +35,9 @@ const DEFAULT_RETRY_COUNT = 3;
 export async function DeployUsingMSDeploy(webDeployPkg, webAppName, publishingProfile, removeAdditionalFilesFlag,
         excludeFilesFromAppDataFlag, takeAppOfflineFlag, virtualApplication, setParametersFile, additionalArguments, isFolderBasedDeployment, useWebDeploy, authType?: string) {
 
-    var msDeployPath = await getMSDeployFullPath();
-    var msDeployDirectory = msDeployPath.slice(0, msDeployPath.lastIndexOf('\\') + 1);
+    var invocation = await resolveMsDeployInvocation();
     var pathVar = process.env.PATH;
-    process.env.PATH = msDeployDirectory + ";" + process.env.PATH ;
+    process.env.PATH = invocation.directory + ";" + process.env.PATH;
 
     setParametersFile = copySetParamFileIfItExists(setParametersFile);
     var setParametersFileName = null;
@@ -49,7 +49,7 @@ export async function DeployUsingMSDeploy(webDeployPkg, webAppName, publishingPr
 
     var msDeployCmdArgs = getMSDeployCmdArgs(webDeployPkg, webAppName, publishingProfile, removeAdditionalFilesFlag,
         excludeFilesFromAppDataFlag, takeAppOfflineFlag, virtualApplication, setParametersFileName, additionalArguments, isParamFilePresentInPackage, isFolderBasedDeployment,
-        useWebDeploy, authType);
+        useWebDeploy, authType, invocation.useShell);
 
     var retryCountParam = tl.getVariable("appservice.msdeployretrycount");
     var retryCount = (retryCountParam && !(isNaN(Number(retryCountParam)))) ? Number(retryCountParam): DEFAULT_RETRY_COUNT; 
@@ -58,7 +58,7 @@ export async function DeployUsingMSDeploy(webDeployPkg, webAppName, publishingPr
         while(true) {
             try {
                 retryCount -= 1;
-                await executeMSDeploy(msDeployCmdArgs);
+                await executeMSDeploy(msDeployCmdArgs, invocation);
                 break;
             }
             catch (error) {
@@ -89,13 +89,12 @@ export async function DeployUsingMSDeploy(webDeployPkg, webAppName, publishingPr
 
 
 export async function executeWebDeploy(webDeployArguments: WebDeployArguments): Promise<WebDeployResult> {
-    const args = await getWebDeployArgumentsString(webDeployArguments);
+    const invocation = await resolveMsDeployInvocation();
+    const args = await getWebDeployArgumentsString(webDeployArguments, invocation.useShell);
     const originalPathVar = process.env.PATH;
     try {
-        const msDeployPath: string = await getMSDeployFullPath();
-        const msDeployDirectory = msDeployPath.slice(0, msDeployPath.lastIndexOf('\\') + 1);
-        process.env.PATH = msDeployDirectory + ";" + process.env.PATH;
-        await executeMSDeploy(args);
+        process.env.PATH = invocation.directory + ";" + process.env.PATH;
+        await executeMSDeploy(args, invocation);
         return {
             isSuccess: true
         } as WebDeployResult;
@@ -164,7 +163,7 @@ function argStringToArray(argString): string[] {
     return args;
 }
 
-async function executeMSDeploy(msDeployCmdArgs: string): Promise<any> {
+export async function executeMSDeploy(msDeployCmdArgs: string, invocation: MsDeployInvocation): Promise<any> {
     return new Promise<any>(async (resolve, reject) => {
         const errorFile = path.join(tl.getVariable('System.DefaultWorkingDirectory'), ERROR_FILE_NAME);
         const fd = fs.openSync(errorFile, "w");
@@ -187,13 +186,24 @@ async function executeMSDeploy(msDeployCmdArgs: string): Promise<any> {
             for (let i = 0; i < msDeployCmdArgsArray.length; i++) {
                 tl.debug("arg#" + i + ": " + msDeployCmdArgsArray[i]);
             }
-            // set shell: true because C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe has folder with spaces 
-            // see https://github.com/microsoft/azure-pipelines-tasks/issues/17634
+            // windowsVerbatimArguments keeps msdeploy's own argument quoting intact (msdeploy
+            // re-parses its command line). The tool name is the literal "msdeploy", which
+            // resolves via the PATH entry prepended by the caller - a space-free (8.3 short)
+            // directory on the primary path, so the resolved executable path has no spaces and
+            // the verbatim command line parses correctly. shell is false on that primary path
+            // so the command processor is not involved. It is only true on the fallback path,
+            // where the substituted values have been quoted/escaped. Historically shell:true
+            // was always used because the msdeploy install path contains spaces.
+            //
+            // NOTE: the resolved tool must be a real executable (msdeploy.exe), not a .cmd/.bat
+            // wrapper. task-lib applies a different, nested re-quoting to .cmd/.bat tools (its
+            // "_isCmdFile" path) that would change how the verbatim arguments are passed, so do
+            // not change the tool name to a shell-script wrapper.
             const options: IExecOptions = { 
                 failOnStdErr: true, 
                 errStream: errorStream, 
                 windowsVerbatimArguments: true, 
-                shell: true
+                shell: invocation.useShell
             };
             await tl.exec("msdeploy", msDeployCmdArgsArray, options);
             resolve("Azure App service successfully deployed");

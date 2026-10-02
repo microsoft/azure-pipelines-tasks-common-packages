@@ -4,6 +4,7 @@ import path = require('path');
 import { Package } from './packageUtility';
 import * as winreg from 'winreg';
 import * as semver from 'semver';
+import childProcess = require('child_process');
 
 export const ERROR_FILE_NAME = "error.txt";
 /**
@@ -27,15 +28,15 @@ export const ERROR_FILE_NAME = "error.txt";
 export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, profile,
                              removeAdditionalFilesFlag: boolean, excludeFilesFromAppDataFlag: boolean, takeAppOfflineFlag: boolean,
                              virtualApplication: string, setParametersFile: string, additionalArguments: string, isParamFilePresentInPacakge: boolean,
-                             isFolderBasedDeployment: boolean, useWebDeploy: boolean, authType?: string) : string {
+                             isFolderBasedDeployment: boolean, useWebDeploy: boolean, authType?: string, escapeForShell: boolean = false) : string {
 
     var msDeployCmdArgs: string = " -verb:sync";
 
     var webApplicationDeploymentPath = (virtualApplication) ? webAppName + "/" + virtualApplication : webAppName;
     
     if(isFolderBasedDeployment) {
-        msDeployCmdArgs += " -source:IisApp=\"'" + webAppPackage + "'\"";
-        msDeployCmdArgs += " -dest:iisApp=\"'" + webApplicationDeploymentPath + "'\"";
+        msDeployCmdArgs += " -source:IisApp=" + wrapSourceValue(webAppPackage, escapeForShell);
+        msDeployCmdArgs += " -dest:iisApp=" + wrapSourceValue(webApplicationDeploymentPath, escapeForShell);
     }
     else {
         if (webAppPackage && webAppPackage.toLowerCase().endsWith('.war')) {
@@ -45,18 +46,18 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pr
             tl.debug('WAR: warFile = ' + warFile);
             warFile = (virtualApplication) ? warFile + "/" + virtualApplication + warExt : warFile + warExt;
             tl.debug('WAR: warFile = ' + warFile);
-            msDeployCmdArgs += " -source:contentPath=\"'" + webAppPackage + "'\"";
+            msDeployCmdArgs += " -source:contentPath=" + wrapSourceValue(webAppPackage, escapeForShell);
             // tomcat, jetty location on server => /site/webapps/
             tl.debug('WAR: dest = /site/webapps/' + warFile);
-            msDeployCmdArgs += " -dest:contentPath=\"'/site/webapps/" + warFile + "'\"";
+            msDeployCmdArgs += " -dest:contentPath=" + wrapSourceValue("/site/webapps/" + warFile, escapeForShell);
         } else {
-            msDeployCmdArgs += " -source:package=\"'" + webAppPackage + "'\"";
+            msDeployCmdArgs += " -source:package=" + wrapSourceValue(webAppPackage, escapeForShell);
 
             if(isParamFilePresentInPacakge) {
                 msDeployCmdArgs += " -dest:auto";
             }
             else {
-                msDeployCmdArgs += " -dest:contentPath=\"'" + webApplicationDeploymentPath + "'\"";
+                msDeployCmdArgs += " -dest:contentPath=" + wrapSourceValue(webApplicationDeploymentPath, escapeForShell);
             }
         }
     }
@@ -67,7 +68,7 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pr
     }
     
     if(isParamFilePresentInPacakge) {
-        msDeployCmdArgs += " -setParam:name=\"'IIS Web Application Name'\",value=\"'" + webApplicationDeploymentPath + "'\"";
+        msDeployCmdArgs += " -setParam:name=\"'IIS Web Application Name'\",value=" + wrapSourceValue(webApplicationDeploymentPath, escapeForShell);
     }
 
     if(takeAppOfflineFlag) {
@@ -104,6 +105,36 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pr
     return msDeployCmdArgs;
 }
 
+
+/**
+ * Wraps a value that is substituted into an msdeploy "-source:"/"-dest:" argument so that it
+ * reaches msdeploy as a single argument with its contents preserved exactly.
+ *
+ * Default (escapeForShell === false): the historical form - a double quote then a single
+ * quote around the value. argStringToArray() later strips the outer double quotes and
+ * msdeploy strips the single quotes.
+ *
+ * escapeForShell === true: used only on the fallback path, where msdeploy is launched through
+ * the command processor (shell:true) because a space-free msdeploy path is not available. The
+ * value is wrapped in escaped double quotes that survive argStringToArray(), so the command
+ * processor treats the whole value as one literal, double-quoted argument and does not
+ * interpret any special characters it contains (&, |, <, >, (, ), ^, ...); msdeploy then
+ * strips the double quotes and receives the original value. A double quote cannot occur in a
+ * Windows path, so removing any is harmless.
+ *
+ * Trailing backslashes are also removed before wrapping. A backslash immediately before the
+ * closing quote would be consumed by argStringToArray() together with the escaped closing
+ * quote, leaving the value's double quote unterminated so the argument would absorb the
+ * following argument. A trailing path separator is redundant for every value substituted here
+ * (a package file path, an IIS application path, or a web-app/virtual-application name), so
+ * stripping it is safe.
+ */
+function wrapSourceValue(value: string, escapeForShell: boolean): string {
+    if (!escapeForShell) {
+        return "\"'" + value + "'\"";
+    }
+    return '"\\"' + value.replace(/"/g, '').replace(/\\+$/, '') + '\\""';
+}
 
 /**
  * Escapes quotes in a string to ensure proper command-line parsing.
@@ -209,7 +240,7 @@ function parseAdditionalArguments(additionalArguments: string): string[] {
 
 
 
-export async function getWebDeployArgumentsString(args: WebDeployArguments): Promise<string> {
+export async function getWebDeployArgumentsString(args: WebDeployArguments, escapeForShell: boolean = false): Promise<string> {
     const profile = {
         userPWD: args.password,
         userName: args.userName,
@@ -229,7 +260,8 @@ export async function getWebDeployArgumentsString(args: WebDeployArguments): Pro
         await args.package.isMSBuildPackage(),
         args.package.isFolder(),
         args.useWebDeploy,
-        args.authType);
+        args.authType,
+        escapeForShell);
 }
 
 export function shouldUseMSDeployTokenAuth(): boolean {
@@ -251,6 +283,71 @@ export async function getMSDeployFullPath(): Promise<string> {
         const subfolder = shouldUseMSDeployTokenAuth() ? "M229" : "M142";
         return path.join(__dirname, "MSDeploy", subfolder , "MSDeploy3.6", "msdeploy.exe");
     }
+}
+
+/**
+ * Returns a space-free path to msdeploy.exe when possible.
+ *
+ * msdeploy parses its own command line (including argv[0]); when it is launched without
+ * a shell, an unquoted space in the executable path makes msdeploy mis-parse its
+ * arguments. If the resolved path contains a space we return its 8.3 short-name form
+ * (which has no spaces) when one is available. Otherwise the original path is returned
+ * unchanged and the caller falls back to a shell-based invocation.
+ *
+ * The input is the resolved msdeploy install path (registry InstallPath or the bundled
+ * fallback), not user-supplied input, so expanding it through cmd's %~s modifier is safe.
+ */
+export function getMsDeployShortPath(fullPath: string): string {
+    if (!fullPath || fullPath.indexOf(' ') === -1) {
+        return fullPath;
+    }
+    try {
+        const result = childProcess.spawnSync(
+            process.env.COMSPEC || 'cmd.exe',
+            ['/d', '/c', 'for %A in ("' + fullPath + '") do @echo %~sA'],
+            { encoding: 'utf8', windowsHide: true, windowsVerbatimArguments: true });
+        const shortPath = (result.stdout || '').trim();
+        return (shortPath && shortPath.indexOf(' ') === -1) ? shortPath : fullPath;
+    } catch (error) {
+        tl.debug('Unable to resolve 8.3 short path for msdeploy; using the full path: ' + error);
+        return fullPath;
+    }
+}
+
+export interface MsDeployInvocation {
+    /**
+     * Directory prepended to PATH so the literal tool name "msdeploy" resolves here. When a
+     * space-free (8.3 short) path to msdeploy.exe is available this is that short directory,
+     * which lets msdeploy run without a shell (see useShell) while keeping a space-free,
+     * verbatim command line that msdeploy re-parses correctly.
+     */
+    directory: string;
+    /**
+     * Whether msdeploy must be launched through the command processor (cmd.exe).
+     *  - false (primary): a space-free msdeploy path is available, so msdeploy runs without a
+     *    command processor. Special characters in any argument (for example in a package file
+     *    path) are passed through literally instead of being interpreted.
+     *  - true (fallback): no space-free path is available, so msdeploy runs through the command
+     *    processor. The substituted values are quoted/escaped instead (callers pass
+     *    escapeForShell=true to getMSDeployCmdArgs / getWebDeployArgumentsString) so their
+     *    contents are preserved.
+     */
+    useShell: boolean;
+}
+
+/**
+ * Resolves how msdeploy.exe is invoked. The tool name passed to tl.exec is always the
+ * literal "msdeploy"; this function only decides which directory to put on PATH (so the
+ * literal name resolves to a space-free location when possible) and whether a shell is
+ * needed. Keeping the tool name literal means the command line that reaches msdeploy is
+ * unchanged from the historical behaviour except for the removal of cmd.exe on the
+ * primary path.
+ */
+export async function resolveMsDeployInvocation(): Promise<MsDeployInvocation> {
+    const fullPath = await getMSDeployFullPath();
+    const invokePath = getMsDeployShortPath(fullPath);
+    const useShell = invokePath.indexOf(' ') !== -1;
+    return { directory: path.dirname(invokePath), useShell };
 }
 
 async function getMSDeployInstallPath(): Promise<string> {
