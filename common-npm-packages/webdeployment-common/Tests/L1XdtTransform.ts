@@ -63,6 +63,26 @@ export function runL1XdtTransformTests(this: Mocha.Suite) {
         done();
     });
 
+    it('Ignores the legacy unsafe XDT transform opt-out', function(done: Mocha.Done) {
+        const transformFile = writeTemporaryTransformFile('Web.LegacyOptOutImport.config',
+            '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">\r\n' +
+            '  <xdt:Import path="CustomTransform.dll" namespace="CustomTransform" />\r\n' +
+            '  <appSettings xdt:Transform="SetAttributes" />\r\n' +
+            '</configuration>\r\n');
+
+        tl.setVariable('AZP_ALLOW_UNSAFE_XDT_TRANSFORMS', 'true');
+        try {
+            assert.throws(
+                () => applyXdtTransformation(getAbsolutePath('Web_test.config'), transformFile),
+                /xdt:Import/,
+                'The legacy opt-out must not bypass XDT security validation');
+        }
+        finally {
+            tl.setVariable('AZP_ALLOW_UNSAFE_XDT_TRANSFORMS', '');
+        }
+        done();
+    });
+
     it('Rejects XDT imports that load assemblies by name', function(done: Mocha.Done) {
         const transformFile = writeTemporaryTransformFile('Web.BlockedImportAssembly.config',
             '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">\r\n' +
@@ -165,53 +185,6 @@ export function runL1XdtTransformTests(this: Mocha.Suite) {
         catch (error) {
             assert(!/xdt:Import|unsupported xdt:/i.test(error.message),
                 'Validation must not block built-in transform/locator types with arguments, got: ' + error.message);
-        }
-        done();
-    });
-
-    it('Restores legacy behavior when the AZP_ALLOW_UNSAFE_XDT_TRANSFORMS opt-out is set', function(done: Mocha.Done) {
-        if (tl.getPlatform() !== tl.Platform.Windows) {
-            this.skip();
-        }
-
-        const transformFile = writeTemporaryTransformFile('Web.OptOutImport.config',
-            '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">\r\n' +
-            '  <xdt:Import path="CustomTransform.dll" namespace="CustomTransform" />\r\n' +
-            '  <appSettings xdt:Transform="SetAttributes" />\r\n' +
-            '</configuration>\r\n');
-
-        tl.setVariable('AZP_ALLOW_UNSAFE_XDT_TRANSFORMS', 'true');
-        try {
-            applyXdtTransformation(getAbsolutePath('Web_test.config'), transformFile);
-        }
-        catch (error) {
-            assert(!/xdt:Import|unsupported xdt:/i.test(error.message),
-                'Opt-out must bypass XDT security validation, got: ' + error.message);
-        }
-        finally {
-            tl.setVariable('AZP_ALLOW_UNSAFE_XDT_TRANSFORMS', '');
-        }
-        done();
-    });
-
-    it('Enforces validation when the opt-out variable is not exactly "true"', function(done: Mocha.Done) {
-        const transformFile = writeTemporaryTransformFile('Web.OptOutDisabledImport.config',
-            '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">\r\n' +
-            '  <xdt:Import path="CustomTransform.dll" namespace="CustomTransform" />\r\n' +
-            '  <appSettings xdt:Transform="SetAttributes" />\r\n' +
-            '</configuration>\r\n');
-
-        try {
-            ['false', '1', 'yes'].forEach(value => {
-                tl.setVariable('AZP_ALLOW_UNSAFE_XDT_TRANSFORMS', value);
-                assert.throws(
-                    () => applyXdtTransformation(getAbsolutePath('Web_test.config'), transformFile),
-                    /xdt:Import/,
-                    'Opt-out value "' + value + '" must not bypass XDT security validation');
-            });
-        }
-        finally {
-            tl.setVariable('AZP_ALLOW_UNSAFE_XDT_TRANSFORMS', '');
         }
         done();
     });
