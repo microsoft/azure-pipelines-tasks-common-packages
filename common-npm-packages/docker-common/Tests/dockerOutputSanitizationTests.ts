@@ -159,7 +159,7 @@ export function runDockerCommandSanitizationTests() {
             ).then(() => {
                 assert.ok(!connection.stdoutWritten.includes("##vso["),
                     "##vso[ should be sanitized before reaching process.stdout");
-                assert.ok(connection.stdoutWritten.includes("#vso[task.prependpath]"),
+                assert.ok(connection.stdoutWritten.includes("##_vso[task.prependpath]"),
                     "Sanitized text should still be readable");
                 done();
             }).catch(done);
@@ -173,7 +173,7 @@ export function runDockerCommandSanitizationTests() {
             ).then(() => {
                 assert.ok(!connection.stderrWritten.includes("##vso["),
                     "##vso[ should be sanitized on stderr too");
-                assert.ok(connection.stderrWritten.includes("#vso[task.setvariable"),
+                assert.ok(connection.stderrWritten.includes("##_vso[task.setvariable"),
                     "Sanitized command should still appear in stderr");
                 done();
             }).catch(done);
@@ -207,14 +207,33 @@ export function runDockerCommandSanitizationTests() {
             }).catch(done);
         });
 
-        it('Should handle case-insensitive ##VSO[ variants', (done) => {
+        it('Should leave ##VSO[ alone because the agent matches case-sensitively', (done) => {
+            // The agent locates commands with
+            // message.IndexOf("##vso[", StringComparison.Ordinal), so "##VSO["
+            // is not a command and does not need neutralizing. Matching the
+            // agent byte-for-byte avoids corrupting legitimate output that
+            // merely looks like a marker.
             const connection = new MockContainerConnection("##VSO[task.prependpath]/tmp/pwned");
 
             dockerCommandUtils.build(
                 connection as any, "Dockerfile", "", [], ["test:latest"], (_output) => {}
             ).then(() => {
-                assert.ok(!connection.stdoutWritten.includes("##VSO["),
-                    "Case-insensitive ##VSO[ should be sanitized");
+                assert.ok(!connection.stdoutWritten.includes("##vso["),
+                    "no lowercase marker should be introduced");
+                assert.ok(connection.stdoutWritten.includes("##VSO[task.prependpath]"),
+                    "##VSO[ is inert to the agent and should pass through unchanged");
+                done();
+            }).catch(done);
+        });
+
+        it('Should allow the task-lib default allowlist through (task.debug)', (done) => {
+            const connection = new MockContainerConnection("##vso[task.debug]hello");
+
+            dockerCommandUtils.build(
+                connection as any, "Dockerfile", "", [], ["test:latest"], (_output) => {}
+            ).then(() => {
+                assert.ok(connection.stdoutWritten.includes("##vso[task.debug]"),
+                    "allowlisted commands stay intact so benign tooling output is not broken");
                 done();
             }).catch(done);
         });
@@ -339,7 +358,7 @@ export function runDockerCommandSanitizationTests() {
             ).then(() => {
                 assert.ok(!connection.stdoutWritten.includes("##vso["),
                     "##vso[ split across chunks should still be sanitized");
-                assert.ok(connection.stdoutWritten.includes("#vso[task.prependpath]"),
+                assert.ok(connection.stdoutWritten.includes("##_vso[task.prependpath]"),
                     "Sanitized marker should be present");
                 done();
             }).catch(done);

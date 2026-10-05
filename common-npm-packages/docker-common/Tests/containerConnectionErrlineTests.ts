@@ -44,9 +44,14 @@ export function runContainerConnectionErrlineTests() {
         beforeEach(() => {
             errorCalls = [];
             originalError = tl.error;
-            // tl.error() is the agent-command-aware channel that replayed
-            // errlines are ultimately written to on failure - capture what it
-            // actually receives.
+            // Capture what tl.error() actually receives. Note that tl.error()
+            // is NOT the injectable sink: task-lib wraps the message in an
+            // outer ##vso[task.issue ...] command and escapes CR/LF, so an
+            // embedded marker is inert there. The genuinely exploitable sink
+            // is the console.log('##[error]...') branch covered further down.
+            // We still assert on this path because errlines must never be
+            // retained raw - that is the underlying defect, and it is what
+            // makes the console.log branch exploitable.
             (tl as any).error = (message: string) => { errorCalls.push(message); };
 
             originalGetPipelineFeature = tl.getPipelineFeature;
@@ -81,10 +86,10 @@ export function runContainerConnectionErrlineTests() {
                         assert.strictEqual(errorCalls.length, 1,
                             "tl.error should be called once for the replayed errline");
                         assert.ok(!errorCalls[0].includes("##vso["),
-                            "the replayed errline must not contain an unneutralized ##vso[ marker - " +
-                            "this is the logging-command injection bypass: attacker-controlled Docker " +
-                            "stderr on a failed command must not reach tl.error() unsanitized");
-                        assert.ok(errorCalls[0].includes("#vso[task.setvariable"),
+                            "attacker-controlled Docker stderr must not be replayed raw - " +
+                            "retaining the unfiltered line is the root defect that makes the " +
+                            "console.log('##[error]...') branch injectable");
+                        assert.ok(errorCalls[0].includes("##_vso[task.setvariable"),
                             "the sanitized marker should still be present so the output stays readable");
                         done();
                     } catch (assertionError) {
@@ -187,7 +192,7 @@ export function runContainerConnectionErrlineTests() {
                         assert.strictEqual(consoleLogCalls.length, 1);
                         assert.ok(!consoleLogCalls[0].includes("##vso["),
                             "the console.log replay path must also be sanitized, not just tl.error()");
-                        assert.ok(consoleLogCalls[0].includes("#vso[task.setvariable"),
+                        assert.ok(consoleLogCalls[0].includes("##_vso[task.setvariable"),
                             "sanitized marker should still be present in the ##[error] line");
                         assert.strictEqual(errorCalls.length, 0,
                             "tl.error() should not be used when hideDockerExecTaskLogIssueErrorOutput is on");

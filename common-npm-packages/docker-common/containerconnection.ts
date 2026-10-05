@@ -52,18 +52,18 @@ export default class ContainerConnection {
         // "errline" is emitted from the raw child-process stderr regardless of
         // any outStream/errStream sanitizer passed in via `options` - those
         // streams are only consulted for data written through them, not for
-        // this event. Since these lines are replayed verbatim through
-        // tl.error()/console.log() below (an agent-command-aware channel) once
-        // the command fails, they must be sanitized here as well, otherwise
+        // this event. Since these lines are replayed below through
+        // tl.error()/console.log() (an agent-command-aware channel) once the
+        // command fails, filtering has to happen here, otherwise
         // attacker-controlled Docker output (e.g. from a remote Docker Engine)
         // can inject ##vso[] logging commands on a nonzero exit even when the
         // caller believes sanitization is already applied via `options`.
         //
-        // A plain full-string replace (rather than the chunk-aware stream
-        // sanitizer in dockercommandutils.ts) is sufficient here: ToolRunner
-        // already splits stderr into complete, newline-terminated lines before
-        // emitting "errline", so there is no chunk boundary a marker could be
-        // split across.
+        // Filtering at capture rather than at each replay site is deliberate:
+        // nothing attacker-controlled is ever stored raw, so both replay
+        // branches below - and any sink added later - are covered by default.
+        // Of the two, only console.log() is actually injectable; tl.error()
+        // escapes CR/LF and wraps the text in an outer task.issue command.
         command.on("errline", line => {
             errlines.push(sanitizeVsoCommandMarkers(line));
         });

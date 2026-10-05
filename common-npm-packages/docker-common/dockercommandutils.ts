@@ -6,9 +6,7 @@ import ContainerConnection from "./containerconnection";
 import * as pipelineUtils from "./pipelineutils";
 import * as path from "path";
 import * as crypto from "crypto";
-import { Writable } from "stream";
-import { StringDecoder } from "string_decoder";
-import { sanitizeVsoCommandMarkers } from "./vsoCommandSanitizer";
+import { createSanitizedOutputStream, sanitizeVsoCommandMarkers } from "./vsoCommandSanitizer";
 
 const matchPatternForSize = new RegExp(/[\d\.]+/);
 const orgUrl = tl.getVariable('System.TeamFoundationCollectionUri');
@@ -46,8 +44,11 @@ export function build(connection: ContainerConnection, dockerFile: string, comma
         output += data;
     });
 
-    // Use a sanitized output stream so that ##vso[] commands embedded in Docker
-    // build output cannot be interpreted by the agent (CVE fix for logging-command injection).
+    // Filter what is written to the live build log so that ##vso[] markers in
+    // Docker build output are not parsed by the agent as logging commands.
+    // Note: `output` below is the RAW command output and is handed to
+    // onCommandOut() unfiltered on purpose, because callers parse it for image
+    // IDs and digests. Callers must not print it to the log unfiltered.
     return connection.execCommand(command, createSanitizedExecOptions()).then(() => {
         // Return the std output of the command by calling the delegate
         onCommandOut(output);
@@ -65,7 +66,9 @@ export function command(connection: ContainerConnection, dockerCommand: string, 
         output += data;
     });
 
-    // Use a sanitized output stream to prevent logging-command injection.
+    // Filter what is written to the live build log so that ##vso[] markers in
+    // Docker output are not parsed by the agent as logging commands. $output
+    // stays raw for the caller's parsing and must not be logged unfiltered.
     return connection.execCommand(command, createSanitizedExecOptions()).then(() => {
         // Return the std output of the command by calling the delegate
         onCommandOut(output);
@@ -84,7 +87,9 @@ export function push(connection: ContainerConnection, image: string, commandArgu
         output += data;
     });
 
-    // Use a sanitized output stream to prevent logging-command injection.
+    // Filter what is written to the live build log so that ##vso[] markers in
+    // Docker output are not parsed by the agent as logging commands. $output
+    // stays raw for the caller's parsing and must not be logged unfiltered.
     return connection.execCommand(command, createSanitizedExecOptions()).then(() => {
         // Return the std output of the command by calling the delegate
         onCommandOut(image, output + "\n");
@@ -103,7 +108,9 @@ export function start(connection: ContainerConnection, container: string, comman
         output += data;
     });
 
-    // Use a sanitized output stream to prevent logging-command injection.
+    // Filter what is written to the live build log so that ##vso[] markers in
+    // Docker output are not parsed by the agent as logging commands. $output
+    // stays raw for the caller's parsing and must not be logged unfiltered.
     return connection.execCommand(command, createSanitizedExecOptions()).then(() => {
         // Return the std output of the command by calling the delegate
         onCommandOut(container, output + "\n");
@@ -122,7 +129,9 @@ export function stop(connection: ContainerConnection, container: string, command
         output += data;
     });
 
-    // Use a sanitized output stream to prevent logging-command injection.
+    // Filter what is written to the live build log so that ##vso[] markers in
+    // Docker output are not parsed by the agent as logging commands. $output
+    // stays raw for the caller's parsing and must not be logged unfiltered.
     return connection.execCommand(command, createSanitizedExecOptions()).then(() => {
         // Return the std output of the command by calling the delegate
         onCommandOut(container, output + "\n");
@@ -376,7 +385,7 @@ export async function getImageRootfsLayers(connection: ContainerConnection, imag
     });
 
     try {
-        connection.execCommand(command).then(() => {
+        connection.execCommand(command, createSanitizedExecOptions()).then(() => {
             defer.resolve();
         });
     }
@@ -442,71 +451,18 @@ function isBuildKitBuild(): boolean {
     return isBuildKitBuildValue && Number(isBuildKitBuildValue) == 1;
 }
 
-// Regex that matches a trailing suffix which could be the START of a #+vso[
-// sequence split across chunks.  We carry over:
-//   - any run of # characters at the end, and
-//   - an optional partial "v", "vs", or "vso" after the hashes.
-// Case-insensitive to mirror vsoCommandPattern.
-const trailingPartialMarker = /#+(?:v(?:s(?:o)?)?)?$/i;
-
 /**
- * Strips ##vso[ command prefixes from Docker output so that the Azure Pipelines
- * agent does not interpret attacker-controlled Docker build output as logging
- * commands (e.g. task.prependpath, task.setvariable).
+ * Neutralizes logging-command markers in a complete string of Docker output.
  *
- * The replacement preserves the text for human readability while making it
- * invisible to the agent's command parser.
+ * Retained as a named export because callers outside this package use it; the
+ * marker logic itself lives in azure-pipelines-task-lib so that this package
+ * never maintains its own copy of the agent's command syntax.
  */
 export function sanitizeDockerOutput(data: string): string {
     return sanitizeVsoCommandMarkers(data);
 }
 
-/**
- * Creates a Writable stream that sanitizes ##vso[] commands before forwarding
- * data to the given destination stream. Used as the outStream / errStream option
- * for ToolRunner.exec() so that Docker output is still visible in the build log
- * but cannot inject agent commands.
- *
- * The stream is stateful: it carries over any trailing characters that could be
- * the start of a #+vso[ token split across pipe-buffer chunks.  A StringDecoder
- * is used to avoid mojibake when a multibyte UTF-8 sequence is split across
- * chunk boundaries.
- */
-export function createSanitizedOutputStream(destination: NodeJS.WritableStream): NodeJS.WritableStream {
-    const decoder = new StringDecoder('utf8');
-    let pending = "";
-
-    return new Writable({
-        write(chunk: Buffer | string, _encoding: BufferEncoding, callback: (error?: Error | null) => void): void {
-            // Decode safely (handles split multibyte sequences)
-            const text = typeof chunk === 'string' ? chunk : decoder.write(chunk);
-            pending += text;
-
-            // Keep any trailing characters that could be the start of #+vso[
-            // so we can detect the marker even when it spans chunks.
-            const tailMatch = trailingPartialMarker.exec(pending);
-            const safeEnd = tailMatch ? tailMatch.index : pending.length;
-
-            const toWrite = pending.substring(0, safeEnd);
-            pending = pending.substring(safeEnd);
-
-            if (toWrite) {
-                destination.write(sanitizeDockerOutput(toWrite), 'utf8', callback);
-            } else {
-                callback();
-            }
-        },
-        final(callback: (error?: Error | null) => void): void {
-            // Flush any remaining pending bytes (including decoder remainder)
-            pending += decoder.end();
-            if (pending) {
-                destination.write(sanitizeDockerOutput(pending), 'utf8', callback);
-            } else {
-                callback();
-            }
-        }
-    });
-}
+export { createSanitizedOutputStream };
 
 // Creates fresh exec options for each docker command invocation.
 // Each call returns new stream instances so that stateful carry-over buffers
