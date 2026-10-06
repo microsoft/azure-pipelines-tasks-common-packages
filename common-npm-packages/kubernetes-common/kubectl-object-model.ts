@@ -196,7 +196,10 @@ export class Kubectl {
             command.arg('--insecure-skip-tls-verify');
         }
         command.arg(['--namespace', this.namespace]);
-        return command.execSync({ silent: !!silent } as IExecOptions);
+        return command.execSync({
+            silent: !!silent,
+            externalOutput: { source: 'childProcess' }
+        } as IExecOptions);
     }
 
     private createInlineArray(str: string | string[]): string {
@@ -218,9 +221,15 @@ export class Kubectl {
             const resultInJSON = JSON.parse(result.stdout);
             if (resultInJSON.clientVersion && resultInJSON.clientVersion.gitVersion) {
                 console.log('==============================================================================');
-                console.log('\t\t\t' + tl.loc('KubectlClientVersion') + ': ' + resultInJSON.clientVersion.gitVersion);
+                tl.writeExternalOutput(
+                    '\t\t\t' + tl.loc('KubectlClientVersion') + ': ' + resultInJSON.clientVersion.gitVersion + '\n',
+                    { source: 'childProcess' }
+                );
                 if (resultInJSON.serverVersion && resultInJSON.serverVersion.gitVersion) {
-                    console.log('\t\t\t' + tl.loc('KubectlServerVersion') + ': ' + resultInJSON.serverVersion.gitVersion);
+                    tl.writeExternalOutput(
+                        '\t\t\t' + tl.loc('KubectlServerVersion') + ': ' + resultInJSON.serverVersion.gitVersion + '\n',
+                        { source: 'remote' }
+                    );
                     console.log('==============================================================================');
                 }
                 else {
