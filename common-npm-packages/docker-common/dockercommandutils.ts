@@ -1,12 +1,13 @@
 "use strict";
 
 import * as tl from "azure-pipelines-task-lib/task";
+import * as tr from "azure-pipelines-task-lib/toolrunner";
 import * as Q from "q";
 import ContainerConnection from "./containerconnection";
 import * as pipelineUtils from "./pipelineutils";
 import * as path from "path";
 import * as crypto from "crypto";
-import { createSanitizedOutputStream, sanitizeVsoCommandMarkers } from "./vsoCommandSanitizer";
+import { dockerExternalOutputOptions, sanitizeVsoCommandMarkers } from "./vsoCommandSanitizer";
 
 const matchPatternForSize = new RegExp(/[\d\.]+/);
 const orgUrl = tl.getVariable('System.TeamFoundationCollectionUri');
@@ -67,7 +68,7 @@ export function command(connection: ContainerConnection, dockerCommand: string, 
     });
 
     // Filter what is written to the live build log so that ##vso[] markers in
-    // Docker output are not parsed by the agent as logging commands. $output
+    // Docker output are not parsed by the agent as logging commands. `output`
     // stays raw for the caller's parsing and must not be logged unfiltered.
     return connection.execCommand(command, createSanitizedExecOptions()).then(() => {
         // Return the std output of the command by calling the delegate
@@ -88,7 +89,7 @@ export function push(connection: ContainerConnection, image: string, commandArgu
     });
 
     // Filter what is written to the live build log so that ##vso[] markers in
-    // Docker output are not parsed by the agent as logging commands. $output
+    // Docker output are not parsed by the agent as logging commands. `output`
     // stays raw for the caller's parsing and must not be logged unfiltered.
     return connection.execCommand(command, createSanitizedExecOptions()).then(() => {
         // Return the std output of the command by calling the delegate
@@ -109,7 +110,7 @@ export function start(connection: ContainerConnection, container: string, comman
     });
 
     // Filter what is written to the live build log so that ##vso[] markers in
-    // Docker output are not parsed by the agent as logging commands. $output
+    // Docker output are not parsed by the agent as logging commands. `output`
     // stays raw for the caller's parsing and must not be logged unfiltered.
     return connection.execCommand(command, createSanitizedExecOptions()).then(() => {
         // Return the std output of the command by calling the delegate
@@ -130,7 +131,7 @@ export function stop(connection: ContainerConnection, container: string, command
     });
 
     // Filter what is written to the live build log so that ##vso[] markers in
-    // Docker output are not parsed by the agent as logging commands. $output
+    // Docker output are not parsed by the agent as logging commands. `output`
     // stays raw for the caller's parsing and must not be logged unfiltered.
     return connection.execCommand(command, createSanitizedExecOptions()).then(() => {
         // Return the std output of the command by calling the delegate
@@ -462,14 +463,10 @@ export function sanitizeDockerOutput(data: string): string {
     return sanitizeVsoCommandMarkers(data);
 }
 
-export { createSanitizedOutputStream };
-
-// Creates fresh exec options for each docker command invocation.
-// Each call returns new stream instances so that stateful carry-over buffers
-// don't leak across commands and streams can be properly ended.
-export function createSanitizedExecOptions(): { outStream: NodeJS.WritableStream; errStream: NodeJS.WritableStream } {
+// ToolRunner owns the stateful filter lifecycle and finalizes it when the
+// child process exits, including when the final output has no newline.
+export function createSanitizedExecOptions(): tr.IExecOptions {
     return {
-        outStream: createSanitizedOutputStream(process.stdout),
-        errStream: createSanitizedOutputStream(process.stderr)
+        externalOutput: dockerExternalOutputOptions
     };
 }

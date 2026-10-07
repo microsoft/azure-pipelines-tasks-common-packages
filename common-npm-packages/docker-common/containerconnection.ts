@@ -50,9 +50,8 @@ export default class ContainerConnection {
         }
 
         // "errline" is emitted from the raw child-process stderr regardless of
-        // any outStream/errStream sanitizer passed in via `options` - those
-        // streams are only consulted for data written through them, not for
-        // this event. Since these lines are replayed below through
+        // ToolRunner's `externalOutput` filter, which protects only the copy
+        // written to the live log. Since these raw lines are replayed below through
         // tl.error()/console.log() (an agent-command-aware channel) once the
         // command fails, filtering has to happen here, otherwise
         // attacker-controlled Docker output (e.g. from a remote Docker Engine)

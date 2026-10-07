@@ -1,6 +1,6 @@
 import assert = require("assert");
 import { EventEmitter } from "events";
-import { Writable } from "stream";
+import { createFilteredWriter } from "azure-pipelines-task-lib/externaloutput";
 
 // Set environment variables required by azure-pipelines-task-lib before importing dockerCommandUtils
 process.env['INPUT_BUILDCONTEXT'] = '/tmp/build';
@@ -10,8 +10,8 @@ import * as dockerCommandUtils from "../dockercommandutils";
 
 /**
  * Minimal mock for ToolRunner that simulates Docker command execution.
- * When exec() is called, it emits stdout/stderr data and writes to the
- * provided outStream/errStream options, mimicking real ToolRunner behavior.
+ * The real-ToolRunner tests cover process and stream lifecycle behavior; this
+ * mock only applies the configured external-output policy to simulated chunks.
  */
 class MockToolRunner extends EventEmitter {
     public simulatedStdout: string = "";
@@ -30,45 +30,34 @@ class MockToolRunner extends EventEmitter {
             this.emit("stderr", this.simulatedStderr);
         }
 
-        return new Promise<void>((resolve) => {
-            const writes: Promise<void>[] = [];
+        const outStream = options && options.outStream || process.stdout;
+        const errStream = options && options.failOnStdErr
+            ? options.errStream || process.stderr
+            : outStream;
+        const stdoutWriter = createFilteredWriter(options.externalOutput, outStream);
+        const stderrWriter = errStream === outStream
+            ? stdoutWriter
+            : createFilteredWriter(options.externalOutput, errStream);
 
-            if (this.simulatedStdoutChunks && options && options.outStream) {
-                // Write as multiple chunks to simulate pipe buffer splits
-                let chain = Promise.resolve();
-                for (const chunk of this.simulatedStdoutChunks) {
-                    chain = chain.then(() => new Promise<void>((res) => {
-                        options.outStream.write(chunk, 'utf8', () => res());
-                    }));
-                }
-                writes.push(chain);
-            } else if (this.simulatedStdout && options && options.outStream) {
-                writes.push(new Promise<void>((res) => {
-                    options.outStream.write(this.simulatedStdout, 'utf8', () => res());
-                }));
-            }
-            if (this.simulatedStderr && options && options.errStream) {
-                writes.push(new Promise<void>((res) => {
-                    options.errStream.write(this.simulatedStderr, 'utf8', () => res());
-                }));
-            }
+        (this.simulatedStdoutChunks || [this.simulatedStdout])
+            .filter(chunk => !!chunk)
+            .forEach(chunk => stdoutWriter.write(chunk));
+        if (this.simulatedStderr) {
+            stderrWriter.write(this.simulatedStderr);
+        }
 
-            Promise.all(writes).then(() => {
-                // Signal end to flush any stateful carry-over in the sanitized stream
-                if (options && options.outStream && typeof options.outStream.end === 'function') {
-                    options.outStream.end(() => resolve());
-                } else {
-                    resolve();
-                }
-            });
-        });
+        stdoutWriter.end();
+        if (stderrWriter !== stdoutWriter) {
+            stderrWriter.end();
+        }
+
+        return Promise.resolve();
     }
 }
 
 /**
  * Mock ContainerConnection that uses MockToolRunner.
- * Captures exec options and intercepts what the sanitized outStream/errStream
- * writes to process.stdout/stderr during exec.
+ * Captures exec options and intercepts ToolRunner's display destinations.
  */
 class MockContainerConnection {
     public lastExecOptions: any = null;
@@ -124,29 +113,29 @@ export function runDockerCommandSanitizationTests() {
 
     describe('build()', () => {
 
-        it('Should pass outStream and errStream options to execCommand', (done) => {
+        it('Should pass external-output options to execCommand', (done) => {
             const connection = new MockContainerConnection("output");
 
             dockerCommandUtils.build(
                 connection as any, "Dockerfile", "", [], ["test:latest"], (_output) => {}
             ).then(() => {
                 assert.ok(connection.lastExecOptions, "execCommand should receive options");
-                assert.ok(connection.lastExecOptions.outStream, "options should have outStream");
-                assert.ok(connection.lastExecOptions.errStream, "options should have errStream");
+                assert.strictEqual(connection.lastExecOptions.externalOutput.source, "childProcess");
+                assert.strictEqual(connection.lastExecOptions.externalOutput.enableVsoCommands, true);
                 done();
             }).catch(done);
         });
 
-        it('Should not use raw process.stdout as outStream', (done) => {
+        it('Should let ToolRunner own output filtering and finalization', (done) => {
             const connection = new MockContainerConnection("output");
 
             dockerCommandUtils.build(
                 connection as any, "Dockerfile", "", [], ["test:latest"], (_output) => {}
             ).then(() => {
-                assert.notStrictEqual(connection.lastExecOptions.outStream, process.stdout,
-                    "outStream must be a sanitizing wrapper, not raw process.stdout");
-                assert.notStrictEqual(connection.lastExecOptions.errStream, process.stderr,
-                    "errStream must be a sanitizing wrapper, not raw process.stderr");
+                assert.strictEqual(connection.lastExecOptions.outStream, undefined);
+                assert.strictEqual(connection.lastExecOptions.errStream, undefined);
+                assert.ok(connection.lastExecOptions.externalOutput,
+                    "ToolRunner should receive the external-output filtering policy");
                 done();
             }).catch(done);
         });
@@ -171,10 +160,12 @@ export function runDockerCommandSanitizationTests() {
             dockerCommandUtils.build(
                 connection as any, "Dockerfile", "", [], ["test:latest"], (_output) => {}
             ).then(() => {
-                assert.ok(!connection.stderrWritten.includes("##vso["),
-                    "##vso[ should be sanitized on stderr too");
-                assert.ok(connection.stderrWritten.includes("##_vso[task.setvariable"),
-                    "Sanitized command should still appear in stderr");
+                assert.ok(!connection.stdoutWritten.includes("##vso["),
+                    "ToolRunner should sanitize stderr routed to its default display stream");
+                assert.ok(connection.stdoutWritten.includes("##_vso[task.setvariable"),
+                    "Sanitized stderr should still appear in the live output");
+                assert.strictEqual(connection.stderrWritten, "",
+                    "ToolRunner routes stderr to outStream unless failOnStdErr is set");
                 done();
             }).catch(done);
         });
@@ -424,8 +415,8 @@ export function runDockerCommandSanitizationTests() {
                 connection as any, "myimage:latest"
             ).then(() => {
                 assert.ok(connection.lastExecOptions, "execCommand should receive options");
-                assert.ok(connection.lastExecOptions.outStream, "options should have outStream");
-                assert.ok(connection.lastExecOptions.errStream, "options should have errStream");
+                assert.ok(connection.lastExecOptions.externalOutput,
+                    "options should enable ToolRunner external-output filtering");
                 assert.ok(!connection.stdoutWritten.includes("##vso["),
                     "getHistory stdout should be sanitized");
                 done();
