@@ -16,6 +16,8 @@
         "XdtTransformationUnreadableFile": "Unable to read %s in order to validate its XML declaration. Error: %s",
         "XdtTransformationInvalidXdtNamespaceNode": "The XML transform file %s contains the XDT node '%s' without a namespace-aware local name. The transform was blocked because its namespace could not be validated safely.",
         "XdtTransformationMalformedXmlDeclaration": "Unable to read the XML declaration of %s. The file starts with '<?xml' but the declaration is not terminated. Correct the XML declaration and try again.",
+        "XdtTransformationFeatureDisabled": "Cannot apply XML transform %s because pipeline variable %s is false. Set it to 'true' or unset it to enable hardened XDT transformations. No unhardened transformation was run.",
+        "WebDeploymentInvalidCompatibilityFlag": "Invalid value for pipeline variable %s. The value must be 'true' or 'false'; leave it unset to use the enabled-by-default behavior.",
         "JSONParseError": "Unable to parse JSON file: %s. Error: %s",
         "NOJSONfilematchedwithspecificpattern": "NO JSON file matched with specific pattern: %s.",
         "FailedToApplyTransformation": "Unable to apply transformation for the given package. Verify the following.",

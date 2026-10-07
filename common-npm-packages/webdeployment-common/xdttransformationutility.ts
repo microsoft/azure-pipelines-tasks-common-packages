@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import path = require('path');
 import { DOMParser } from '@xmldom/xmldom';
 import { detectFileEncoding } from './fileencoding';
+import { WebDeploymentCompatibilityFixEnabled, isWebDeploymentCompatibilityFixEnabled } from './featureFlags';
 
 const xdtNamespace = 'http://schemas.microsoft.com/XML-Document-Transform';
 // Built-in XDT transform/locator type names. Verified by reflecting the concrete (non-abstract)
@@ -27,10 +28,6 @@ const builtInXdtLocatorTypes = [
     'Match',
     'XPath'
 ];
-
-// Number of leading bytes probed when looking for an XML declaration. The declaration must be the
-// very first construct in a well-formed document, so a small window is always sufficient.
-const xmlDeclarationProbeByteCount = 4096;
 
 // UTF-16 aliases that .NET resolves to a UTF-16 encoding. Declaring one of these changes the byte
 // alignment ctt.exe uses, so it must agree with the encoding this validator decoded the transform
@@ -89,7 +86,8 @@ function buildAsciiTransparentEncodingSet(): { [encodingName: string]: boolean }
         'ibm861', 'cp861', 'ibm862', 'cp862', 'ibm863', 'cp863', 'ibm864', 'cp864', 'ibm865', 'cp865',
         'ibm866', 'cp866', 'ibm869', 'cp869',
         // Other single-byte code pages
-        'latin1', 'latin-1', 'l1', 'koi8-r', 'koi8-u', 'koi8-ru', 'macintosh',
+        'latin1', 'latin-1', 'l1', 'iso-ir-100', 'csisolatin1', 'cp819', 'ibm819',
+        'koi8-r', 'koi8-u', 'koi8-ru', 'macintosh',
         'x-mac-roman', 'x-mac-cyrillic', 'x-mac-ce', 'x-mac-greek', 'x-mac-turkish', 'x-mac-icelandic',
         'tis-620', 'windows-874', 'cp874',
         // Multi-byte CJK code pages
@@ -155,14 +153,17 @@ export function applyXdtTransformation(sourceFile: string, transformFile: string
 }
 
 function validateXdtTransformFile(transformFile: string): void {
+    if (!isWebDeploymentCompatibilityFixEnabled()) {
+        publishXdtSecurityTelemetry('blocked', 'featureDisabled');
+        throw new Error(tl.loc('XdtTransformationFeatureDisabled', transformFile,
+            'DistributedTask.Tasks.' + WebDeploymentCompatibilityFixEnabled));
+    }
+
     // ctt.exe loads the transform file independently of the source document (see the comment above
     // asciiTransparentEncodings), so only the transform's own declared encoding is part of this
     // validator's attack surface.
-    const transformDeclaredEncoding = validateXdtEncodingDeclaration(transformFile);
-
-    // Read the transform exactly once, so the bytes whose declaration was validated are provably the
-    // bytes that get parsed and inspected below.
-    const transformBuffer = fs.readFileSync(transformFile);
+    const transformBuffer = readTransformFile(transformFile);
+    const transformDeclaredEncoding = validateXdtEncodingDeclaration(transformFile, transformBuffer);
     const transformEncoding = detectTransformFileEncoding(transformFile, transformBuffer);
 
     validateUtf16DecoderAgreement(transformFile, transformDeclaredEncoding, transformEncoding);
@@ -192,29 +193,24 @@ function blockEncodingMismatch(file: string, declaredEncoding: string, transform
     throw new Error(tl.loc('XdtTransformationEncodingMismatch', file, declaredEncoding, transformEncoding));
 }
 
-// Returns the encoding declared by the document, or '' when the document has no XML declaration.
-// Throws when the declared encoding cannot be modelled, or cannot be read at all.
-function validateXdtEncodingDeclaration(file: string): string {
-    let buffer: Buffer;
+function readTransformFile(file: string): Buffer {
     try {
-        buffer = readFileHead(file, xmlDeclarationProbeByteCount);
+        return fs.readFileSync(file);
     }
     catch (error) {
         if (error && error.code === 'ENOENT') {
-            // A genuinely absent file is not a validation concern: ctt.exe reports it itself, and
-            // failing here would change the error surfaced for pre-existing packaging mistakes.
-            tl.debug('Unable to read the XML declaration of ' + file + ': ' + describeError(error));
-            return '';
+            throw error;
         }
 
-        // Any other read failure (a sharing violation or a denied ACL, for example) must fail closed.
-        // Skipping the check here would silently disable the encoding gate for a file that ctt.exe
-        // goes on to read successfully.
         publishXdtSecurityTelemetry('blocked', 'unreadableFile');
         throw new Error(tl.loc('XdtTransformationUnreadableFile', file, describeError(error)));
     }
+}
 
-    const declaredEncoding = readXmlDeclarationEncoding(file, buffer);
+// Returns the encoding declared by the document, or '' when the document has no XML declaration.
+// Throws when the declared encoding cannot be modelled, or cannot be read at all.
+function validateXdtEncodingDeclaration(file: string, buffer: Buffer): string {
+    const declaredEncoding = readCompleteXmlDeclarationEncoding(file, buffer);
     if (declaredEncoding === null) {
         return '';
     }
@@ -227,36 +223,26 @@ function validateXdtEncodingDeclaration(file: string): string {
     return declaredEncoding;
 }
 
-function readFileHead(file: string, byteCount: number): Buffer {
-    const descriptor = fs.openSync(file, 'r');
-    try {
-        const buffer = Buffer.alloc(byteCount);
-        const bytesRead = fs.readSync(descriptor, buffer, 0, byteCount, 0);
-        return buffer.subarray(0, bytesRead);
-    }
-    finally {
-        fs.closeSync(descriptor);
-    }
-}
-
 // Returns the declared encoding, or null when the document has no XML declaration at all. An empty
 // declared encoding is returned as '' rather than null so that it is treated as a present-but-
 // unmodellable declaration and blocked, instead of being mistaken for an absent declaration.
-function readXmlDeclarationEncoding(file: string, buffer: Buffer): string {
+function readCompleteXmlDeclarationEncoding(file: string, buffer: Buffer): string {
     const prolog = stripByteOrderMark(buffer);
 
-    // The declaration itself is always pure ASCII. Probe a byte-per-character view, which covers
-    // UTF-8 and every single-byte code page, and a view with NUL bytes removed, which covers both
-    // UTF-16 LE and UTF-16 BE.
-    const prologCandidates = [prolog.toString('latin1'), removeNulBytes(prolog).toString('latin1')];
+    // Inspect only the prefix until a declaration is found, then read through its terminator.
+    // XML permits arbitrary whitespace in the declaration, so its length cannot be capped.
+    const prefix = prolog.subarray(0, 12);
+    const prologCandidates = [prefix.toString('latin1'), removeNulBytes(prefix).toString('latin1')];
 
     for (let index = 0; index < prologCandidates.length; index++) {
-        const candidate = prologCandidates[index];
-        if (!/^<\?xml\s/.test(candidate)) {
+        if (!/^<\?xml\s/.test(prologCandidates[index])) {
             continue;
         }
 
-        const declarationEnd = candidate.indexOf('?>');
+        const removeNul = index === 1;
+        const terminator = !removeNul ? Buffer.from('?>') :
+            Buffer.from(prolog[0] === 0 ? [0, 0x3F, 0, 0x3E] : [0x3F, 0, 0x3E, 0]);
+        const declarationEnd = prolog.indexOf(terminator);
         if (declarationEnd == -1) {
             // Fail closed: the document claims an XML declaration that this validator cannot read,
             // so it cannot establish which encoding ctt.exe will use.
@@ -264,7 +250,9 @@ function readXmlDeclarationEncoding(file: string, buffer: Buffer): string {
             throw new Error(tl.loc('XdtTransformationMalformedXmlDeclaration', file));
         }
 
-        const match = /\bencoding\s*=\s*(?:"([^"]*)"|'([^']*)')/.exec(candidate.substring(0, declarationEnd));
+        const declaration = prolog.subarray(0, declarationEnd);
+        const candidate = (removeNul ? removeNulBytes(declaration) : declaration).toString('latin1');
+        const match = /\bencoding\s*=\s*(?:"([^"]*)"|'([^']*)')/.exec(candidate);
         if (!match) {
             // A declaration without an encoding pseudo-attribute leaves ctt.exe on BOM detection,
             // which matches what detectFileEncoding does here.

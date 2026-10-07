@@ -5,6 +5,7 @@ import fs = require("fs");
 import os = require("os");
 import path = require("path");
 import { getMSDeployCmdArgs, getWebDeployErrorCode, getSpaceSafeToolPath } from "../msdeployutility";
+import { WebDeploymentCompatibilityFixEnabled } from "../featureFlags";
 
 export function runGetMSDeployCmdArgsTests() {
     it('Should produce default valid args', () => {
@@ -141,37 +142,54 @@ export function runGetWebDeployErrorCodeTests(): void {
 
 export function runSecureMSDeployValidationTests(): void {
     let sandbox: sinon.SinonSandbox;
+    let featureStub: sinon.SinonStub;
+    let originalCompatibilityValue: string | undefined;
+    const compatibilityEnvironmentVariable = "DISTRIBUTEDTASK_TASKS_" + WebDeploymentCompatibilityFixEnabled.toUpperCase();
 
     beforeEach(() => {
+        originalCompatibilityValue = process.env[compatibilityEnvironmentVariable];
+        delete process.env[compatibilityEnvironmentVariable];
         sandbox = sinon.createSandbox();
+        featureStub = sandbox.stub(tl, "getPipelineFeature").returns(false);
     });
 
     afterEach(() => {
         sandbox.restore();
+        if (originalCompatibilityValue === undefined) {
+            delete process.env[compatibilityEnvironmentVariable];
+        } else {
+            process.env[compatibilityEnvironmentVariable] = originalCompatibilityValue;
+        }
     });
 
-    function stubSecureFlag(enabled: boolean): void {
-        sandbox.stub(tl, "getPipelineFeature").callsFake((feature: string) => {
-            return feature === "SecureMSDeployCommandExecution" ? enabled : false;
+    function stubSecureFlag(enabled: boolean, compatibilityEnabled?: boolean | string): void {
+        if (compatibilityEnabled === undefined) {
+            delete process.env[compatibilityEnvironmentVariable];
+        } else {
+            process.env[compatibilityEnvironmentVariable] = String(compatibilityEnabled);
+        }
+        featureStub.callsFake((feature: string) => {
+            return feature === "SecureMSDeployCommandExecution" ? enabled
+                : feature === WebDeploymentCompatibilityFixEnabled ? String(compatibilityEnabled).toLowerCase() === "true" : false;
         });
     }
 
-    const unsafeValues = ["it's", '"quoted"', "a`b", "a\nb", "a\rb"];
+    const unsafeValues = ["it's", '"quoted"', "a\nb", "a\rb"];
 
     for (const unsafeValue of unsafeValues) {
         it(`should reject package path containing '${unsafeValue}' when the secure flag is on`, () => {
-            stubSecureFlag(true);
+            stubSecureFlag(true, true);
             assert.throws(() => {
                 getMSDeployCmdArgs(unsafeValue, 'webapp_name', null, false, false, false, null, null, null, false, false, false);
             });
         });
     }
 
-    const legitimateValues = ["my package (v1)-final.zip", "R&D 100%-release.zip", "a|b.zip", "a;b.zip", "a$b.zip", "a<b.zip", "a>b.zip", "a^b.zip"];
+    const legitimateValues = ["my package (v1)-final.zip", "R&D 100%-release.zip", "a`b.zip", "a|b.zip", "a;b.zip", "a$b.zip", "a<b.zip", "a>b.zip", "a^b.zip"];
 
     for (const legitimateValue of legitimateValues) {
         it(`should not reject package path containing '${legitimateValue}' when the secure flag is on`, () => {
-            stubSecureFlag(true);
+            stubSecureFlag(true, true);
             assert.doesNotThrow(() => {
                 getMSDeployCmdArgs(legitimateValue, 'webapp_name', null, false, false, false, null, null, null, false, false, false);
             });
@@ -179,7 +197,7 @@ export function runSecureMSDeployValidationTests(): void {
     }
 
     it("should reject a publish profile containing a quote character when the secure flag is on", () => {
-        stubSecureFlag(true);
+        stubSecureFlag(true, true);
         const profile = { publishUrl: "webapp.scm.azurewebsites.net", userName: "it's-me", userPWD: "P@ss" };
         assert.throws(() => {
             getMSDeployCmdArgs("package.zip", 'webapp_name', profile, false, false, false, null, null, null, false, false, false);
@@ -188,10 +206,180 @@ export function runSecureMSDeployValidationTests(): void {
 
     it("should not perform validation when the secure flag is off", () => {
         stubSecureFlag(false);
-        assert.doesNotThrow(() => {
-            getMSDeployCmdArgs("a&b.zip", 'webapp_name', null, false, false, false, null, null, null, false, false, false);
-        });
+        for (const value of unsafeValues.concat(["a`b.zip", "a&b.zip"])) {
+            const args = getMSDeployCmdArgs(value, 'webapp_name', null, false, false, false, null, null, null, false, false, false);
+            assert.strictEqual(args, " -verb:sync -source:package=\"'" + value +
+                "'\" -dest:contentPath=\"'webapp_name'\"   -enableRule:DoNotDeleteRule");
+        }
     });
+
+    for (const unsafeValue of unsafeValues) {
+        for (const field of ["appName", "virtualApplication", "setParametersFile", "publishUrl", "userName", "userPWD", "authType"]) {
+            it(`should reject ${JSON.stringify(unsafeValue)} in ${field} when the secure flag is on`, () => {
+                stubSecureFlag(true, true);
+                const values = {
+                    appName: "webapp_name",
+                    virtualApplication: "application",
+                    setParametersFile: "parameters.xml",
+                    publishUrl: "webapp.scm.azurewebsites.net",
+                    userName: "user",
+                    userPWD: "password",
+                    authType: "Basic"
+                };
+                values[field as keyof typeof values] = unsafeValue;
+                assert.throws(() => getMSDeployCmdArgs("package.zip", values.appName, {
+                    publishUrl: values.publishUrl, userName: values.userName, userPWD: values.userPWD
+                }, false, false, false, values.virtualApplication, values.setParametersFile, null, false, false, true,
+                values.authType), /quotes and newlines are not allowed/);
+            });
+        }
+    }
+
+    it("should quote a secure parameter filename containing spaces and preserve backticks", () => {
+        stubSecureFlag(true, true);
+        const args = getMSDeployCmdArgs("my `package.zip", "my `site", null, false, false, false,
+            "my `application", "my `parameters.xml", null, false, false, true);
+        assert.strictEqual(args, " -verb:sync -source:package=\"'my `package.zip'\" " +
+            "-dest:contentPath=\"'my `site/my `application'\" -setParamFile=\"\\\"my `parameters.xml\\\"\"    -enableRule:DoNotDeleteRule");
+    });
+
+    it("should preserve the exact legacy command string with a spaced parameter filename", () => {
+        stubSecureFlag(false);
+        const args = getMSDeployCmdArgs("my package.zip", "my site", null, false, false, false,
+            "my application", "my parameters.xml", "-retryAttempts:11", false, false, true);
+        assert.strictEqual(args, " -verb:sync -source:package=\"'my package.zip'\" " +
+            "-dest:contentPath=\"'my site/my application'\" -setParamFile=my parameters.xml  -retryAttempts:11 -enableRule:DoNotDeleteRule");
+    });
+
+    for (const newline of ["\r", "\n"]) {
+        it(`should reject ${JSON.stringify(newline)} in additional arguments when the secure flag is on`, () => {
+            stubSecureFlag(true, true);
+            assert.throws(() => getMSDeployCmdArgs("package.zip", "site", null, false, false, false,
+                null, null, "-setParam:name='name',value='a" + newline + "b'", false, false, false),
+            /newlines are not allowed/);
+        });
+    }
+
+    it("should keep a secure user agent containing spaces in a quoted argument", () => {
+        stubSecureFlag(true, true);
+        sandbox.stub(tl, "getVariable").withArgs("AZURE_HTTP_USER_AGENT").returns("my `user agent");
+        const args = getMSDeployCmdArgs("package.zip", "site", {
+            publishUrl: "site.scm.azurewebsites.net", userName: "user", userPWD: "password"
+        }, false, false, false, null, null, null, false, false, false);
+        assert.ok(args.endsWith(' -userAgent:"\\"my `user agent\\""'));
+    });
+
+    for (const unsafeValue of unsafeValues) {
+        it(`should reject ${JSON.stringify(unsafeValue)} in the secure user agent`, () => {
+            stubSecureFlag(true, true);
+            sandbox.stub(tl, "getVariable").withArgs("AZURE_HTTP_USER_AGENT").returns(unsafeValue);
+            assert.throws(() => getMSDeployCmdArgs("package.zip", "site", {
+                publishUrl: "site.scm.azurewebsites.net", userName: "user", userPWD: "password"
+            }, false, false, false, null, null, null, false, false, false),
+            /quotes and newlines are not allowed/);
+        });
+    }
+
+    for (const secureEnabled of [false, true]) {
+        for (const compatibilityEnabled of [undefined, "", false, true, "FALSE", "TrUe"]) {
+            it(`should preserve the command and validation rollout matrix with secure=${secureEnabled}, compatibility=${compatibilityEnabled}`, () => {
+                stubSecureFlag(secureEnabled, compatibilityEnabled);
+                const fixesEnabled = secureEnabled && String(compatibilityEnabled).toLowerCase() !== "false";
+                const userAgentStub = sandbox.stub(tl, "getVariable").withArgs("AZURE_HTTP_USER_AGENT").returns("my user agent");
+                const profile = { publishUrl: "localhost", userName: "user", userPWD: "password" };
+                function buildArgs(authType: string = "Basic", additional: string = "-retryAttempts:11"): string {
+                    return getMSDeployCmdArgs("package.zip", "site", profile, false, false, false,
+                        null, "my parameters.xml", additional, false, false, true, authType);
+                }
+                const prefix = " -verb:sync -source:package=\"'package.zip'\" -dest:contentPath=\"'site'\"," +
+                    "ComputerName=\"'https://localhost/msdeploy.axd?site=site'\",UserName=\"'user'\"," +
+                    "Password=\"'password'\",AuthType=\"'Basic'\"";
+                const expected = prefix + (fixesEnabled
+                    ? ' -setParamFile="\\"my parameters.xml\\""'
+                    : " -setParamFile=my parameters.xml") +
+                    "  -retryAttempts:11 -enableRule:DoNotDeleteRule" +
+                    (fixesEnabled ? ' -userAgent:"\\"my user agent\\""' : " -userAgent:my user agent");
+                assert.strictEqual(buildArgs(), expected);
+
+                const backtickArgs = () => getMSDeployCmdArgs("my `package.zip", "site", null, false, false,
+                    false, null, null, null, false, false, false);
+                if (secureEnabled && !fixesEnabled) {
+                    assert.throws(backtickArgs, /quotes and newlines are not allowed/);
+                } else {
+                    assert.strictEqual(backtickArgs(), " -verb:sync -source:package=\"'my `package.zip'\" " +
+                        "-dest:contentPath=\"'site'\"   -enableRule:DoNotDeleteRule");
+                }
+
+                for (const unsafeValue of unsafeValues) {
+                    const unsafePackageArgs = () => getMSDeployCmdArgs(unsafeValue, "site", null, false, false,
+                        false, null, null, null, false, false, false);
+                    if (secureEnabled) {
+                        assert.throws(unsafePackageArgs, /quotes and newlines are not allowed/);
+                    } else {
+                        assert.doesNotThrow(unsafePackageArgs);
+                    }
+                    if (fixesEnabled) {
+                        assert.throws(() => buildArgs(unsafeValue), /quotes and newlines are not allowed/);
+                    } else {
+                        assert.ok(buildArgs(unsafeValue).includes("AuthType=\"'" + unsafeValue + "'\""));
+                    }
+                    userAgentStub.returns(unsafeValue);
+                    if (fixesEnabled) {
+                        assert.throws(() => buildArgs(), /quotes and newlines are not allowed/);
+                    } else {
+                        assert.ok(buildArgs().endsWith(" -userAgent:" + unsafeValue));
+                    }
+                    userAgentStub.returns("my user agent");
+                }
+                for (const newline of ["\r", "\n"]) {
+                    if (fixesEnabled) {
+                        assert.throws(() => buildArgs("Basic", "-retryAttempts:11" + newline), /newlines are not allowed/);
+                    } else {
+                        assert.ok(buildArgs("Basic", "-retryAttempts:11" + newline).includes("-retryAttempts:11" + newline));
+                    }
+                }
+
+                const debugSpy = sandbox.spy(tl, "debug");
+                const secret = "compatibility-log-probe";
+                buildArgs("Basic", "-setParam:name='Credential',value='" + secret + "',kind='TextFile'");
+                assert.strictEqual(debugSpy.getCalls().some(call => String(call.args[0]).includes(secret)), !fixesEnabled);
+            });
+        }
+    }
+
+    it("should read compatibility flags at call time rather than caching them at module load", () => {
+        const buildArgs = () => getMSDeployCmdArgs("my `package.zip", "site", null,
+            false, false, false, null, null, null, false, false, false);
+        stubSecureFlag(true, false);
+        assert.throws(buildArgs);
+        stubSecureFlag(true, true);
+        assert.doesNotThrow(buildArgs);
+        stubSecureFlag(true);
+        assert.doesNotThrow(buildArgs);
+        stubSecureFlag(true, "");
+        assert.doesNotThrow(buildArgs);
+        stubSecureFlag(true, false);
+        assert.throws(buildArgs);
+    });
+
+    for (const invalidValue of ["invalid", "1", " true", "false ", " "]) {
+        it(`should reject invalid compatibility configuration ${JSON.stringify(invalidValue)} before constructing secure arguments`, () => {
+            stubSecureFlag(true, invalidValue);
+            sandbox.stub(tl, "loc").callsFake((key: string) => key);
+            assert.throws(() => getMSDeployCmdArgs("package.zip", "site", null,
+                false, false, false, null, null, null, false, false, false),
+            /WebDeploymentInvalidCompatibilityFlag/);
+            assert.strictEqual(featureStub.calledWith(WebDeploymentCompatibilityFixEnabled), false);
+        });
+
+        it(`should preserve legacy arguments with security off despite invalid compatibility configuration ${JSON.stringify(invalidValue)}`, () => {
+            stubSecureFlag(false, invalidValue);
+            assert.strictEqual(getMSDeployCmdArgs("my `package.zip", "site", null,
+                false, false, false, null, null, null, false, false, false),
+            " -verb:sync -source:package=\"'my `package.zip'\" -dest:contentPath=\"'site'\"   -enableRule:DoNotDeleteRule");
+            assert.strictEqual(featureStub.calledWith(WebDeploymentCompatibilityFixEnabled), false);
+        });
+    }
 }
 
 export function runGetSpaceSafeToolPathTests(): void {
