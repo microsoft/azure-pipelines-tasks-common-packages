@@ -368,6 +368,81 @@ function runXdtTransformTests(this: Mocha.Suite, featureValue?: string) {
         done();
     });
 
+    ['iso-ir-100', 'csISOLatin1', 'cp819', 'ibm819'].forEach((alias, aliasIndex) => {
+        const sourceEncodings: { name: string, declaration: string, bom: Buffer, encoding: BufferEncoding }[] = [
+            { name: 'implicit UTF-8', declaration: '', bom: Buffer.alloc(0), encoding: 'utf8' },
+            { name: 'declared UTF-8', declaration: '<?xml version="1.0" encoding="utf-8"?>', bom: Buffer.alloc(0), encoding: 'utf8' },
+            { name: 'UTF-8 BOM', declaration: '', bom: Buffer.from([0xEF, 0xBB, 0xBF]), encoding: 'utf8' },
+            { name: 'UTF-16 LE', declaration: '<?xml version="1.0" encoding="utf-16"?>', bom: Buffer.from([0xFF, 0xFE]), encoding: 'utf16le' }
+        ];
+        sourceEncodings.forEach((sourceEncoding, sourceIndex) => {
+            it('Rejects non-ASCII ' + alias + ' transforms against ' + sourceEncoding.name + ' before changing files', function() {
+                const fixture = aliasIndex + '-' + sourceIndex;
+                const originalSource = Buffer.concat([sourceEncoding.bom, Buffer.from(sourceEncoding.declaration +
+                    '<configuration><appSettings><add key="Setting1" value="Original \u00E9" /></appSettings></configuration>',
+                    sourceEncoding.encoding)]);
+                const sourceFile = writeTemporaryBinaryFile('Web.MixedSource' + fixture + '.config', originalSource);
+                const transformFile = writeTemporaryBinaryFile('Web.MixedTransform' + fixture + '.config', Buffer.from(
+                    '<?xml version="1.0" encoding="' + alias + '"?>' +
+                    '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">' +
+                    '<appSettings><add key="Setting1" value="caf\u00E9" xdt:Locator="Match(key)" ' +
+                    'xdt:Transform="SetAttributes(value)" /></appSettings></configuration>', 'latin1'));
+                const originalDestination = Buffer.from('<configuration />');
+                const destinationFile = writeTemporaryBinaryFile('Web.MixedDestination' + fixture + '.config',
+                    originalDestination);
+                const sandbox = sinon.createSandbox();
+                try {
+                    const execute = sandbox.stub(tl, 'execSync').throws(new Error('XDT must not execute'));
+                    assert.throws(() => applyXdtTransformation(sourceFile, transformFile), /encodings are incompatible/i);
+                    assert.throws(() => applyXdtTransformation(sourceFile, transformFile, destinationFile),
+                        /encodings are incompatible/i);
+                    assert.strictEqual(execute.callCount, 0);
+                    assert.deepStrictEqual(fs.readFileSync(sourceFile), originalSource);
+                    assert.deepStrictEqual(fs.readFileSync(destinationFile), originalDestination);
+                }
+                finally {
+                    sandbox.restore();
+                }
+            });
+        });
+    });
+
+    it('Preserves non-ASCII values across equivalent Latin-1 source and transform aliases (L1)', function() {
+        if (tl.getPlatform() !== tl.Platform.Windows) {
+            this.skip();
+        }
+        ['iso-ir-100', 'csISOLatin1', 'cp819', 'ibm819', 'iso-8859-1'].forEach((alias, index) => {
+            const sourceFile = writeTemporaryBinaryFile('Web.EquivalentLatin1Source' + index + '.config', Buffer.from(
+                '<?xml version="1.0" encoding="iso-8859-1"?>' +
+                '<configuration><appSettings><add key="Setting1" value="Original" /></appSettings></configuration>', 'latin1'));
+            const expectedValue = 'caf\u00E9 \u00A3 \u00F1';
+            const transformFile = writeTemporaryBinaryFile('Web.EquivalentLatin1Transform' + index + '.config', Buffer.from(
+                '<?xml version="1.0" encoding="' + alias + '"?>' +
+                '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">' +
+                '<appSettings><add key="Setting1" value="' + expectedValue + '" xdt:Locator="Match(key)" ' +
+                'xdt:Transform="SetAttributes(value)" /></appSettings></configuration>', 'latin1'));
+            applyXdtTransformation(sourceFile, transformFile);
+            assert(fs.readFileSync(sourceFile, 'latin1').indexOf(expectedValue) !== -1);
+        });
+    });
+
+    it('Preserves ASCII-only Latin-1 transforms against UTF-8 sources (L1)', function() {
+        if (tl.getPlatform() !== tl.Platform.Windows) {
+            this.skip();
+        }
+        ['iso-ir-100', 'csISOLatin1', 'cp819', 'ibm819', 'iso-8859-1'].forEach((alias, index) => {
+            const sourceFile = writeTemporaryTransformFile('Web.AsciiLatin1Source' + index + '.config',
+                '<configuration><appSettings><add key="Setting1" value="Original" /></appSettings></configuration>');
+            const transformFile = writeTemporaryTransformFile('Web.AsciiLatin1Transform' + index + '.config',
+                '<?xml version="1.0" encoding="' + alias + '"?>' +
+                '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">' +
+                '<appSettings><add key="Setting1" value="Transformed" xdt:Locator="Match(key)" ' +
+                'xdt:Transform="SetAttributes(value)" /></appSettings></configuration>');
+            applyXdtTransformation(sourceFile, transformFile);
+            assert(fs.readFileSync(sourceFile, 'utf8').indexOf('Transformed') !== -1);
+        });
+    });
+
     it('Allows XML declarations beyond the former probe boundary (L1)', function(done: Mocha.Done) {
         if (tl.getPlatform() !== tl.Platform.Windows) {
             this.skip();

@@ -100,6 +100,22 @@ export function runDeployUsingMSDeployTests(): void {
             setParametersFile, additionalArguments, false, setParametersFile !== null);
     }
 
+    function stubCopiedParameterFile(copiedFile: string): void {
+        // MSDeploy uses Windows paths; keep the real cleanup fixture native to the test host.
+        const windowsPath = path.win32.join("C:\\msdeploy-test", path.basename(copiedFile));
+        sandbox.stub(utility, "copySetParamFileIfItExists").returns(windowsPath);
+        sandbox.stub(tl, "rmRF").callThrough().withArgs(windowsPath).callsFake(() => fs.unlinkSync(copiedFile));
+    }
+
+    function stubErrorFileLookup(): void {
+        const windowsPath = workingDirectory + "\\" + msDeployUtility.ERROR_FILE_NAME;
+        const nativePath = path.join(workingDirectory, msDeployUtility.ERROR_FILE_NAME);
+        const readFileSync = fs.readFileSync;
+        sandbox.stub(tl, "exist").callThrough().withArgs(windowsPath).callsFake(() => fs.existsSync(nativePath));
+        sandbox.stub(fs, "readFileSync").callThrough().withArgs(windowsPath, "utf-8")
+            .callsFake(() => readFileSync(nativePath, "utf-8"));
+    }
+
     function expectedArguments(packagePath: string): string[] {
         return ["-verb:sync", "-source:package='" + packagePath + "'", "-dest:contentPath='webapp_name'",
             "-enableRule:DoNotDeleteRule"];
@@ -227,7 +243,7 @@ export function runDeployUsingMSDeployTests(): void {
         it(`should keep a copied parameter filename with spaces intact and clean up after ${failDeployment ? "exhausted retries" : "success"}`, async () => {
             const copiedFile = path.join(workingDirectory, "my `parameters.xml");
             fs.writeFileSync(copiedFile, "<parameters />");
-            sandbox.stub(utility, "copySetParamFileIfItExists").returns(copiedFile);
+            stubCopiedParameterFile(copiedFile);
             const originalPath = process.env.PATH;
             if (failDeployment) {
                 execStub.rejects(new Error("deployment failed"));
@@ -254,7 +270,7 @@ export function runDeployUsingMSDeployTests(): void {
     it("should clean up the parameter file and restore PATH when secure validation fails", async () => {
         const copiedFile = path.join(workingDirectory, "parameters.xml");
         fs.writeFileSync(copiedFile, "<parameters />");
-        sandbox.stub(utility, "copySetParamFileIfItExists").returns(copiedFile);
+        stubCopiedParameterFile(copiedFile);
         const originalPath = process.env.PATH;
 
         await assert.rejects(deploy("app'payload.zip", true, true, null, "input.xml"));
@@ -267,7 +283,7 @@ export function runDeployUsingMSDeployTests(): void {
     it("should leave the legacy parameter-file splitting and execution options unchanged", async () => {
         const copiedFile = path.join(workingDirectory, "my parameters.xml");
         fs.writeFileSync(copiedFile, "<parameters />");
-        sandbox.stub(utility, "copySetParamFileIfItExists").returns(copiedFile);
+        stubCopiedParameterFile(copiedFile);
 
         await deploy("package.zip", false, false, null, "input.xml");
 
@@ -380,7 +396,7 @@ export function runDeployUsingMSDeployTests(): void {
                 }
 
                 if (entryPoint === "DeployUsingMSDeploy") {
-                    sandbox.stub(utility, "copySetParamFileIfItExists").returns(parameters);
+                    stubCopiedParameterFile(parameters);
                     const expectedError = failure === "stderr" ? /MSDeploy wrote to stderr/
                         : failure === "nonzero exit" ? /MSDeploy exited with code 23/
                         : failure === "launch error" ? /spawn ENOENT/
@@ -390,6 +406,7 @@ export function runDeployUsingMSDeployTests(): void {
                     assert.strictEqual(fs.existsSync(parameters), false);
                 } else {
                     stubSecureFlag(true, true);
+                    stubErrorFileLookup();
                     sandbox.stub(msDeployUtility, "getWebDeployArgumentsString").resolves(" -verb:sync");
                     const result = await executeWebDeploy({ package: null, appName: "site", setParametersFile: parameters });
                     assert.strictEqual(result.isSuccess, false);
@@ -425,7 +442,7 @@ export function runDeployUsingMSDeployTests(): void {
                     const debugSpy = sandbox.spy(tl, "debug");
 
                     if (entryPoint === "DeployUsingMSDeploy") {
-                        sandbox.stub(utility, "copySetParamFileIfItExists").returns(parameters);
+                        stubCopiedParameterFile(parameters);
                         await DeployUsingMSDeploy(source, "site", profile, false, false, false, null,
                             "input.xml", "-retryAttempts:11", true, true);
                     } else {
@@ -494,7 +511,7 @@ export function runDeployUsingMSDeployTests(): void {
                 let deployment: Promise<unknown>;
 
                 if (entryPoint === "DeployUsingMSDeploy") {
-                    sandbox.stub(utility, "copySetParamFileIfItExists").returns(parameters);
+                    stubCopiedParameterFile(parameters);
                     deployment = DeployUsingMSDeploy(source, "site", null, false, false, false, null,
                         "input.xml", null, true, true);
                 } else {

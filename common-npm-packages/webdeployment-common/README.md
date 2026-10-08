@@ -59,6 +59,14 @@ Latin-1 encoding aliases `iso-ir-100`,
 `csISOLatin1`, `cp819`, and `ibm819` in XDT transform declarations. Encoding names
 are matched case-insensitively.
 
+For these restored aliases, transforms containing non-ASCII Latin-1 bytes require
+a source with a Latin-1 encoding declaration and no Unicode BOM. Incompatible combinations, including
+a UTF-8 source with a Latin-1 transform, are rejected before `ctt.exe` runs or
+the source/destination is overwritten. Re-save both files using the same encoding.
+ASCII-only transforms using these aliases remain compatible with UTF-8 sources.
+Previously accepted encoding names retain their existing behavior; this guard
+does not fix the engine's pre-existing mixed-encoding limitation for `iso-8859-1`.
+
 Valid XML declarations are no longer limited to the first 4,096 bytes. The complete
 transform is read once, and both declaration validation and XML validation use
 that buffer. Long declarations still undergo the same encoding and XDT checks.
@@ -68,8 +76,9 @@ validation. XDT imports and custom transform/locator types are rejected, as are
 unsupported transform encodings, malformed declarations, unreadable transforms,
 and UTF-16 decoder disagreements. With the flag explicitly false, the entire XDT
 operation is rejected, so there is no unvalidated fallback.
-`AZP_ALLOW_UNSAFE_XDT_TRANSFORMS` remains unsupported. These encoding checks apply
-to the transform document, not the source document.
+`AZP_ALLOW_UNSAFE_XDT_TRANSFORMS` remains unsupported. Security encoding checks apply
+to the transform document; the separate Latin-1 compatibility check also reads
+the source encoding to prevent data corruption.
 
 ## Secure MSDeploy compatibility
 
@@ -85,8 +94,10 @@ value-level quoting and explicitly quotes the executable's command-line name.
 Generic Windows quoting of whole arguments is not compatible with this parser.
 
 Structured values still reject single/double quotes and CR/LF. Additional
-arguments retain the existing MSDeploy syntax and reject CR/LF. Disabling the new
-compatibility flag preserves the published secure or legacy path selected by the
+arguments retain the existing MSDeploy syntax. Surrounding whitespace, including
+trailing LF/CRLF from pipeline variables, is trimmed before validation; interior
+CR/LF remains rejected. Disabling the new compatibility flag preserves the
+published secure or legacy path selected by the
 existing security flag, including its argument validation and quoting.
 
 The Windows regression suite runs both bundled MSDeploy engines against

@@ -70,6 +70,7 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pr
         validateNoUnsafeCharacters(setParametersFile, 'set parameters file path', compatibilityFixEnabled);
         if (compatibilityFixEnabled) {
             validateNoUnsafeCharacters(authType, 'authentication type', true);
+            additionalArguments = additionalArguments ? additionalArguments.trim() : additionalArguments;
             if (additionalArguments && /[\r\n]/.test(additionalArguments)) {
                 throw new Error('Invalid character in additional arguments: newlines are not allowed.');
             }

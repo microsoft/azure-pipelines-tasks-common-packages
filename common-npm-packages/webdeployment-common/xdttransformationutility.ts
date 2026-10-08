@@ -38,14 +38,14 @@ const utf16EncodingAliases = {
     'unicode': true, 'ucs-2': true, 'ucs2': true, 'ucs-2le': true, 'iso-10646-ucs-2': true
 };
 
-// The bundled ctt.exe (Microsoft.Web.XmlTransform) loads the *transform* document independently of
-// the source document: XmlTransformation(transformFile) reads the transform through its own
-// XmlFileInfoDocument.Load, which decodes using that file's own BOM / byte shape, exactly like this
-// validator's detectFileEncoding. (The *source* document's declared encoding is only ever used when
-// ctt.exe re-serialises the merged result via Save() - it has no bearing on how the transform is
-// decoded, so it is not part of this validator's attack surface and is intentionally not checked
-// here; see MSRC 139444 for the confirmed repro.) When this validator's decode of the transform file
-// disagrees with ctt.exe's own decode of that same file, markup can be hidden from validation yet
+const restoredLatin1EncodingAliases = ['iso-ir-100', 'csisolatin1', 'cp819', 'ibm819'];
+const latin1EncodingAliases = [
+    'latin1', 'latin-1', 'l1', 'iso-8859-1', 'iso8859-1', 'iso_8859-1',
+    ...restoredLatin1EncodingAliases
+];
+
+// Security validation models the transform document's BOM / byte shape. When this validator's
+// decode disagrees with ctt.exe's own decode, markup can be hidden from validation yet
 // revealed to ctt.exe - for example an all-ASCII transform file whose bytes only decode to
 // <xdt:Import .../> under a stateful encoding such as UTF-7 ("+ADw-" -> "<"), or under EBCDIC (byte
 // 0x4C -> "<").
@@ -55,9 +55,9 @@ const utf16EncodingAliases = {
 // can be either synthesised or swallowed by a decoder disagreement. Every XML delimiter ('<' 0x3C,
 // '>' 0x3E, '&' 0x26, '"' 0x22, '\'' 0x27, '=' 0x3D, '/' 0x2F) is ASCII, so under an ASCII-transparent
 // encoding no decoder disagreement can manufacture markup this validator did not already see and
-// inspect. The source document's declared encoding is deliberately NOT checked: it plays no part in
-// how ctt.exe decodes the transform file, so rejecting it would only produce false-positive failures
-// for source files that legitimately declare an encoding this validator cannot model.
+// inspect. The source document is not subject to this security allowlist. A separate compatibility
+// guard checks its encoding for non-ASCII Latin-1 transforms: ASCII-transparent markup alone does
+// not guarantee that ctt.exe preserves configuration values across mixed encodings.
 //
 // The multi-byte CJK code pages qualify because none of their trail-byte ranges can hold an XML
 // delimiter (every delimiter is below 0x40, and GB18030's only sub-0x40 trail range is the digits
@@ -86,7 +86,7 @@ function buildAsciiTransparentEncodingSet(): { [encodingName: string]: boolean }
         'ibm861', 'cp861', 'ibm862', 'cp862', 'ibm863', 'cp863', 'ibm864', 'cp864', 'ibm865', 'cp865',
         'ibm866', 'cp866', 'ibm869', 'cp869',
         // Other single-byte code pages
-        'latin1', 'latin-1', 'l1', 'iso-ir-100', 'csisolatin1', 'cp819', 'ibm819',
+        'latin1', 'latin-1', 'l1', ...restoredLatin1EncodingAliases,
         'koi8-r', 'koi8-u', 'koi8-ru', 'macintosh',
         'x-mac-roman', 'x-mac-cyrillic', 'x-mac-ce', 'x-mac-greek', 'x-mac-turkish', 'x-mac-icelandic',
         'tis-620', 'windows-874', 'cp874',
@@ -133,7 +133,7 @@ export function expandWildcardPattern(folderPath: string, wildcardPattern : stri
 */
 export function applyXdtTransformation(sourceFile: string, transformFile: string, destinationFile?: string) {
 
-    validateXdtTransformFile(transformFile);
+    validateXdtTransformFile(transformFile, sourceFile);
 
     var cttPath = path.join(__dirname, "ctt", "ctt", "ctt.exe"); 
     var cttArgsArray= [
@@ -152,16 +152,14 @@ export function applyXdtTransformation(sourceFile: string, transformFile: string
     }
 }
 
-function validateXdtTransformFile(transformFile: string): void {
+function validateXdtTransformFile(transformFile: string, sourceFile: string): void {
     if (!isWebDeploymentCompatibilityFixEnabled()) {
         publishXdtSecurityTelemetry('blocked', 'featureDisabled');
         throw new Error(tl.loc('XdtTransformationFeatureDisabled', transformFile,
             'DistributedTask.Tasks.' + WebDeploymentCompatibilityFixEnabled));
     }
 
-    // ctt.exe loads the transform file independently of the source document (see the comment above
-    // asciiTransparentEncodings), so only the transform's own declared encoding is part of this
-    // validator's attack surface.
+    // Validate transform security before checking source-encoding compatibility.
     const transformBuffer = readTransformFile(transformFile);
     const transformDeclaredEncoding = validateXdtEncodingDeclaration(transformFile, transformBuffer);
     const transformEncoding = detectTransformFileEncoding(transformFile, transformBuffer);
@@ -170,6 +168,29 @@ function validateXdtTransformFile(transformFile: string): void {
 
     const transformDocument = parseTransformFile(transformFile, transformBuffer.toString(transformEncoding as BufferEncoding));
     validateXdtNode(transformFile, transformDocument.documentElement);
+    validateLatin1TransformCompatibility(sourceFile, transformFile, transformDeclaredEncoding, transformBuffer);
+}
+
+function validateLatin1TransformCompatibility(
+    sourceFile: string, transformFile: string, declaredEncoding: string, transformBuffer: Buffer): void {
+
+    if (restoredLatin1EncodingAliases.indexOf(declaredEncoding.toLowerCase()) === -1 ||
+        !transformBuffer.some(byte => byte >= 0x80)) {
+        return;
+    }
+
+    // ctt.exe can silently corrupt non-ASCII Latin-1 values when the source uses another encoding.
+    const sourceBuffer = readTransformFile(sourceFile);
+    const sourceEncoding = detectFileEncoding(sourceFile, sourceBuffer);
+    const sourceDeclaredEncoding = readCompleteXmlDeclarationEncoding(sourceFile, sourceBuffer);
+    // The byte-shape detector labels single-byte files UTF-8; the declaration distinguishes Latin-1.
+    if (sourceEncoding[0] === 'utf-8' && !sourceEncoding[1] && sourceDeclaredEncoding &&
+        latin1EncodingAliases.indexOf(sourceDeclaredEncoding.toLowerCase()) !== -1) {
+        return;
+    }
+
+    publishXdtSecurityTelemetry('blocked', 'mixedLatin1Encoding');
+    throw new Error(tl.loc('XdtTransformationMixedLatin1Encoding', transformFile, sourceFile));
 }
 
 // UTF-16 is alignment-sensitive: the same bytes yield entirely different characters depending on

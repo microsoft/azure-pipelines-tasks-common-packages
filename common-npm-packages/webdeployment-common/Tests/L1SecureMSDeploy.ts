@@ -87,20 +87,23 @@ export function runL1SecureMSDeployTests(this: Mocha.Suite) {
                             return realSpawn(tool, localArgs, { ...options, cwd: work });
                         });
 
-                        const additionalArguments = "-setParam:name='Display Name',value='" + expectedValue + "'";
-                        await DeployUsingMSDeploy(packageFile, 'local `site', null, false, false, false,
-                            null, parameters, additionalArguments, false, true);
-                        await executeWebDeploy({
-                            package: new Package(packageFile),
-                            appName: 'local `site',
-                            publishUrl: 'localhost',
-                            userName: 'unused',
-                            password: 'unused',
-                            setParametersFile: parameters,
-                            additionalArguments,
-                            useWebDeploy: true
-                        });
-                        assert.strictEqual(destinations.length, 2);
+                        for (const suffix of ['', '\n', '\r\n']) {
+                            const additionalArguments = "-setParam:name='Display Name',value='" + expectedValue +
+                                "' -retryAttempts:2 -retryInterval:1000" + suffix;
+                            await DeployUsingMSDeploy(packageFile, 'local `site', null, false, false, false,
+                                null, parameters, additionalArguments, false, true);
+                            await executeWebDeploy({
+                                package: new Package(packageFile),
+                                appName: 'local `site',
+                                publishUrl: 'localhost',
+                                userName: 'unused',
+                                password: 'unused',
+                                setParametersFile: parameters,
+                                additionalArguments,
+                                useWebDeploy: true
+                            });
+                        }
+                        assert.strictEqual(destinations.length, 6);
                         destinations.forEach(destination => {
                             assert.strictEqual(fs.readFileSync(path.join(destination, 'sample.txt'), 'utf8'), expectedValue);
                         });

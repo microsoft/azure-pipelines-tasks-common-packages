@@ -260,6 +260,20 @@ export function runSecureMSDeployValidationTests(): void {
         });
     }
 
+    for (const compatibilityEnabled of [undefined, true]) {
+        for (const whitespace of ["\n", "\r\n", " \t\r\n"]) {
+            it(`should normalize surrounding ${JSON.stringify(whitespace)} in secure additional arguments with compatibility=${compatibilityEnabled}`, () => {
+                stubSecureFlag(true, compatibilityEnabled);
+                const buildArgs = (additional: string) => getMSDeployCmdArgs("package.zip", "site", null,
+                    false, false, false, null, null, additional, false, false, false);
+                const additional = "-retryAttempts:11 -retryInterval:5000";
+                assert.strictEqual(buildArgs(additional + whitespace), buildArgs(additional));
+                assert.strictEqual(buildArgs(whitespace + additional + whitespace), buildArgs(additional));
+                assert.strictEqual(buildArgs(whitespace), buildArgs(null));
+            });
+        }
+    }
+
     it("should keep a secure user agent containing spaces in a quoted argument", () => {
         stubSecureFlag(true, true);
         sandbox.stub(tl, "getVariable").withArgs("AZURE_HTTP_USER_AGENT").returns("my `user agent");
@@ -333,7 +347,9 @@ export function runSecureMSDeployValidationTests(): void {
                 }
                 for (const newline of ["\r", "\n"]) {
                     if (fixesEnabled) {
-                        assert.throws(() => buildArgs("Basic", "-retryAttempts:11" + newline), /newlines are not allowed/);
+                        assert.strictEqual(buildArgs("Basic", "-retryAttempts:11" + newline), buildArgs());
+                        assert.throws(() => buildArgs("Basic", "-retryAttempts:11" + newline + "-retryInterval:5000"),
+                            /newlines are not allowed/);
                     } else {
                         assert.ok(buildArgs("Basic", "-retryAttempts:11" + newline).includes("-retryAttempts:11" + newline));
                     }
