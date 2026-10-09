@@ -23,7 +23,8 @@ export function runAcrAuthenticationCompatibilityTests(): void {
         getEndpointAuthorizationParameter: tl.getEndpointAuthorizationParameter,
         getEndpointDataParameter: tl.getEndpointDataParameter,
         warning: tl.warning,
-        debug: tl.debug
+        debug: tl.debug,
+        loc: tl.loc
     };
     const originalGetEndpoint = AzureRMEndpoint.prototype.getEndpoint;
     const originalGetMsiToken = ApplicationTokenCredentials.getMSIAuthorizationToken;
@@ -39,6 +40,37 @@ export function runAcrAuthenticationCompatibilityTests(): void {
 
     function setFeature(enabled: boolean): void {
         process.env[featureEnvironmentKey] = String(enabled);
+    }
+
+    async function withImmediateRetryTimers<T>(action: () => Promise<T>, delays: number[]): Promise<T> {
+        const originalSetTimeout = global.setTimeout;
+        (global as any).setTimeout = (callback: (...args: any[]) => void, delay: number, ...args: any[]) => {
+            delays.push(delay);
+            callback(...args);
+            return 0;
+        };
+
+        try {
+            return await action();
+        } finally {
+            global.setTimeout = originalSetTimeout;
+        }
+    }
+
+    function useExchangeResponses(statusCodes: number[]): void {
+        let responseIndex = 0;
+        const sendRequest: typeof webClient.sendRequest = async (request) => {
+            events.push("exchange");
+            requests.push(request);
+            const statusCode = statusCodes[Math.min(responseIndex++, statusCodes.length - 1)];
+            return {
+                statusCode,
+                statusMessage: `Status ${statusCode}`,
+                headers: {},
+                body: statusCode === 200 ? { refresh_token: "fixture-registry-token" } : {}
+            };
+        };
+        Object.assign(webClient, { sendRequest });
     }
 
     beforeEach(() => {
@@ -83,7 +115,8 @@ export function runAcrAuthenticationCompatibilityTests(): void {
             getEndpointAuthorizationParameter: getParameter,
             getEndpointDataParameter: getData,
             warning: (message: string) => { warnings.push(message); },
-            debug: () => {}
+            debug: () => {},
+            loc: (key: string, ...args: any[]) => [key, ...args].join("|")
         });
 
         AzureRMEndpoint.prototype.getEndpoint = async (): Promise<AzureEndpoint> => {
@@ -175,6 +208,117 @@ export function runAcrAuthenticationCompatibilityTests(): void {
         [endpointId, undefined], [endpointId, ""], [undefined, "contoso.azurecr.io"],
         ["", "contoso.azurecr.io"], [endpointId, '{"loginServer":""}'], [endpointId, "{}"]
     ];
+
+    describe("native Promise ACR token exchange", () => {
+        beforeEach(() => {
+            setFeature(false);
+            scheme = "WorkloadIdentityFederation";
+        });
+
+        for (const retryableStatus of [429, 500]) {
+            it(`adopts the recursive Promise after a ${retryableStatus} response`, async () => {
+                const delays: number[] = [];
+                useExchangeResponses([retryableStatus, 200]);
+                const provider = new ACRAuthenticationTokenProvider(endpointId, loginServer);
+
+                const token = await withImmediateRetryTimers(() => provider.getToken(), delays);
+
+                assert.strictEqual(token.getPassword(), "fixture-registry-token");
+                assert.strictEqual(requests.length, 2);
+                assert.deepStrictEqual(delays, [2000]);
+            });
+        }
+
+        it("rejects after exhausting retryable responses", async () => {
+            const delays: number[] = [];
+            useExchangeResponses([500]);
+            const provider = new ACRAuthenticationTokenProvider(endpointId, loginServer);
+            const expected = tl.loc("CouldNotFetchAccessTokenforACRStatusCode", 500, "Status 500");
+
+            await assert.rejects(
+                withImmediateRetryTimers(() => provider.getToken(), delays),
+                (error: any) => {
+                    assert.strictEqual(error, expected);
+                    return true;
+                }
+            );
+            assert.strictEqual(requests.length, 6);
+            assert.deepStrictEqual(delays, [2000, 6000, 14000, 30000, 62000]);
+        });
+
+        it("rejects a non-retryable response without scheduling another request", async () => {
+            const delays: number[] = [];
+            useExchangeResponses([401]);
+            const provider = new ACRAuthenticationTokenProvider(endpointId, loginServer);
+            const expected = tl.loc(
+                "CouldNotFetchAccessTokenforMSIDueToACRNotConfiguredProperlyStatusCode",
+                401,
+                "Status 401"
+            );
+
+            await assert.rejects(
+                withImmediateRetryTimers(() => provider.getToken(), delays),
+                (error: any) => {
+                    assert.strictEqual(error, expected);
+                    return true;
+                }
+            );
+            assert.strictEqual(requests.length, 1);
+            assert.deepStrictEqual(delays, []);
+        });
+
+        it("propagates a rejected exchange request", async () => {
+            const expected = new Error("exchange failed");
+            const sendRequest: typeof webClient.sendRequest = async (request) => {
+                events.push("exchange");
+                requests.push(request);
+                throw expected;
+            };
+            Object.assign(webClient, { sendRequest });
+            const provider = new ACRAuthenticationTokenProvider(endpointId, loginServer);
+
+            await assert.rejects(provider.getToken(), (error: any) => {
+                assert.strictEqual(error, expected);
+                return true;
+            });
+            assert.strictEqual(requests.length, 1);
+        });
+
+        it("preserves Managed Identity error wrapping for a rejected exchange Promise", async () => {
+            scheme = "ManagedServiceIdentity";
+            const sendRequest: typeof webClient.sendRequest = async (request) => {
+                events.push("exchange");
+                requests.push(request);
+                throw new Error("exchange failed");
+            };
+            Object.assign(webClient, { sendRequest });
+            const provider = new ACRAuthenticationTokenProvider(endpointId, loginServer);
+
+            await assert.rejects(provider.getToken(), new Error(tl.loc("MSIFetchError")));
+            assert.deepStrictEqual(events, ["token", "exchange"]);
+            assert.strictEqual(requests.length, 1);
+        });
+
+        it("turns a synchronous exchange setup failure into a rejected public Promise", async () => {
+            const expected = new Error("tenant lookup failed");
+            const getParameter = tl.getEndpointAuthorizationParameter;
+            Object.assign(tl, {
+                getEndpointAuthorizationParameter: (id: string, key: string, optional: boolean) => {
+                    if (key === "tenantid") {
+                        throw expected;
+                    }
+                    return getParameter(id, key, optional);
+                }
+            });
+            const provider = new ACRAuthenticationTokenProvider(endpointId, loginServer);
+
+            await assert.rejects(provider.getToken(), (error: any) => {
+                assert.strictEqual(error, expected);
+                return true;
+            });
+            assert.strictEqual(requests.length, 0);
+        });
+    });
 
     for (const enabled of [false, true]) {
         describe(`feature ${enabled ? "on" : "off"}`, () => {

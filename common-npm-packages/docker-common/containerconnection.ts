@@ -10,6 +10,7 @@ import * as imageUtils from "./containerimageutils";
 import AuthenticationToken from "./registryauthenticationprovider/registryauthenticationtoken"
 import * as fileutils from "./fileutils";
 import * as os from "os";
+import { sanitizeVsoCommandMarkers } from "./vsoCommandSanitizer";
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
@@ -48,13 +49,27 @@ export default class ContainerConnection {
             tl.debug(tl.loc('ConnectingToDockerHost', dockerHostVar));
         }
 
+        // "errline" is emitted from the raw child-process stderr regardless of
+        // ToolRunner's `externalOutput` filter, which protects only the copy
+        // written to the live log. Since these raw lines are replayed below through
+        // tl.error()/console.log() (an agent-command-aware channel) once the
+        // command fails, filtering has to happen here, otherwise
+        // attacker-controlled Docker output (e.g. from a remote Docker Engine)
+        // can inject ##vso[] logging commands on a nonzero exit even when the
+        // caller believes sanitization is already applied via `options`.
+        //
+        // Filtering at capture rather than at each replay site is deliberate:
+        // nothing attacker-controlled is ever stored raw, so both replay
+        // branches below - and any sink added later - are covered by default.
+        // Of the two, only console.log() is actually injectable; tl.error()
+        // escapes CR/LF and wraps the text in an outer task.issue command.
         command.on("errline", line => {
-            errlines.push(line);
+            errlines.push(sanitizeVsoCommandMarkers(line));
         });
         
         const hideDockerExecTaskLogIssueErrorOutput = tl.getPipelineFeature("hideDockerExecTaskLogIssueErrorOutput");
 
-        return command.exec(options).fail(error => {
+        return command.exec(options).catch(error => {
             if (dockerHostVar) {
                 tl.warning(tl.loc('DockerHostVariableWarning', dockerHostVar));
             }
