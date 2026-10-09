@@ -1,6 +1,5 @@
 import assert = require("assert");
 import { EventEmitter } from "events";
-import * as Q from "q";
 
 // Set environment variables required by azure-pipelines-task-lib before importing it
 process.env['INPUT_BUILDCONTEXT'] = '/tmp/build';
@@ -14,6 +13,10 @@ import ContainerConnection from "../containerconnection";
  * "errline" events (as ToolRunner does for each stderr line) and then either
  * succeeding or failing, mirroring what ContainerConnection.execCommand()
  * actually observes from a real docker invocation.
+ *
+ * Real ToolRunner.exec() is typed to return a Q.Promise<number>, but
+ * ContainerConnection.execCommand() only relies on the standard
+ * then()/catch() chaining, so a native Promise is a faithful stand-in here.
  */
 class MockToolRunner extends EventEmitter {
     public errlinesToEmit: string[] = [];
@@ -22,16 +25,17 @@ class MockToolRunner extends EventEmitter {
     arg(_val: string | string[]): void { }
     line(_val: string): void { }
 
-    exec(_options?: any): Q.Promise<void> {
+    exec(_options?: any): Promise<void> {
         // Real ToolRunner emits "errline" as stderr data streams in, before the
         // process exit is known - replicate that ordering here.
         this.errlinesToEmit.forEach(line => this.emit("errline", line));
 
         return this.shouldFail
-            ? Q.reject(new Error("docker exited with a non-zero status"))
-            : Q.resolve(undefined);
+            ? Promise.reject(new Error("docker exited with a non-zero status"))
+            : Promise.resolve(undefined);
     }
 }
+
 
 export function runContainerConnectionErrlineTests() {
 

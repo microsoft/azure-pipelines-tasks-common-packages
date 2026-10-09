@@ -69,7 +69,7 @@ export default class ContainerConnection {
         
         const hideDockerExecTaskLogIssueErrorOutput = tl.getPipelineFeature("hideDockerExecTaskLogIssueErrorOutput");
 
-        return command.exec(options).fail(error => {
+        return command.exec(options).catch(error => {
             if (dockerHostVar) {
                 tl.warning(tl.loc('DockerHostVariableWarning', dockerHostVar));
             }
