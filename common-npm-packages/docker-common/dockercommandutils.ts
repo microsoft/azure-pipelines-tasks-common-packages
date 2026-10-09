@@ -2,7 +2,6 @@
 
 import * as tl from "azure-pipelines-task-lib/task";
 import * as tr from "azure-pipelines-task-lib/toolrunner";
-import * as Q from "q";
 import ContainerConnection from "./containerconnection";
 import * as pipelineUtils from "./pipelineutils";
 import * as path from "path";
@@ -345,7 +344,6 @@ export async function getHistory(connection: ContainerConnection, image: string)
     command.arg("--no-trunc");
     command.arg(image);
 
-    const defer = Q.defer();
     // setup variable to store the command output
     let output = "";
     command.on("stdout", data => {
@@ -353,19 +351,15 @@ export async function getHistory(connection: ContainerConnection, image: string)
     });
 
     try {
-        connection.execCommand(command, createSanitizedExecOptions()).then(() => {
-            defer.resolve();
-        });
+        await connection.execCommand(command, createSanitizedExecOptions());
     }
     catch (e) {
         // Swallow any exceptions encountered in executing command
         // such as --format flag not supported in old docker cli versions
         output = null;
-        defer.resolve();
         tl.warning("Not publishing to image meta data store as get history failed with error " + e);
     }
 
-    await defer.promise;
     return output;
 }
 
@@ -378,7 +372,6 @@ export async function getImageRootfsLayers(connection: ContainerConnection, imag
     command.arg(imageDigest);
     command.arg(["-f", "{{.RootFS.Layers}}"]);
 
-    const defer = Q.defer();
     // setup variable to store the command output
     let output = "";
     command.on("stdout", data => {
@@ -386,18 +379,17 @@ export async function getImageRootfsLayers(connection: ContainerConnection, imag
     });
 
     try {
-        connection.execCommand(command, createSanitizedExecOptions()).then(() => {
-            defer.resolve();
-        });
+        await connection.execCommand(command, createSanitizedExecOptions());
     }
     catch (e) {
         // Swallow any exceptions encountered in executing command
         output = null;
-        defer.resolve();
         tl.warning("get image inspect failed with error " + e);
     }
 
-    await defer.promise;
+    if (!output) {
+        return [];
+    }
 
     // Remove '[' and ']' from output
     output = output.replace(/\[/g, "");
