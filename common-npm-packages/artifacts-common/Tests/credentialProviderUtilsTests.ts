@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import * as tl from "azure-pipelines-task-lib/task";
 import { buildExternalFeedEndpointsJson, configureCredProviderForServiceConnectionFeeds } from "../credentialProviderUtils";
 import { ServiceConnectionAuthType, TokenServiceConnection, ApiKeyServiceConnection, UsernamePasswordServiceConnection, ServiceConnection, EntraServiceConnection } from "../serviceConnectionUtils";
 const CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR = "VSS_NUGET_EXTERNAL_FEED_ENDPOINTS";
@@ -120,6 +121,40 @@ export function credentialProviderUtilsTests() {
         var json = process.env[CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR]
         
         assert.equal(json, "{\"endpointCredentials\":[{\"endpoint\":\"https://contoso.com/nuget/v3/index.json\",\"password\":\"sometoken\"}]}");
+        done();
+    });
+
+    it("masks the serialized credentials before exporting them", (done: Mocha.Done) => {
+        process.env[CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR] = "";
+        const calls: string[] = [];
+        const originalSetSecret = tl.setSecret;
+        const originalSetVariable = tl.setVariable;
+        const expectedJson = "{\"endpointCredentials\":[{\"endpoint\":\"https://contoso.com/nuget/v3/index.json\",\"password\":\"sometoken\"}]}";
+
+        (tl as any).setSecret = (value: string) => calls.push(`secret:${value}`);
+        (tl as any).setVariable = (name: string, value: string, isSecret: boolean) => {
+            calls.push(`variable:${name}:${value}:${isSecret}`);
+        };
+
+        try {
+            configureCredProviderForServiceConnectionFeeds([
+                <TokenServiceConnection>{
+                    packageSource: {
+                        uri: "https://contoso.com/nuget/v3/index.json"
+                    },
+                    authType: ServiceConnectionAuthType.Token,
+                    token: "sometoken"
+                }
+            ]);
+        } finally {
+            (tl as any).setSecret = originalSetSecret;
+            (tl as any).setVariable = originalSetVariable;
+        }
+
+        assert.deepEqual(calls, [
+            `secret:${expectedJson}`,
+            `variable:${CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR}:${expectedJson}:false`
+        ]);
         done();
     });
 
