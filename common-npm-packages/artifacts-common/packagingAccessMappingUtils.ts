@@ -1,4 +1,5 @@
 import { AccessMapping, LocationServiceData } from "azure-devops-node-api/interfaces/LocationsInterfaces";
+import { requireHttpsUrl } from "./webapi";
 
 /**
  * Represents information about an URI used to access a service (e.g. https://pkgs.dev.azure.com/contoso/)
@@ -43,7 +44,7 @@ export function getPackagingAccessMappings(locationServiceData: LocationServiceD
             uri: toNormalizedAccessUri(accessMapping),
             isPublic: isDefaultAccessMapping || isCommonAccessMapping,
             isDefault: isDefaultAccessMapping
-        }
+        };
     });
 }
 
@@ -53,11 +54,14 @@ export function getPackagingAccessMappings(locationServiceData: LocationServiceD
  */
 function toNormalizedAccessUri(accessMapping: AccessMapping): string {
     // We always ensure a trailing slash, since we use these access points in prefix comparisons
+    let uri: string;
     if (!accessMapping.virtualDirectory) {
-        return ensureTrailingSlash(accessMapping.accessPoint);
+        uri = accessMapping.accessPoint;
+    } else {
+        uri = ensureTrailingSlash(accessMapping.accessPoint) + accessMapping.virtualDirectory;
     }
 
-    return ensureTrailingSlash(ensureTrailingSlash(accessMapping.accessPoint) + accessMapping.virtualDirectory);
+    return ensureTrailingSlash(requireHttpsUrl(uri).href);
 }
 
 function ensureTrailingSlash(uri: string) {

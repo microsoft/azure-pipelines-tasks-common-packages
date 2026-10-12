@@ -4,11 +4,12 @@ import * as path from 'path';
 import * as process from 'process';
 import * as tl from 'azure-pipelines-task-lib/task';
 import { getConnectionDataForProtocol } from './connectionDataUtils';
+import { parseAzureArtifactsFeedUrl } from './feedUrlUtils';
 import { getPackagingAccessMappings } from './packagingAccessMappingUtils';
 import { getSystemAccessToken } from './webapi';
 import { ProtocolType } from './protocols';
 import { ServiceConnection, ServiceConnectionAuthType, UsernamePasswordServiceConnection, EntraServiceConnection, TokenServiceConnection } from './serviceConnectionUtils';
-import { getFederatedWorkloadIdentityCredentials, getFeedTenantId } from "./EntraWifUserServiceConnectionUtils";
+import { getFederatedWorkloadIdentityCredentials, getFederatedWorkloadIdentityCredentialsForFeed } from "./EntraWifUserServiceConnectionUtils";
 import { retryOnException } from './retryUtils'
 
 tl.setResourcePath(path.join(__dirname , 'module.json'), true);
@@ -132,10 +133,17 @@ export async function configureEntraCredProvider(protocol: ProtocolType, entraWi
         throw new Error(tl.loc("Error_InternalFeedsNotSupported"));
     }
 
-    const feedTenant = await getFeedTenantId(feedUrl);
-    let token = await getFederatedWorkloadIdentityCredentials(entraWifServiceConnectionName, feedTenant);
-    if (token) {
-        configureCredProviderForServiceConnectionFeeds([new EntraServiceConnection({uri:feedUrl}, entraWifServiceConnectionName, token)]);
+    const credentials = await getFederatedWorkloadIdentityCredentialsForFeed(
+        entraWifServiceConnectionName,
+        parseAzureArtifactsFeedUrl(feedUrl),
+        protocol);
+    if (credentials) {
+        configureCredProviderForServiceConnectionFeeds([
+            new EntraServiceConnection(
+                {uri: credentials.feedUrl.href},
+                entraWifServiceConnectionName,
+                credentials.accessToken)
+        ]);
     } else {
         throw new Error(tl.loc("FailedToGetServiceConnectionAuth", entraWifServiceConnectionName)); 
     }
@@ -163,8 +171,11 @@ export async function configureCredProviderForSameOrganizationFeeds(protocol: Pr
 
     // To avoid confusion, only log the public access mapping URIs rather than all of them (e.g. host guid access mapping)
     // which we might as well support just in case, yet users are extremely unlikely to ever use.
-    const allPrefixes: string[] = [...new Set(packagingAccessMappings.map(prefix => prefix.uri))];
-    const publicPrefixes: string[] = [...new Set(packagingAccessMappings.filter(prefix => prefix.isPublic).map(prefix => prefix.uri))];
+    const allPrefixes: string[] = [...new Set(packagingAccessMappings
+        .map(prefix => prefix.uri))];
+    const publicPrefixes: string[] = [...new Set(packagingAccessMappings
+        .filter(prefix => prefix.isPublic)
+        .map(prefix => prefix.uri))];
     const identityDisplayName = entraWifServiceConnectionName ?? (connectionData.authenticatedUser.customDisplayName || connectionData.authenticatedUser.providerDisplayName);
     console.log(tl.loc('CredProvider_SettingUpForOrgFeeds', identityDisplayName));
     publicPrefixes.forEach(publicPrefix => console.log('  ' + publicPrefix));

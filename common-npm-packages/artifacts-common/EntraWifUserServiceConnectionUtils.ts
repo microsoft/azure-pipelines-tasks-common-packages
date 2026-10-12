@@ -1,8 +1,11 @@
 import path = require("path");
 import * as tl from 'azure-pipelines-task-lib/task';
-import { getSystemAccessToken } from "./webapi";
+import * as api from "azure-devops-node-api";
+import { getSystemAccessToken, getSystemServiceUrl } from "./webapi";
 import fetch from "node-fetch";
 import { retryOnException } from "./retryUtils";
+import { verifyAzureArtifactsFeedUrl } from "./feedUrlUtils";
+import { ProtocolType } from "./protocols";
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
@@ -11,27 +14,23 @@ const CLIENT_ASSERTION_TYPE : string = "urn:ietf:params:oauth:client-assertion-t
 const GRANT_TYPE = "client_credentials";
 const PPE_HOSTS : string [] = ["vsts.me","codedev.ms","devppe.azure.com"];
 
+export interface FederatedFeedCredentials {
+    accessToken: string;
+    feedUrl: URL;
+}
+
+interface VerifiedFeedTenant {
+    feedUrl: URL;
+    tenantId: string | undefined;
+}
+
 export async function getFederatedWorkloadIdentityCredentials(serviceConnectionName: string, tenantId?: string) : Promise<string | undefined>{
-    let tenant = tenantId ?? tl.getEndpointAuthorizationParameterRequired(serviceConnectionName, "TenantId");
-    tl.debug(tl.loc('Info_UsingTenantId', tenantId));
-    const systemAccessToken = getSystemAccessToken();
-    const url = process.env["SYSTEM_OIDCREQUESTURI"]+"?api-version=7.1&serviceConnectionId="+serviceConnectionName;
+    const tenant = tenantId
+        ?? tl.getEndpointAuthorizationParameterRequired(serviceConnectionName, "TenantId");
+    tl.debug(tl.loc('Info_UsingTenantId', tenant));
     
     return await retryOnException(async () => {
-        var oidcToken = await fetch(url, {
-            method: 'POST', 
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer '+ systemAccessToken
-            }
-        }).then(async response => {
-            var oidcObject = await (response?.json()) as {oidcToken: string};
-
-            if (!oidcObject?.oidcToken){
-                throw new Error(tl.loc("Error_FederatedTokenAquisitionFailed"));
-            }
-            return oidcObject.oidcToken;
-        });
+        const oidcToken = await getOidcToken(serviceConnectionName);
         
         tl.setSecret(oidcToken);
         let entraURI = getEntraLoginUrl() + tenant + "/oauth2/v2.0/token";
@@ -69,15 +68,89 @@ export async function getFederatedWorkloadIdentityCredentials(serviceConnectionN
     }, 3, 1000);
 }
 
-export async function getFeedTenantId(feedUrl: string) : Promise<string | undefined>{
-    try {
-        const feedResponse =  await fetch(feedUrl);
-        return feedResponse?.headers?.get('X-VSS-ResourceTenant');
-    } 
-    catch (error){
-        tl.warning(tl.loc("Error_GetFeedTenantIdFailed", error));
+export async function getFeedTenantId(feedUrl: URL, protocolType: ProtocolType = ProtocolType.NuGet) : Promise<string | undefined>{
+    return (await getVerifiedFeedTenant(feedUrl, protocolType)).tenantId;
+}
+
+export async function getFederatedWorkloadIdentityCredentialsForFeed(
+    serviceConnectionName: string,
+    feedUrl: URL,
+    protocolType: ProtocolType = ProtocolType.NuGet
+): Promise<FederatedFeedCredentials | undefined> {
+    const verifiedFeed = await getVerifiedFeedTenant(feedUrl, protocolType);
+    if (!verifiedFeed.tenantId) {
+        throw new Error(tl.loc("Error_FeedTenantUnavailable"));
+    }
+
+    const accessToken = await getFederatedWorkloadIdentityCredentials(
+        serviceConnectionName,
+        verifiedFeed.tenantId
+    );
+    if (!accessToken) {
         return undefined;
     }
+
+    return {
+        accessToken,
+        feedUrl: verifiedFeed.feedUrl
+    };
+}
+
+async function getVerifiedFeedTenant(
+    feedUrl: URL,
+    protocolType: ProtocolType
+): Promise<VerifiedFeedTenant> {
+    const verifiedFeedUrl = await verifyAzureArtifactsFeedUrl(feedUrl, protocolType);
+    const tenantId = await getResourceTenantId(verifiedFeedUrl);
+
+    return { feedUrl: verifiedFeedUrl, tenantId };
+}
+
+async function getResourceTenantId(serviceUrl: URL): Promise<string | undefined> {
+    try {
+        const response = await fetch(serviceUrl.href, { method: "HEAD" });
+        return response?.headers?.get("X-VSS-ResourceTenant") ?? undefined;
+    } catch (error) {
+        tl.debug(tl.loc("Error_GetFeedTenantIdFailed", error));
+        return undefined;
+    }
+}
+
+async function getOidcToken(serviceConnectionName: string): Promise<string> {
+    if (tl.getPipelineFeature("EnableLateBoundIdToken")) {
+        const idToken = tl.getEndpointAuthorizationParameter(
+            serviceConnectionName,
+            "idToken",
+            true
+        );
+        if (idToken) {
+            tl.debug("Using bound idToken from service endpoint.");
+            return idToken;
+        }
+    }
+
+    const systemServiceUrl = getSystemServiceUrl();
+    const systemAccessToken = getSystemAccessToken();
+    const webApi = new api.WebApi(
+        systemServiceUrl.href,
+        api.getBearerHandler(systemAccessToken),
+        { keepAlive: true, maxRedirects: 0 }
+    );
+    const taskApi = await webApi.getTaskApi();
+    const response = await taskApi.createOidcToken(
+        {},
+        tl.getVariable("System.TeamProjectId"),
+        tl.getVariable("System.HostType"),
+        tl.getVariable("System.PlanId"),
+        tl.getVariable("System.JobId"),
+        serviceConnectionName
+    );
+
+    if (!response?.oidcToken) {
+        throw new Error(tl.loc("Error_FederatedTokenAquisitionFailed"));
+    }
+
+    return response.oidcToken;
 }
 
 function getEntraLoginUrl() : string {

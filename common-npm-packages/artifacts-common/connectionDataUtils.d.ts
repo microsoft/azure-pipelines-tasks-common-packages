@@ -1,5 +1,9 @@
 import * as protocols from './protocols';
 import { ConnectionData } from 'azure-devops-node-api/interfaces/LocationsInterfaces';
+export interface AzureArtifactsConnection {
+    serviceUrl: string;
+    accessToken: string;
+}
 /**
  * Gets the raw connection data (direct representation of _apis/connectionData) for the service hosting a particular protocol
  * @param protocolType The packaging protocol, e.g. 'NuGet'
@@ -14,3 +18,4 @@ export declare function getConnectionDataForProtocol(protocolType: protocols.Pro
  * @param project projectId to put in api params
  */
 export declare function getPackagingRouteUrl(protocolType: protocols.ProtocolType, apiVersion: string, locationGuid: string, feedId: string, project: string): Promise<string>;
+export declare function getServiceUriFromAreaId(areaId: string, connection: AzureArtifactsConnection): Promise<string>;

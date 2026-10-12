@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import * as tl from "azure-pipelines-task-lib/task";
 import { getPackagingAccessMappings, PackagingAccessMapping } from "../packagingAccessMappingUtils";
 
 export function packagingAccessMappingUtilsTests() {
@@ -115,17 +116,34 @@ export function packagingAccessMappingUtilsTests() {
             accessMappings: [
                 {
                     moniker: "MissingSlashAccessMapping",
-                    accessPoint: "http://pkgs.dev.azure.com/contoso"
+                    accessPoint: "https://pkgs.dev.azure.com/contoso"
                 }
             ]});
 
         assert.deepEqual(mappings, [
             {
-                uri: "http://pkgs.dev.azure.com/contoso/",
+                uri: "https://pkgs.dev.azure.com/contoso/",
                 isPublic: false,
                 isDefault: false
             }
         ]);
+
+        done();
+    });
+
+    it("getPackagingAccessMappings rejects HTTP access mappings", (done: MochaDone) => {
+        assert.throws(
+            () => getPackagingAccessMappings({
+                defaultAccessMappingMoniker: standardDefaultAccessMappingMoniker,
+                accessMappings: [
+                    {
+                        moniker: "InsecureAccessMapping",
+                        accessPoint: "http://pkgs.dev.azure.com/contoso"
+                    }
+                ]
+            }),
+            (error: Error) => error.message === tl.loc("Error_ServiceUrlHttpsRequired")
+        );
 
         done();
     });
