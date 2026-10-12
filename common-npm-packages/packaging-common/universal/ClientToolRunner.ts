@@ -15,6 +15,8 @@ export function getClientToolOptions(): IExecOptions{
     };
     result.outStream = process.stdout as stream.Writable;
     result.errStream = process.stderr as stream.Writable;
+    // Filter logging-command markers out of the client tool's output before logging it.
+    result.externalOutput = { source: "childProcess" };
     return result;
 }
 
@@ -26,6 +28,15 @@ function getCommandString(toolPath: string, command: string[]){
     return cmd;
 }
 
+// Writes to destStream, filtering output through task-lib when configured.
+function writeFiltered(destStream: NodeJS.WritableStream, data: string | Buffer, externalOutput?: IExecOptions["externalOutput"]): void {
+    if (externalOutput) {
+        tl.writeExternalOutput(data, { ...externalOutput, destination: destStream });
+    } else {
+        destStream.write(data);
+    }
+}
+
 export function runClientTool(clientToolPath: string, command: string[], execOptions: IExecOptions): IExecSyncResult{
 
     if (tl.osType() === "Windows_NT" || clientToolPath.trim().toLowerCase().endsWith(".exe")) {
@@ -35,7 +46,7 @@ export function runClientTool(clientToolPath: string, command: string[], execOpt
         fs.chmodSync(clientToolPath, "755");
 
         if (!execOptions.silent) {
-            execOptions.outStream.write(getCommandString(clientToolPath, command) + os.EOL);
+            writeFiltered(execOptions.outStream, getCommandString(clientToolPath, command) + os.EOL, execOptions.externalOutput);
         }
 
         const spawnOptions = { ...execOptions, maxBuffer: 1024 * 1024 * 1024 };
@@ -43,11 +54,11 @@ export function runClientTool(clientToolPath: string, command: string[], execOpt
         let result = child.spawnSync(clientToolPath, command, spawnOptions);
 
         if (!execOptions.silent && result.stdout && result.stdout.length > 0) {
-            execOptions.outStream.write(result.stdout);
+            writeFiltered(execOptions.outStream, result.stdout, execOptions.externalOutput);
         }
 
         if (!execOptions.silent && result.stderr && result.stderr.length > 0) {
-            execOptions.errStream.write(result.stderr);
+            writeFiltered(execOptions.errStream, result.stderr, execOptions.externalOutput);
         }
 
         let res: IExecSyncResult = <IExecSyncResult>{ code: result.status, error: result.error };
