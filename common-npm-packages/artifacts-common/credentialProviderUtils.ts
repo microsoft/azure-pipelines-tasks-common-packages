@@ -207,7 +207,9 @@ export function configureCredProviderForServiceConnectionFeeds(serviceConnection
         endpointCredentials: [...map.values()]
     };
 
-    tl.setVariable(CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR, JSON.stringify(endpointCredentialsContainer), false /* while this contains secrets, we need the environment variable to be set */);
+    const serializedCredentials = JSON.stringify(endpointCredentialsContainer);
+    tl.setSecret(serializedCredentials);
+    tl.setVariable(CRED_PROVIDER_EXTERNAL_ENDPOINTS_ENVVAR, serializedCredentials, false /* while this contains secrets, we need the environment variable to be set */);
 }
 
 /**
