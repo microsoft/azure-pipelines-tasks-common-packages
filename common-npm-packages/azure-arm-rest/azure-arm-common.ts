@@ -6,7 +6,7 @@ import querystring = require('querystring');
 import { Mutex } from 'async-mutex';
 import { getHandlerFromToken, WebApi } from 'azure-devops-node-api';
 import tl = require('azure-pipelines-task-lib/task');
-import HttpsProxyAgent = require('https-proxy-agent');
+import { HttpsProxyAgent } from 'https-proxy-agent';
 import fetch = require('node-fetch');
 import jwt = require('jsonwebtoken');
 import Q = require('q');

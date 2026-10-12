@@ -2,6 +2,8 @@ import tl = require('azure-pipelines-task-lib/task');
 import { IExecOptions } from 'azure-pipelines-task-lib/toolrunner';
 import fs = require('fs');
 import path = require('path');
+import { spawn } from 'child_process';
+import { isWebDeploymentCompatibilityFixEnabled } from './featureFlags';
 
 import { copySetParamFileIfItExists, isMSDeployPackage } from './utility'; 
 import { 
@@ -183,36 +185,82 @@ async function executeMSDeploy(msDeployCmdArgs: string, msDeployFullPath: string
         });
 
         try {
-            tl.debug("the argument string is:");
-            tl.debug(msDeployCmdArgs);
-            tl.debug("converting the argument string into an array of arguments");
-            const msDeployCmdArgsArray = argStringToArray(msDeployCmdArgs);
-            tl.debug("the array of arguments is:");
-            for (let i = 0; i < msDeployCmdArgsArray.length; i++) {
-                tl.debug("arg#" + i + ": " + msDeployCmdArgsArray[i]);
-            }
             const secureInvocationEnabled = tl.getPipelineFeature('SecureMSDeployCommandExecution');
-            let options: IExecOptions;
-            let toolPath: string;
-            if (secureInvocationEnabled) {
-                toolPath = getSpaceSafeToolPath(msDeployFullPath);
-                if (toolPath.indexOf(' ') >= 0) {
-                    console.log('##vso[telemetry.publish area=TaskHub;feature=AzureRmWebAppDeployment]' +
-                        JSON.stringify({ event: 'SecureMSDeployCommandExecution', outcome: 'SpaceFreeToolPathUnavailable' }));
-                    throw new Error('Secure MSDeploy execution could not resolve a space-free path for msdeploy.exe. ' +
-                        'The deployment was stopped instead of falling back to shell-based execution.');
-                }
-                options = { failOnStdErr: true, errStream: errorStream, windowsVerbatimArguments: true };
-            } else {
-                options = { failOnStdErr: true, errStream: errorStream, windowsVerbatimArguments: true, shell: true };
-                toolPath = "msdeploy";
+            // Depends on SecureMSDeployCommandExecution; see the README rollout matrix.
+            const compatibilityFixEnabled = secureInvocationEnabled && isWebDeploymentCompatibilityFixEnabled();
+            if (!compatibilityFixEnabled) {
+                tl.debug("the argument string is:");
+                tl.debug(msDeployCmdArgs);
+                tl.debug("converting the argument string into an array of arguments");
             }
-            await tl.exec(toolPath, msDeployCmdArgsArray, options);
+            const msDeployCmdArgsArray = argStringToArray(msDeployCmdArgs);
+            if (!compatibilityFixEnabled) {
+                tl.debug("the array of arguments is:");
+                for (let i = 0; i < msDeployCmdArgsArray.length; i++) {
+                    tl.debug("arg#" + i + ": " + msDeployCmdArgsArray[i]);
+                }
+            }
+            if (compatibilityFixEnabled) {
+                await executeSecureMSDeploy(msDeployFullPath, msDeployCmdArgsArray, errorStream);
+            } else {
+                let options: IExecOptions;
+                let toolPath: string;
+                if (secureInvocationEnabled) {
+                    toolPath = getSpaceSafeToolPath(msDeployFullPath);
+                    if (toolPath.indexOf(' ') >= 0) {
+                        console.log('##vso[telemetry.publish area=TaskHub;feature=AzureRmWebAppDeployment]' +
+                            JSON.stringify({ event: 'SecureMSDeployCommandExecution', outcome: 'SpaceFreeToolPathUnavailable' }));
+                        throw new Error('Secure MSDeploy execution could not resolve a space-free path for msdeploy.exe. ' +
+                            'The deployment was stopped instead of falling back to shell-based execution.');
+                    }
+                    options = { failOnStdErr: true, errStream: errorStream, windowsVerbatimArguments: true };
+                } else {
+                    options = { failOnStdErr: true, errStream: errorStream, windowsVerbatimArguments: true, shell: true };
+                    toolPath = "msdeploy";
+                }
+                await tl.exec(toolPath, msDeployCmdArgsArray, options);
+            }
             resolve("Azure App service successfully deployed");
         } catch (error) {
             msDeployError = error;
         } finally {
             errorStream.end();
         }
+    });
+}
+
+function executeSecureMSDeploy(toolPath: string, args: string[], errorStream: fs.WriteStream): Promise<void> {
+    if (/["\r\n]/.test(toolPath)) {
+        throw new Error('Invalid character in MSDeploy executable path: double quotes and newlines are not allowed.');
+    }
+
+    return new Promise<void>((resolve, reject) => {
+        // MSDeploy parses the raw command line. Quote only argv0, not complete arguments containing spaces.
+        const child = spawn(toolPath, args, {
+            argv0: '"' + toolPath + '"',
+            windowsVerbatimArguments: true,
+            shell: false
+        });
+        let wroteToStdErr = false;
+        child.stdout.on('data', (data: Buffer) => process.stdout.write(data));
+        child.stderr.on('data', (data: Buffer) => {
+            wroteToStdErr = true;
+            errorStream.write(data);
+        });
+        child.stdout.on('error', reject);
+        child.stderr.on('error', reject);
+        // Spawn errors include spawnargs; do not propagate credential-bearing metadata to task logs.
+        child.on('error', (error: Error) => reject(new Error(error.message)));
+        child.on('close', (code: number | null, signal: string | null) => {
+            if (signal) {
+                reject(new Error(`MSDeploy was terminated by signal ${signal}.`));
+            } else if (code !== 0) {
+                reject(new Error(`MSDeploy exited with code ${code}.`));
+            } else if (wroteToStdErr) {
+                reject(new Error('MSDeploy wrote to stderr.'));
+            } else {
+                resolve();
+            }
+        });
     });
 }

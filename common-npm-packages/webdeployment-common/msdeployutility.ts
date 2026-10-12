@@ -3,6 +3,7 @@ import fs = require('fs');
 import path = require('path');
 import { spawnSync } from 'child_process';
 import { Package } from './packageUtility';
+import { isWebDeploymentCompatibilityFixEnabled } from './featureFlags';
 import * as winreg from 'winreg';
 import * as semver from 'semver';
 
@@ -10,8 +11,9 @@ export const ERROR_FILE_NAME = "error.txt";
 
 const UNSAFE_CHARACTER_PATTERN = /["'`\r\n]/;
 
-function validateNoUnsafeCharacters(value: string, argumentName: string): void {
-    if (value && UNSAFE_CHARACTER_PATTERN.test(value)) {
+function validateNoUnsafeCharacters(value: string, argumentName: string, allowBackticks: boolean = false): void {
+    const unsafeCharacterPattern = allowBackticks ? /["'\r\n]/ : UNSAFE_CHARACTER_PATTERN;
+    if (value && unsafeCharacterPattern.test(value)) {
         throw new Error(`Invalid character in ${argumentName}: quotes and newlines are not allowed.`);
     }
 }
@@ -58,15 +60,25 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pr
                              virtualApplication: string, setParametersFile: string, additionalArguments: string, isParamFilePresentInPacakge: boolean,
                              isFolderBasedDeployment: boolean, useWebDeploy: boolean, authType?: string) : string {
 
-    if (tl.getPipelineFeature('SecureMSDeployCommandExecution')) {
-        validateNoUnsafeCharacters(webAppPackage, 'package path');
-        validateNoUnsafeCharacters(webAppName, 'web app name');
-        validateNoUnsafeCharacters(virtualApplication, 'virtual application');
-        validateNoUnsafeCharacters(setParametersFile, 'set parameters file path');
+    const secureInvocationEnabled = tl.getPipelineFeature('SecureMSDeployCommandExecution');
+    // Depends on SecureMSDeployCommandExecution; see the README rollout matrix.
+    const compatibilityFixEnabled = secureInvocationEnabled && isWebDeploymentCompatibilityFixEnabled();
+    if (secureInvocationEnabled) {
+        validateNoUnsafeCharacters(webAppPackage, 'package path', compatibilityFixEnabled);
+        validateNoUnsafeCharacters(webAppName, 'web app name', compatibilityFixEnabled);
+        validateNoUnsafeCharacters(virtualApplication, 'virtual application', compatibilityFixEnabled);
+        validateNoUnsafeCharacters(setParametersFile, 'set parameters file path', compatibilityFixEnabled);
+        if (compatibilityFixEnabled) {
+            validateNoUnsafeCharacters(authType, 'authentication type', true);
+            additionalArguments = additionalArguments ? additionalArguments.trim() : additionalArguments;
+            if (additionalArguments && /[\r\n]/.test(additionalArguments)) {
+                throw new Error('Invalid character in additional arguments: newlines are not allowed.');
+            }
+        }
         if (profile != null) {
-            validateNoUnsafeCharacters(profile.publishUrl, 'publish URL');
-            validateNoUnsafeCharacters(profile.userName, 'user name');
-            validateNoUnsafeCharacters(profile.userPWD, 'password');
+            validateNoUnsafeCharacters(profile.publishUrl, 'publish URL', compatibilityFixEnabled);
+            validateNoUnsafeCharacters(profile.userName, 'user name', compatibilityFixEnabled);
+            validateNoUnsafeCharacters(profile.userPWD, 'password', compatibilityFixEnabled);
         }
     }
 
@@ -117,7 +129,9 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pr
 
     if(useWebDeploy) {
         if(setParametersFile) {
-            msDeployCmdArgs += " -setParamFile=" + setParametersFile + " ";
+            msDeployCmdArgs += compatibilityFixEnabled
+                ? " -setParamFile=" + escapeArg('"' + setParametersFile + '"') + " "
+                : " -setParamFile=" + setParametersFile + " ";
         }
 
         if(excludeFilesFromAppDataFlag) {
@@ -125,7 +139,7 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pr
         }
     }
 
-    additionalArguments = additionalArguments ? escapeQuotes(additionalArguments) : ' ';
+    additionalArguments = additionalArguments ? escapeQuotes(additionalArguments, !compatibilityFixEnabled) : ' ';
     msDeployCmdArgs += ' ' + additionalArguments;
 
     if(!(removeAdditionalFilesFlag && useWebDeploy)) {
@@ -137,7 +151,12 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pr
         var userAgent = tl.getVariable("AZURE_HTTP_USER_AGENT");
         if(userAgent)
         {
-            msDeployCmdArgs += ' -userAgent:' + userAgent;
+            if (compatibilityFixEnabled) {
+                validateNoUnsafeCharacters(userAgent, 'user agent', true);
+                msDeployCmdArgs += ' -userAgent:' + escapeArg('"' + userAgent + '"');
+            } else {
+                msDeployCmdArgs += ' -userAgent:' + userAgent;
+            }
         }
     }
 
@@ -149,9 +168,10 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pr
 /**
  * Escapes quotes in a string to ensure proper command-line parsing.
  * @param {string} additionalArguments - The string to format.
+ * @param {boolean} logArguments - Whether argument values are included in debug logs.
  * @returns {string} The formatted string with escaped quotes.
  */
-function escapeQuotes(additionalArguments: string): string {
+function escapeQuotes(additionalArguments: string, logArguments: boolean = true): string {
     const parsedArgs = parseAdditionalArguments(additionalArguments);
     const separator = ",";
     const formattedArgs = parsedArgs.map(function (arg) {
@@ -163,7 +183,9 @@ function escapeQuotes(additionalArguments: string): string {
             let quotedStringCheck = (char == separator && equalsSignEncountered && ((formattedArg.startsWith("'") && formattedArg.endsWith("'")) || (formattedArg.startsWith('"') && formattedArg.endsWith('"'))));
             let commaSeperatorCheck = connectionStringCheck.test(formattedArg) ? quotedStringCheck : (char == separator && equalsSignEncountered);
             if (commaSeperatorCheck) {
-                tl.debug("formattedArg : " + formattedArg + ' {"connectionStringCheck":"' + connectionStringCheck.test(formattedArg) + '"}');
+                if (logArguments) {
+                    tl.debug("formattedArg : " + formattedArg + ' {"connectionStringCheck":"' + connectionStringCheck.test(formattedArg) + '"}');
+                }
                 equalsSignEncountered = false;
                 arg = arg.replace(formattedArg, escapeArg(formattedArg));
                 formattedArg = '';
