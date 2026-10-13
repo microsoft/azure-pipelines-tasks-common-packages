@@ -56,7 +56,7 @@ export function webapiUrlTests() {
 
         assert.throws(
             () => utils.requireHttpsUrl("not a URL"),
-            /Error_ServiceUrlInvalid/
+            /Error_UrlInvalid/
         );
     });
 
@@ -67,7 +67,7 @@ export function webapiUrlTests() {
             () => utils.requireHttpsUrl(
                 "http://devops.example.test/organization/"
             ),
-            /Error_ServiceUrlHttpsRequired/
+            /Error_UrlHttpsRequired/
         );
     });
 

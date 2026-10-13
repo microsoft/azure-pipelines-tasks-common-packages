@@ -72,7 +72,7 @@ export function entraWifUserServiceConnectionUtilsTests() {
                 calls.push(`verify-feed:${protocolType}:${feedUrl.href}`);
                 const url = feedUrl;
                 if (url.protocol !== "https:") {
-                    throw new Error("Error_FeedUrlHttpsRequired");
+                    throw new Error("Error_UrlHttpsRequired");
                 }
                 if (rejectFeedHost && url.hostname === "attacker.example") {
                     throw new Error("Error_FeedUrlUntrustedHost");
@@ -418,7 +418,7 @@ export function entraWifUserServiceConnectionUtilsTests() {
                 new URL("http://attacker.example/feed"),
                 ProtocolType.NuGet
             ),
-            /Error_FeedUrlHttpsRequired/
+            /Error_UrlHttpsRequired/
         );
 
         assert.deepStrictEqual(calls, [

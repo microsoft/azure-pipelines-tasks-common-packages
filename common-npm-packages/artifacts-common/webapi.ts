@@ -5,16 +5,16 @@ import * as tl from 'azure-pipelines-task-lib/task';
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
-export function requireHttpsUrl(value: string): URL {
+export function requireHttpsUrl(value: string | URL): URL {
     let url: URL;
     try {
-        url = new URL(value);
+        url = typeof value === "string" ? new URL(value) : value;
     } catch {
-        throw new Error(tl.loc("Error_ServiceUrlInvalid"));
+        throw new Error(tl.loc("Error_UrlInvalid"));
     }
 
     if (url.protocol.toLowerCase() !== "https:") {
-        throw new Error(tl.loc("Error_ServiceUrlHttpsRequired"));
+        throw new Error(tl.loc("Error_UrlHttpsRequired"));
     }
 
     return url;

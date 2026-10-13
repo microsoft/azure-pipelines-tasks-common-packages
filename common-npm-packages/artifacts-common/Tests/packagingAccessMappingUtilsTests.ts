@@ -166,7 +166,7 @@ export function packagingAccessMappingUtilsTests() {
                 ]
             }),
             (error: Error) =>
-                error.message === tl.loc("Error_ServiceUrlHttpsRequired")
+                error.message === tl.loc("Error_UrlHttpsRequired")
         );
 
         done();

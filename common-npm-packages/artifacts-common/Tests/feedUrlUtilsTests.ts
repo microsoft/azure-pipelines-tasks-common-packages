@@ -43,7 +43,7 @@ export function feedUrlUtilsTests() {
             getHttpsPackagingAccessMappings: () =>
                 packagingUris.map(uri => {
                     if (uri.startsWith("http:")) {
-                        throw new Error("Error_ServiceUrlHttpsRequired");
+                        throw new Error("Error_UrlHttpsRequired");
                     }
                     return { uri };
                 })
@@ -245,7 +245,7 @@ export function feedUrlUtilsTests() {
                 new URL("http://pkgs.example.test/organization/feed"),
                 ProtocolType.NuGet
             ),
-            /Error_FeedUrlHttpsRequired/
+            /Error_UrlHttpsRequired/
         );
         assert.strictEqual(connectionDataCalls, 0);
     });
@@ -259,7 +259,7 @@ export function feedUrlUtilsTests() {
                 new URL("https://pkgs.example.test/organization/feed"),
                 ProtocolType.NuGet
             ),
-            /Error_FeedUrlHttpsRequired/
+            /Error_UrlHttpsRequired/
         );
     });
 }

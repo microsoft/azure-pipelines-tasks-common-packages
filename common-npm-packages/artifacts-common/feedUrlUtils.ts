@@ -3,6 +3,7 @@ import * as tl from "azure-pipelines-task-lib/task";
 import { getConnectionDataForProtocol } from "./connectionDataUtils";
 import { getHttpsPackagingAccessMappings } from "./packagingAccessMappingUtils";
 import { ProtocolType } from "./protocols";
+import { requireHttpsUrl } from "./webapi";
 
 tl.setResourcePath(path.join(__dirname, "module.json"), true);
 
@@ -14,24 +15,15 @@ export async function verifyAzureArtifactsFeedUrl(
     feedUrl: URL,
     protocolType: ProtocolType = ProtocolType.NuGet
 ): Promise<URL> {
-    const candidate = requireAzureArtifactsFeedUrl(feedUrl);
+    const candidate = requireHttpsUrl(feedUrl);
     const connectionData = await getConnectionDataForProtocol(protocolType);
     if (!connectionData?.locationServiceData) {
         throw new Error(tl.loc("Error_FeedUrlUntrustedHost"));
     }
 
-    let trustedUrls: URL[];
-    try {
-        trustedUrls = getHttpsPackagingAccessMappings(
-            connectionData.locationServiceData
-        ).map(mapping => new URL(mapping.uri));
-    } catch (error) {
-        if (error instanceof Error &&
-            error.message === tl.loc("Error_ServiceUrlHttpsRequired")) {
-            throw new Error(tl.loc("Error_FeedUrlHttpsRequired"));
-        }
-        throw error;
-    }
+    const trustedUrls = getHttpsPackagingAccessMappings(
+        connectionData.locationServiceData
+    ).map(mapping => new URL(mapping.uri));
     const matchesMapping = trustedUrls.some(trustedUrl =>
         isUrlOnSameHost(candidate, trustedUrl)
     );
@@ -44,22 +36,7 @@ export async function verifyAzureArtifactsFeedUrl(
 }
 
 export function parseAzureArtifactsFeedUrl(feedUrl: string): URL {
-    let parsedUrl: URL;
-    try {
-        parsedUrl = new URL(feedUrl);
-    } catch {
-        throw new Error(tl.loc("Error_FeedUrlInvalid"));
-    }
-
-    return requireAzureArtifactsFeedUrl(parsedUrl);
-}
-
-function requireAzureArtifactsFeedUrl(feedUrl: URL): URL {
-    if (feedUrl.protocol.toLowerCase() !== "https:") {
-        throw new Error(tl.loc("Error_FeedUrlHttpsRequired"));
-    }
-
-    return feedUrl;
+    return requireHttpsUrl(feedUrl);
 }
 
 function isUrlOnSameHost(candidate: URL, trustedUrl: URL): boolean {
