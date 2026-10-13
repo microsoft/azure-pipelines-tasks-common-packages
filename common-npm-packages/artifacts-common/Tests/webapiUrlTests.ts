@@ -2,10 +2,6 @@ import * as assert from "assert";
 import * as mocker from "azure-pipelines-task-lib/lib-mocker";
 
 export function webapiUrlTests() {
-    let endpointUrl: string;
-    let collectionUrl: string;
-    let teamFoundationCollectionUrl: string;
-
     before(() => {
         mocker.disable();
         mocker.enable({
@@ -19,25 +15,11 @@ export function webapiUrlTests() {
     });
 
     beforeEach(() => {
-        endpointUrl = "https://devops.example.test/organization/";
-        collectionUrl = "https://devops.example.test/organization/";
-        teamFoundationCollectionUrl = collectionUrl;
-
         mocker.resetCache();
         mocker.registerAllowable("path");
         mocker.registerAllowable("../webapi");
         mocker.registerAllowable("azure-devops-node-api");
         mocker.registerMock("azure-pipelines-task-lib/task", {
-            getEndpointUrl: () => endpointUrl,
-            getVariable: (name: string) => {
-                if (name === "System.CollectionUri") {
-                    return collectionUrl;
-                }
-                if (name === "System.TeamFoundationCollectionUri") {
-                    return teamFoundationCollectionUrl;
-                }
-                return undefined;
-            },
             loc: (key: string) => key,
             setResourcePath: () => {}
         });
@@ -47,41 +29,44 @@ export function webapiUrlTests() {
         mocker.deregisterAll();
     });
 
-    it("accepts matching HTTPS system endpoint and collection roots", () => {
+    it("accepts an HTTPS URL", () => {
         const utils = require("../webapi");
 
         assert.strictEqual(
-            utils.getSystemServiceUrl().href,
+            utils.requireHttpsUrl(
+                "https://devops.example.test/organization/"
+            ).href,
             "https://devops.example.test/organization/"
         );
     });
 
-    it("rejects a mismatched system endpoint and collection root", () => {
-        endpointUrl = "https://attacker.example/organization/";
+    it("accepts an HTTPS URL with embedded credentials", () => {
         const utils = require("../webapi");
 
-        assert.throws(
-            () => utils.getSystemServiceUrl(),
-            /Error_SystemConnectionUrlMismatch/
+        assert.strictEqual(
+            utils.requireHttpsUrl(
+                "https://user@example.test/organization/"
+            ).href,
+            "https://user@example.test/organization/"
         );
     });
 
-    it("rejects a mismatched Team Foundation collection variable", () => {
-        teamFoundationCollectionUrl = "https://attacker.example/organization/";
+    it("rejects an invalid URL", () => {
         const utils = require("../webapi");
 
         assert.throws(
-            () => utils.getSystemServiceUrl(),
-            /Error_SystemConnectionUrlMismatch/
+            () => utils.requireHttpsUrl("not a URL"),
+            /Error_ServiceUrlInvalid/
         );
     });
 
-    it("rejects an HTTP system endpoint", () => {
-        endpointUrl = "http://devops.example.test/organization/";
+    it("rejects an HTTP URL", () => {
         const utils = require("../webapi");
 
         assert.throws(
-            () => utils.getSystemServiceUrl(),
+            () => utils.requireHttpsUrl(
+                "http://devops.example.test/organization/"
+            ),
             /Error_ServiceUrlHttpsRequired/
         );
     });

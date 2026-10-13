@@ -16,34 +16,8 @@ export function requireHttpsUrl(value: string): URL {
     if (url.protocol.toLowerCase() !== "https:") {
         throw new Error(tl.loc("Error_ServiceUrlHttpsRequired"));
     }
-    if (url.username || url.password) {
-        throw new Error(tl.loc("Error_ServiceUrlInvalid"));
-    }
 
     return url;
-}
-
-export function getSystemServiceUrl(): URL {
-    const endpointUrl = requireHttpsUrl(
-        tl.getEndpointUrl("SYSTEMVSSCONNECTION", false)
-    );
-    const collectionUrlValues = [
-        tl.getVariable("System.CollectionUri"),
-        tl.getVariable("System.TeamFoundationCollectionUri")
-    ].filter((value): value is string => !!value);
-
-    if (collectionUrlValues.length === 0) {
-        throw new Error(tl.loc("Error_ServiceUrlMissingCollectionUrl"));
-    }
-
-    for (const collectionUrlValue of collectionUrlValues) {
-        const collectionUrl = requireHttpsUrl(collectionUrlValue);
-        if (normalizeServiceRoot(endpointUrl) !== normalizeServiceRoot(collectionUrl)) {
-            throw new Error(tl.loc("Error_SystemConnectionUrlMismatch"));
-        }
-    }
-
-    return endpointUrl;
 }
 
 export function getWebApiWithProxy(serviceUri: string, accessToken: string, options: IRequestOptions = {}): api.WebApi {
@@ -53,7 +27,6 @@ export function getWebApiWithProxy(serviceUri: string, accessToken: string, opti
         proxy: tl.getHttpProxyConfiguration(serviceUri),
         allowRetries: true,
         maxRetries: 5,
-        maxRedirects: 0,
         keepAlive: true
     };
 
@@ -71,8 +44,4 @@ export function getSystemAccessToken(): string {
     } else {
         tl.warning('Could not determine credentials to use');
     }
-}
-
-function normalizeServiceRoot(url: URL): string {
-    return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
 }

@@ -1,7 +1,7 @@
 import path = require("path");
 import * as tl from 'azure-pipelines-task-lib/task';
 import * as api from "azure-devops-node-api";
-import { getSystemAccessToken, getSystemServiceUrl } from "./webapi";
+import { getSystemAccessToken } from "./webapi";
 import fetch from "node-fetch";
 import { retryOnException } from "./retryUtils";
 import {
@@ -125,24 +125,19 @@ async function getVerifiedFeedTenant(
 }
 
 function getTenantDiscoveryUrl(feedUrl: URL, protocolType: ProtocolType): URL {
-    const tenantDiscoveryUrl = new URL(feedUrl.href);
+    const discoveryBaseUrl = new URL(feedUrl.href);
+    if (!discoveryBaseUrl.pathname.endsWith("/")) {
+        discoveryBaseUrl.pathname += "/";
+    }
 
     if (protocolType === ProtocolType.PyPi &&
         /\/pypi\/upload\/?$/i.test(feedUrl.pathname)) {
-        tenantDiscoveryUrl.pathname = tenantDiscoveryUrl.pathname.replace(
-            /\/pypi\/upload\/?$/i,
-            "/pypi/simple/"
-        );
-        return tenantDiscoveryUrl;
+        return new URL("../simple/", discoveryBaseUrl);
     }
 
     if (protocolType === ProtocolType.Cargo &&
         /\/cargo\/index\/?$/i.test(feedUrl.pathname)) {
-        tenantDiscoveryUrl.pathname = tenantDiscoveryUrl.pathname.replace(
-            /\/cargo\/index\/?$/i,
-            "/nuget/v3/index.json"
-        );
-        return tenantDiscoveryUrl;
+        return new URL("config.json", discoveryBaseUrl);
     }
 
     return feedUrl;
@@ -165,22 +160,11 @@ async function getResourceTenantId(serviceUrl: URL): Promise<string | undefined>
 
 
 async function getOidcToken(serviceConnectionName: string): Promise<string> {
-    if (tl.getPipelineFeature("EnableLateBoundIdToken")) {
-        const idToken = tl.getEndpointAuthorizationParameter(
-            serviceConnectionName,
-            "idToken",
-            true
-        );
-        if (idToken) {
-            tl.debug("Using bound idToken from service endpoint.");
-            return idToken;
-        }
-    }
-
-    const systemServiceUrl = getSystemServiceUrl();
+    const systemServiceUrl =
+        tl.getEndpointUrlRequired("SYSTEMVSSCONNECTION");
     const systemAccessToken = getSystemAccessToken();
     const webApi = new api.WebApi(
-        systemServiceUrl.href,
+        systemServiceUrl,
         api.getBearerHandler(systemAccessToken),
         { keepAlive: true, maxRedirects: 0 }
     );

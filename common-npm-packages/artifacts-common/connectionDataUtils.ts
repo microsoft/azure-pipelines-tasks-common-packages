@@ -31,7 +31,11 @@ export async function getConnectionDataForProtocol(
         );
 
         // Get _apis/connectionData from the packaging service
-        const webApi = api.getWebApiWithProxy(serviceUri, accessToken);
+        const webApi = api.getWebApiWithProxy(
+            serviceUri,
+            accessToken,
+            { maxRedirects: 0 }
+        );
         const locationApi = await webApi.getLocationsApi();
         tl.debug(`Acquiring connection data for: ${serviceUri}`);
         const connectionData = await locationApi.getConnectionData(ConnectOptions.IncludeServices);
@@ -65,7 +69,11 @@ export async function getPackagingRouteUrl(
             trustedConnection
         );
 
-        const webApi = api.getWebApiWithProxy(serviceUri, accessToken);
+        const webApi = api.getWebApiWithProxy(
+            serviceUri,
+            accessToken,
+            { maxRedirects: 0 }
+        );
         const data = await webApi.vsoClient.getVersioningData(apiVersion, protocols.ProtocolType[protocolType], locationGuid, { feedId: feedId, project: project });
 
         tl.debug('Resolved Route: ' + data.requestUrl);
@@ -88,7 +96,11 @@ export async function getServiceUriFromAreaId(
         return api.requireHttpsUrl(rootServiceUrl).href;
     }
 
-    const webApi = api.getWebApiWithProxy(rootServiceUrl, accessToken);
+    const webApi = api.getWebApiWithProxy(
+        rootServiceUrl,
+        accessToken,
+        { maxRedirects: 0 }
+    );
     const locationApi = await webApi.getLocationsApi();
 
     tl.debug(`Getting URI for area ID ${areaId} from ${rootServiceUrl}`);
@@ -110,7 +122,7 @@ export async function getServiceUriFromAreaId(
 
 function getSystemAzureArtifactsConnection(): AzureArtifactsConnection {
     return {
-        serviceUrl: api.getSystemServiceUrl().href,
+        serviceUrl: tl.getEndpointUrlRequired("SYSTEMVSSCONNECTION"),
         accessToken: api.getSystemAccessToken()
     };
 }
