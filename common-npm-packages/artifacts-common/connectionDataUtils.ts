@@ -5,11 +5,6 @@ import { retryOnException } from './retryUtils';
 import { ConnectOptions } from 'azure-devops-node-api/interfaces/common/VSSInterfaces';
 import { ConnectionData } from 'azure-devops-node-api/interfaces/LocationsInterfaces';
 
-export interface AzureArtifactsConnection {
-    serviceUrl: string;
-    accessToken: string;
-}
-
 /**
  * Gets the raw connection data (direct representation of _apis/connectionData) for the service hosting a particular protocol
  * @param protocolType The packaging protocol, e.g. 'NuGet'
@@ -22,12 +17,14 @@ export async function getConnectionDataForProtocol(
     return await retryOnException(async () => {
         // Determine where the Packaging service lives
         tl.debug('Finding the URI for the packaging service');
-        const trustedConnection = getSystemAzureArtifactsConnection();
-        const accessToken = trustedConnection.accessToken;
+        const serviceUrl =
+            tl.getEndpointUrlRequired("SYSTEMVSSCONNECTION");
+        const accessToken = api.getSystemAccessToken();
         const areaId = protocols.getAreaIdForProtocol(protocolType);
         const serviceUri = await getServiceUriFromAreaId(
             areaId,
-            trustedConnection
+            serviceUrl,
+            accessToken
         );
 
         // Get _apis/connectionData from the packaging service
@@ -61,12 +58,14 @@ export async function getPackagingRouteUrl(
 
     tl.debug('Finding route for location ' + locationGuid);
     return await retryOnException(async () => {
-        const trustedConnection = getSystemAzureArtifactsConnection();
-        const accessToken = trustedConnection.accessToken;
+        const serviceUrl =
+            tl.getEndpointUrlRequired("SYSTEMVSSCONNECTION");
+        const accessToken = api.getSystemAccessToken();
         const areaId = protocols.getAreaIdForProtocol(protocolType);
         const serviceUri = await getServiceUriFromAreaId(
             areaId,
-            trustedConnection
+            serviceUrl,
+            accessToken
         );
 
         const webApi = api.getWebApiWithProxy(
@@ -86,14 +85,14 @@ export async function getPackagingRouteUrl(
  */
 export async function getServiceUriFromAreaId(
     areaId: string,
-    connection: AzureArtifactsConnection
+    serviceUrl: string,
+    accessToken: string
 ): Promise<string> {
-    const rootServiceUrl = api.requireHttpsUrl(connection.serviceUrl).href;
-    const accessToken = connection.accessToken;
+    const rootServiceUrl = api.requireHttpsUrl(serviceUrl).href;
     const serverType = tl.getVariable('System.ServerType');
     if (!serverType || serverType.toLowerCase() !== 'hosted') {
         tl.debug(`Using '${rootServiceUrl}' as the service URI since this is on-premises`);
-        return api.requireHttpsUrl(rootServiceUrl).href;
+        return rootServiceUrl;
     }
 
     const webApi = api.getWebApiWithProxy(
@@ -118,11 +117,4 @@ export async function getServiceUriFromAreaId(
         }
         throw error;
     }
-}
-
-function getSystemAzureArtifactsConnection(): AzureArtifactsConnection {
-    return {
-        serviceUrl: tl.getEndpointUrlRequired("SYSTEMVSSCONNECTION"),
-        accessToken: api.getSystemAccessToken()
-    };
 }
