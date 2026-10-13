@@ -4,7 +4,10 @@ import * as api from "azure-devops-node-api";
 import { getSystemAccessToken, getSystemServiceUrl } from "./webapi";
 import fetch from "node-fetch";
 import { retryOnException } from "./retryUtils";
-import { verifyAzureArtifactsFeedUrl } from "./feedUrlUtils";
+import {
+    parseAzureArtifactsFeedUrl,
+    verifyAzureArtifactsFeedUrl
+} from "./feedUrlUtils";
 import { ProtocolType } from "./protocols";
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
@@ -25,6 +28,11 @@ interface VerifiedFeedTenant {
 }
 
 export async function getFederatedWorkloadIdentityCredentials(serviceConnectionName: string, tenantId?: string) : Promise<string | undefined>{
+    const serverType = tl.getVariable("System.ServerType");
+    if (serverType?.toLowerCase() !== "hosted") {
+        throw new Error(tl.loc("Error_WifAuthenticationHostedOnly"));
+    }
+
     const tenant = tenantId
         ?? tl.getEndpointAuthorizationParameterRequired(serviceConnectionName, "TenantId");
     tl.debug(tl.loc('Info_UsingTenantId', tenant));
@@ -68,8 +76,14 @@ export async function getFederatedWorkloadIdentityCredentials(serviceConnectionN
     }, 3, 1000);
 }
 
-export async function getFeedTenantId(feedUrl: URL, protocolType: ProtocolType = ProtocolType.NuGet) : Promise<string | undefined>{
-    return (await getVerifiedFeedTenant(feedUrl, protocolType)).tenantId;
+export async function getFeedTenantId(
+    feedUrl: string | URL,
+    protocolType: ProtocolType = ProtocolType.NuGet
+) : Promise<string | undefined>{
+    const parsedFeedUrl = typeof feedUrl === "string"
+        ? parseAzureArtifactsFeedUrl(feedUrl)
+        : feedUrl;
+    return (await getVerifiedFeedTenant(parsedFeedUrl, protocolType)).tenantId;
 }
 
 export async function getFederatedWorkloadIdentityCredentialsForFeed(
@@ -101,20 +115,54 @@ async function getVerifiedFeedTenant(
     protocolType: ProtocolType
 ): Promise<VerifiedFeedTenant> {
     const verifiedFeedUrl = await verifyAzureArtifactsFeedUrl(feedUrl, protocolType);
-    const tenantId = await getResourceTenantId(verifiedFeedUrl);
+    const tenantDiscoveryUrl = getTenantDiscoveryUrl(
+        verifiedFeedUrl,
+        protocolType
+    );
+    const tenantId = await getResourceTenantId(tenantDiscoveryUrl);
 
     return { feedUrl: verifiedFeedUrl, tenantId };
 }
 
+function getTenantDiscoveryUrl(feedUrl: URL, protocolType: ProtocolType): URL {
+    const tenantDiscoveryUrl = new URL(feedUrl.href);
+
+    if (protocolType === ProtocolType.PyPi &&
+        /\/pypi\/upload\/?$/i.test(feedUrl.pathname)) {
+        tenantDiscoveryUrl.pathname = tenantDiscoveryUrl.pathname.replace(
+            /\/pypi\/upload\/?$/i,
+            "/pypi/simple/"
+        );
+        return tenantDiscoveryUrl;
+    }
+
+    if (protocolType === ProtocolType.Cargo &&
+        /\/cargo\/index\/?$/i.test(feedUrl.pathname)) {
+        tenantDiscoveryUrl.pathname = tenantDiscoveryUrl.pathname.replace(
+            /\/cargo\/index\/?$/i,
+            "/nuget/v3/index.json"
+        );
+        return tenantDiscoveryUrl;
+    }
+
+    return feedUrl;
+}
+
 async function getResourceTenantId(serviceUrl: URL): Promise<string | undefined> {
     try {
-        const response = await fetch(serviceUrl.href, { method: "HEAD" });
+        const response = await fetch(serviceUrl.href, {
+            method: "HEAD",
+            redirect: "manual"
+        });
+
         return response?.headers?.get("X-VSS-ResourceTenant") ?? undefined;
     } catch (error) {
         tl.debug(tl.loc("Error_GetFeedTenantIdFailed", error));
-        return undefined;
     }
+
+    return undefined;
 }
+
 
 async function getOidcToken(serviceConnectionName: string): Promise<string> {
     if (tl.getPipelineFeature("EnableLateBoundIdToken")) {

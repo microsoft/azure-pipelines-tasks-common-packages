@@ -44,7 +44,16 @@ export function getPackagingAccessMappings(locationServiceData: LocationServiceD
             uri: toNormalizedAccessUri(accessMapping),
             isPublic: isDefaultAccessMapping || isCommonAccessMapping,
             isDefault: isDefaultAccessMapping
-        };
+        }
+    });
+}
+
+export function getHttpsPackagingAccessMappings(
+    locationServiceData: LocationServiceData
+): PackagingAccessMapping[] {
+    return getPackagingAccessMappings(locationServiceData).map(mapping => {
+        requireHttpsUrl(mapping.uri);
+        return mapping;
     });
 }
 
@@ -54,14 +63,11 @@ export function getPackagingAccessMappings(locationServiceData: LocationServiceD
  */
 function toNormalizedAccessUri(accessMapping: AccessMapping): string {
     // We always ensure a trailing slash, since we use these access points in prefix comparisons
-    let uri: string;
     if (!accessMapping.virtualDirectory) {
-        uri = accessMapping.accessPoint;
-    } else {
-        uri = ensureTrailingSlash(accessMapping.accessPoint) + accessMapping.virtualDirectory;
+        return ensureTrailingSlash(accessMapping.accessPoint);
     }
 
-    return ensureTrailingSlash(requireHttpsUrl(uri).href);
+    return ensureTrailingSlash(ensureTrailingSlash(accessMapping.accessPoint) + accessMapping.virtualDirectory);
 }
 
 function ensureTrailingSlash(uri: string) {

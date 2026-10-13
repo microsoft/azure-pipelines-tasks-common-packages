@@ -19,6 +19,7 @@
   "loc.messages.Error_ServiceUrlInvalid": "The Azure DevOps service URL is invalid.",
   "loc.messages.Error_ServiceUrlMissingCollectionUrl": "The Azure DevOps collection URL is unavailable, so the service URL cannot be verified.",
   "loc.messages.Error_SystemConnectionUrlMismatch": "The Azure DevOps system endpoint does not match the collection URL supplied by the agent.",
+  "loc.messages.Error_WifAuthenticationHostedOnly": "Workload identity federation authentication is only supported on Azure DevOps Services.",
   "loc.messages.Error_GetFeedTenantIdFailed": "Failed to find tenantId for feedUrl. %s",
   "loc.messages.LoginFailed": "Azure login failed",
   "loc.messages.MSILoginFailed": "Azure login failed using Managed Service Identity",

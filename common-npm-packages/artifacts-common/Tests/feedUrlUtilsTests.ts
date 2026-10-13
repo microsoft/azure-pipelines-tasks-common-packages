@@ -1,9 +1,11 @@
 import * as assert from "assert";
 import * as mocker from "azure-pipelines-task-lib/lib-mocker";
+import { ProtocolType } from "../protocols";
 
 export function feedUrlUtilsTests() {
     let packagingUris: string[];
     let connectionDataCalls: number;
+    let connectionDataProtocol: ProtocolType | undefined;
 
     before(() => {
         mocker.disable();
@@ -20,6 +22,7 @@ export function feedUrlUtilsTests() {
     beforeEach(() => {
         packagingUris = ["https://pkgs.example.test/organization/"];
         connectionDataCalls = 0;
+        connectionDataProtocol = undefined;
 
         mocker.resetCache();
         mocker.registerAllowable("path");
@@ -30,13 +33,14 @@ export function feedUrlUtilsTests() {
             setResourcePath: () => {}
         });
         mocker.registerMock("./connectionDataUtils", {
-            getConnectionDataForProtocol: async (_protocolType: number) => {
+            getConnectionDataForProtocol: async (protocolType: ProtocolType) => {
                 connectionDataCalls++;
+                connectionDataProtocol = protocolType;
                 return { locationServiceData: {} };
             }
         });
         mocker.registerMock("./packagingAccessMappingUtils", {
-            getPackagingAccessMappings: () =>
+            getHttpsPackagingAccessMappings: () =>
                 packagingUris.map(uri => {
                     if (uri.startsWith("http:")) {
                         throw new Error("Error_ServiceUrlHttpsRequired");
@@ -53,7 +57,8 @@ export function feedUrlUtilsTests() {
     it("accepts a feed within an authenticated Packaging access mapping", async () => {
         const feedUrlUtils = require("../feedUrlUtils");
         const verifiedUrl = await feedUrlUtils.verifyAzureArtifactsFeedUrl(
-            new URL("HTTPS://PKGS.EXAMPLE.TEST/organization/_packaging/feed/pypi/simple")
+            new URL("HTTPS://PKGS.EXAMPLE.TEST/organization/_packaging/feed/pypi/simple"),
+            ProtocolType.PyPi
         );
 
         assert.strictEqual(
@@ -63,12 +68,23 @@ export function feedUrlUtilsTests() {
         assert.strictEqual(connectionDataCalls, 1);
     });
 
+    it("defaults omitted protocols to NuGet discovery", async () => {
+        const feedUrlUtils = require("../feedUrlUtils");
+
+        await feedUrlUtils.verifyAzureArtifactsFeedUrl(
+            new URL("https://pkgs.example.test/organization/feed")
+        );
+
+        assert.strictEqual(connectionDataProtocol, ProtocolType.NuGet);
+    });
+
     it("rejects a feed on an origin not returned by authenticated discovery", async () => {
         const feedUrlUtils = require("../feedUrlUtils");
 
         await assert.rejects(
             () => feedUrlUtils.verifyAzureArtifactsFeedUrl(
-                new URL("https://attacker.example/organization/feed")
+                new URL("https://attacker.example/organization/feed"),
+                ProtocolType.NuGet
             ),
             /Error_FeedUrlUntrustedHost/
         );
@@ -79,7 +95,8 @@ export function feedUrlUtilsTests() {
         const feedUrlUtils = require("../feedUrlUtils");
 
         const verifiedUrl = await feedUrlUtils.verifyAzureArtifactsFeedUrl(
-            new URL("https://pkgs.example.test/another-organization/feed")
+            new URL("https://pkgs.example.test/another-organization/feed"),
+            ProtocolType.NuGet
         );
 
         assert.strictEqual(
@@ -88,12 +105,27 @@ export function feedUrlUtilsTests() {
         );
     });
 
+    it("accepts embedded credentials on an authenticated Azure Artifacts host", async () => {
+        const feedUrlUtils = require("../feedUrlUtils");
+
+        const verifiedUrl = await feedUrlUtils.verifyAzureArtifactsFeedUrl(
+            new URL("https://username:password@pkgs.example.test/organization/feed"),
+            ProtocolType.NuGet
+        );
+
+        assert.strictEqual(
+            verifiedUrl.href,
+            "https://username:password@pkgs.example.test/organization/feed"
+        );
+    });
+
     it("accepts another Azure DevOps-owned visualstudio.com packaging host", async () => {
         packagingUris = ["https://source.pkgs.visualstudio.com/"];
         const feedUrlUtils = require("../feedUrlUtils");
 
         const verifiedUrl = await feedUrlUtils.verifyAzureArtifactsFeedUrl(
-            new URL("https://target.pkgs.visualstudio.com/feed")
+            new URL("https://target.pkgs.visualstudio.com/feed"),
+            ProtocolType.NuGet
         );
 
         assert.strictEqual(
@@ -107,7 +139,8 @@ export function feedUrlUtilsTests() {
 
         await assert.rejects(
             () => feedUrlUtils.verifyAzureArtifactsFeedUrl(
-                new URL("http://pkgs.example.test/organization/feed")
+                new URL("http://pkgs.example.test/organization/feed"),
+                ProtocolType.NuGet
             ),
             /Error_FeedUrlHttpsRequired/
         );
@@ -120,7 +153,8 @@ export function feedUrlUtilsTests() {
 
         await assert.rejects(
             () => feedUrlUtils.verifyAzureArtifactsFeedUrl(
-                new URL("https://pkgs.example.test/organization/feed")
+                new URL("https://pkgs.example.test/organization/feed"),
+                ProtocolType.NuGet
             ),
             /Error_FeedUrlHttpsRequired/
         );

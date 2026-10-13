@@ -23,6 +23,7 @@
         "Error_ServiceUrlInvalid": "The Azure DevOps service URL is invalid.",
         "Error_ServiceUrlMissingCollectionUrl": "The Azure DevOps collection URL is unavailable, so the service URL cannot be verified.",
         "Error_SystemConnectionUrlMismatch": "The Azure DevOps system endpoint does not match the collection URL supplied by the agent.",
+        "Error_WifAuthenticationHostedOnly": "Workload identity federation authentication is only supported on Azure DevOps Services.",
         "Error_GetFeedTenantIdFailed": "Failed to find tenantId for feedUrl. %s",
         "Error_InternalFeedsNotSupported": "FeedUrl must belong to an external organization. To authenticate to a feed in your organization with a 'Azure DevOps' service connection type, remove the `feedUrl` input.",
         "LoginFailed": "Azure login failed",

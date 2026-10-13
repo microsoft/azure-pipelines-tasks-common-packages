@@ -1,7 +1,7 @@
 import * as path from "path";
 import * as tl from "azure-pipelines-task-lib/task";
 import { getConnectionDataForProtocol } from "./connectionDataUtils";
-import { getPackagingAccessMappings } from "./packagingAccessMappingUtils";
+import { getHttpsPackagingAccessMappings } from "./packagingAccessMappingUtils";
 import { ProtocolType } from "./protocols";
 
 tl.setResourcePath(path.join(__dirname, "module.json"), true);
@@ -20,11 +20,11 @@ export async function verifyAzureArtifactsFeedUrl(
         throw new Error(tl.loc("Error_FeedUrlUntrustedHost"));
     }
 
-    let mappings;
+    let trustedUrls: URL[];
     try {
-        mappings = getPackagingAccessMappings(
+        trustedUrls = getHttpsPackagingAccessMappings(
             connectionData.locationServiceData
-        );
+        ).map(mapping => new URL(mapping.uri));
     } catch (error) {
         if (error instanceof Error &&
             error.message === tl.loc("Error_ServiceUrlHttpsRequired")) {
@@ -32,8 +32,8 @@ export async function verifyAzureArtifactsFeedUrl(
         }
         throw error;
     }
-    const matchesMapping = mappings.some(mapping =>
-        isUrlOnSameHost(candidate, new URL(mapping.uri))
+    const matchesMapping = trustedUrls.some(trustedUrl =>
+        isUrlOnSameHost(candidate, trustedUrl)
     );
 
     if (!matchesMapping) {
@@ -57,9 +57,6 @@ export function parseAzureArtifactsFeedUrl(feedUrl: string): URL {
 function requireAzureArtifactsFeedUrl(feedUrl: URL): URL {
     if (feedUrl.protocol.toLowerCase() !== "https:") {
         throw new Error(tl.loc("Error_FeedUrlHttpsRequired"));
-    }
-    if (feedUrl.username || feedUrl.password) {
-        throw new Error(tl.loc("Error_FeedUrlInvalid"));
     }
 
     return feedUrl;

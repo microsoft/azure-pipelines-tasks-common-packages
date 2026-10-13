@@ -16,7 +16,7 @@ export interface AzureArtifactsConnection {
  */
 export async function getConnectionDataForProtocol(
     protocolType: protocols.ProtocolType
-) : Promise<ConnectionData> {
+): Promise<ConnectionData> {
     // Retry getting the connection data (which also potentially includes a network call to find the packaging service first),
     // since we've previously had reliability issues here.
     return await retryOnException(async () => {

@@ -5,7 +5,7 @@ import * as process from 'process';
 import * as tl from 'azure-pipelines-task-lib/task';
 import { getConnectionDataForProtocol } from './connectionDataUtils';
 import { parseAzureArtifactsFeedUrl } from './feedUrlUtils';
-import { getPackagingAccessMappings } from './packagingAccessMappingUtils';
+import { getHttpsPackagingAccessMappings } from './packagingAccessMappingUtils';
 import { getSystemAccessToken } from './webapi';
 import { ProtocolType } from './protocols';
 import { ServiceConnection, ServiceConnectionAuthType, UsernamePasswordServiceConnection, EntraServiceConnection, TokenServiceConnection } from './serviceConnectionUtils';
@@ -125,7 +125,7 @@ export async function configureCredProvider(protocol: ProtocolType, serviceConne
  */
 export async function configureEntraCredProvider(protocol: ProtocolType, entraWifServiceConnectionName: string, feedUrl: string | undefined) {
     const connectionData = await getConnectionDataForProtocol(protocol);
-    const packagingAccessMappings = getPackagingAccessMappings(connectionData.locationServiceData)
+    const packagingAccessMappings = getHttpsPackagingAccessMappings(connectionData.locationServiceData)
     const allPrefixes: string[] = [...new Set(packagingAccessMappings.map(prefix => prefix.uri))];
     const isFeedInternal = allPrefixes.some(prefix => feedUrl.startsWith(prefix));
 
@@ -167,7 +167,7 @@ export async function configureCredProviderForSameOrganizationFeeds(protocol: Pr
     }
 
     const connectionData = await getConnectionDataForProtocol(protocol);
-    const packagingAccessMappings = getPackagingAccessMappings(connectionData.locationServiceData);
+    const packagingAccessMappings = getHttpsPackagingAccessMappings(connectionData.locationServiceData);
 
     // To avoid confusion, only log the public access mapping URIs rather than all of them (e.g. host guid access mapping)
     // which we might as well support just in case, yet users are extremely unlikely to ever use.
