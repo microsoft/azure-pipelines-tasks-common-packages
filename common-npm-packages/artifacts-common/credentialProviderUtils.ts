@@ -4,7 +4,6 @@ import * as path from 'path';
 import * as process from 'process';
 import * as tl from 'azure-pipelines-task-lib/task';
 import { getConnectionDataForProtocol } from './connectionDataUtils';
-import { parseAzureArtifactsFeedUrl } from './feedUrlUtils';
 import { getHttpsPackagingAccessMappings } from './packagingAccessMappingUtils';
 import { getSystemAccessToken } from './webapi';
 import { ProtocolType } from './protocols';
@@ -135,7 +134,7 @@ export async function configureEntraCredProvider(protocol: ProtocolType, entraWi
 
     const credentials = await getFederatedWorkloadIdentityCredentialsForFeed(
         entraWifServiceConnectionName,
-        parseAzureArtifactsFeedUrl(feedUrl),
+        feedUrl,
         protocol);
     if (credentials) {
         configureCredProviderForServiceConnectionFeeds([

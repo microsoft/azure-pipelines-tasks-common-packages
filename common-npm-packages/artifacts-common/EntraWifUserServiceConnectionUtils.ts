@@ -4,10 +4,7 @@ import * as api from "azure-devops-node-api";
 import { getSystemAccessToken } from "./webapi";
 import fetch from "node-fetch";
 import { retryOnException } from "./retryUtils";
-import {
-    parseAzureArtifactsFeedUrl,
-    verifyAzureArtifactsFeedUrl
-} from "./feedUrlUtils";
+import { verifyAzureArtifactsFeedUrl } from "./feedUrlUtils";
 import { ProtocolType } from "./protocols";
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
@@ -75,18 +72,17 @@ export async function getFeedTenantId(
     feedUrl: string | URL,
     protocolType: ProtocolType = ProtocolType.NuGet
 ) : Promise<string | undefined>{
-    const parsedFeedUrl = typeof feedUrl === "string"
-        ? parseAzureArtifactsFeedUrl(feedUrl)
-        : feedUrl;
-    return await getVerifiedFeedTenantId(parsedFeedUrl, protocolType);
+    const verifiedFeedUrl = await verifyAzureArtifactsFeedUrl(feedUrl, protocolType);
+    return await getTenantIdForVerifiedFeed(verifiedFeedUrl, protocolType);
 }
 
 export async function getFederatedWorkloadIdentityCredentialsForFeed(
     serviceConnectionName: string,
-    feedUrl: URL,
+    feedUrl: string | URL,
     protocolType: ProtocolType = ProtocolType.NuGet
 ): Promise<FederatedFeedCredentials | undefined> {
-    const tenantId = await getVerifiedFeedTenantId(feedUrl, protocolType);
+    const verifiedFeedUrl = await verifyAzureArtifactsFeedUrl(feedUrl, protocolType);
+    const tenantId = await getTenantIdForVerifiedFeed(verifiedFeedUrl, protocolType);
     if (!tenantId) {
         throw new Error(tl.loc("Error_FeedTenantUnavailable"));
     }
@@ -101,17 +97,16 @@ export async function getFederatedWorkloadIdentityCredentialsForFeed(
 
     return {
         accessToken,
-        feedUrl
+        feedUrl: verifiedFeedUrl
     };
 }
 
-async function getVerifiedFeedTenantId(
+async function getTenantIdForVerifiedFeed(
     feedUrl: URL,
     protocolType: ProtocolType
 ): Promise<string | undefined> {
-    const verifiedFeedUrl = await verifyAzureArtifactsFeedUrl(feedUrl, protocolType);
     const tenantDiscoveryUrl = getTenantDiscoveryUrl(
-        verifiedFeedUrl,
+        feedUrl,
         protocolType
     );
     return await getResourceTenantId(tenantDiscoveryUrl);

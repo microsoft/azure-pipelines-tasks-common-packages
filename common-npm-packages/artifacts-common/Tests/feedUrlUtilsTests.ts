@@ -242,7 +242,7 @@ export function feedUrlUtilsTests() {
 
         await assert.rejects(
             () => feedUrlUtils.verifyAzureArtifactsFeedUrl(
-                new URL("http://pkgs.example.test/organization/feed"),
+                "http://pkgs.example.test/organization/feed",
                 ProtocolType.NuGet
             ),
             /Error_UrlHttpsRequired/

@@ -5,4 +5,4 @@ export interface FederatedFeedCredentials {
 }
 export declare function getFederatedWorkloadIdentityCredentials(serviceConnectionName: string, tenantId?: string) : Promise<string | undefined>;
 export declare function getFeedTenantId(feedUrl: string | URL, protocolType?: ProtocolType) : Promise<string | undefined>;
-export declare function getFederatedWorkloadIdentityCredentialsForFeed(serviceConnectionName: string, feedUrl: URL, protocolType?: ProtocolType): Promise<FederatedFeedCredentials | undefined>;
+export declare function getFederatedWorkloadIdentityCredentialsForFeed(serviceConnectionName: string, feedUrl: string | URL, protocolType?: ProtocolType): Promise<FederatedFeedCredentials | undefined>;

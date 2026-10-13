@@ -61,16 +61,12 @@ export function entraWifUserServiceConnectionUtilsTests() {
             setSecret: () => {}
         });
         mocker.registerMock("./feedUrlUtils", {
-            parseAzureArtifactsFeedUrl: (feedUrl: string) => {
-                calls.push(`parse-feed:${feedUrl}`);
-                return new URL(feedUrl);
-            },
             verifyAzureArtifactsFeedUrl: async (
-                feedUrl: URL,
+                feedUrl: string | URL,
                 protocolType: ProtocolType
             ) => {
-                calls.push(`verify-feed:${protocolType}:${feedUrl.href}`);
-                const url = feedUrl;
+                const url = typeof feedUrl === "string" ? new URL(feedUrl) : feedUrl;
+                calls.push(`verify-feed:${protocolType}:${url.href}`);
                 if (url.protocol !== "https:") {
                     throw new Error("Error_UrlHttpsRequired");
                 }
@@ -207,7 +203,6 @@ export function entraWifUserServiceConnectionUtilsTests() {
             "11111111-1111-4111-8111-111111111111"
         );
         assert.deepStrictEqual(calls, [
-            "parse-feed:https://pkgs.internal.test/organization/feed",
             "verify-feed:0:https://pkgs.internal.test/organization/feed",
             "fetch:https://pkgs.internal.test/organization/feed"
         ]);
@@ -221,9 +216,7 @@ export function entraWifUserServiceConnectionUtilsTests() {
             () => utils.getFeedTenantId("https://attacker.example/feed"),
             /Error_FeedUrlUntrustedHost/
         );
-
         assert.deepStrictEqual(calls, [
-            "parse-feed:https://attacker.example/feed",
             "verify-feed:0:https://attacker.example/feed"
         ]);
     });

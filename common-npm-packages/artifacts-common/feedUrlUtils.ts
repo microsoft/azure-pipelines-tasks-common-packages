@@ -12,7 +12,7 @@ tl.setResourcePath(path.join(__dirname, "module.json"), true);
  * The URL must match an access mapping returned by authenticated Packaging discovery.
  */
 export async function verifyAzureArtifactsFeedUrl(
-    feedUrl: URL,
+    feedUrl: string | URL,
     protocolType: ProtocolType = ProtocolType.NuGet
 ): Promise<URL> {
     const candidate = requireHttpsUrl(feedUrl);
@@ -33,10 +33,6 @@ export async function verifyAzureArtifactsFeedUrl(
     }
 
     return candidate;
-}
-
-export function parseAzureArtifactsFeedUrl(feedUrl: string): URL {
-    return requireHttpsUrl(feedUrl);
 }
 
 function isUrlOnSameHost(candidate: URL, trustedUrl: URL): boolean {
