@@ -3,7 +3,6 @@ import * as fs from 'fs';
 import path = require('path');
 import { DOMParser } from '@xmldom/xmldom';
 import { detectFileEncoding } from './fileencoding';
-import { WebDeploymentCompatibilityFixEnabled, isWebDeploymentCompatibilityFixEnabled } from './featureFlags';
 
 const xdtNamespace = 'http://schemas.microsoft.com/XML-Document-Transform';
 // Built-in XDT transform/locator type names. Verified by reflecting the concrete (non-abstract)
@@ -153,10 +152,10 @@ export function applyXdtTransformation(sourceFile: string, transformFile: string
 }
 
 function validateXdtTransformFile(transformFile: string, sourceFile: string): void {
-    if (!isWebDeploymentCompatibilityFixEnabled()) {
+    if (!tl.getPipelineFeature('WebDeploymentCompatibilityFixEnabled')) {
         publishXdtSecurityTelemetry('blocked', 'featureDisabled');
         throw new Error(tl.loc('XdtTransformationFeatureDisabled', transformFile,
-            'DistributedTask.Tasks.' + WebDeploymentCompatibilityFixEnabled));
+            'DistributedTask.Tasks.WebDeploymentCompatibilityFixEnabled'));
     }
 
     // Validate transform security before checking source-encoding compatibility.

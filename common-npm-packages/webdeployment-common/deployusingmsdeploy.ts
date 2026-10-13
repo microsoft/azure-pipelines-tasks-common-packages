@@ -3,7 +3,6 @@ import { IExecOptions } from 'azure-pipelines-task-lib/toolrunner';
 import fs = require('fs');
 import path = require('path');
 import { spawn } from 'child_process';
-import { isWebDeploymentCompatibilityFixEnabled } from './featureFlags';
 
 import { copySetParamFileIfItExists, isMSDeployPackage } from './utility'; 
 import { 
@@ -187,7 +186,8 @@ async function executeMSDeploy(msDeployCmdArgs: string, msDeployFullPath: string
         try {
             const secureInvocationEnabled = tl.getPipelineFeature('SecureMSDeployCommandExecution');
             // Depends on SecureMSDeployCommandExecution; see the README rollout matrix.
-            const compatibilityFixEnabled = secureInvocationEnabled && isWebDeploymentCompatibilityFixEnabled();
+            const compatibilityFixEnabled = secureInvocationEnabled &&
+                tl.getPipelineFeature('WebDeploymentCompatibilityFixEnabled');
             if (!compatibilityFixEnabled) {
                 tl.debug("the argument string is:");
                 tl.debug(msDeployCmdArgs);
