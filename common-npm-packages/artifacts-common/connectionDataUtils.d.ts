@@ -14,4 +14,3 @@ export declare function getConnectionDataForProtocol(protocolType: protocols.Pro
  * @param project projectId to put in api params
  */
 export declare function getPackagingRouteUrl(protocolType: protocols.ProtocolType, apiVersion: string, locationGuid: string, feedId: string, project: string): Promise<string>;
-export declare function getServiceUriFromAreaId(areaId: string, serviceUrl: string, accessToken: string): Promise<string>;

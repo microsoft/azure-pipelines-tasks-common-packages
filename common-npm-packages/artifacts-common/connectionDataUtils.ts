@@ -20,9 +20,8 @@ export async function getConnectionDataForProtocol(
         const serviceUrl =
             tl.getEndpointUrlRequired("SYSTEMVSSCONNECTION");
         const accessToken = api.getSystemAccessToken();
-        const areaId = protocols.getAreaIdForProtocol(protocolType);
         const serviceUri = await getServiceUriFromAreaId(
-            areaId,
+            protocols.getAreaIdForProtocol(protocolType),
             serviceUrl,
             accessToken
         );
@@ -61,9 +60,8 @@ export async function getPackagingRouteUrl(
         const serviceUrl =
             tl.getEndpointUrlRequired("SYSTEMVSSCONNECTION");
         const accessToken = api.getSystemAccessToken();
-        const areaId = protocols.getAreaIdForProtocol(protocolType);
         const serviceUri = await getServiceUriFromAreaId(
-            areaId,
+            protocols.getAreaIdForProtocol(protocolType),
             serviceUrl,
             accessToken
         );
@@ -80,15 +78,11 @@ export async function getPackagingRouteUrl(
     }, 3, 1000);
 }
 
-/**
- * Gets the URI of the service that hosts an area.
- */
-export async function getServiceUriFromAreaId(
+async function getServiceUriFromAreaId(
     areaId: string,
-    serviceUrl: string,
+    rootServiceUrl: string,
     accessToken: string
 ): Promise<string> {
-    const rootServiceUrl = api.requireHttpsUrl(serviceUrl).href;
     const serverType = tl.getVariable('System.ServerType');
     if (!serverType || serverType.toLowerCase() !== 'hosted') {
         tl.debug(`Using '${rootServiceUrl}' as the service URI since this is on-premises`);
@@ -96,7 +90,7 @@ export async function getServiceUriFromAreaId(
     }
 
     const webApi = api.getWebApiWithProxy(
-        rootServiceUrl,
+        api.requireHttpsUrl(rootServiceUrl).href,
         accessToken,
         { maxRedirects: 0 }
     );
