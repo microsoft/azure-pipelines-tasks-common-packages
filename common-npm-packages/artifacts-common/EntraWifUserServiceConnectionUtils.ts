@@ -22,11 +22,6 @@ export interface FederatedFeedCredentials {
     feedUrl: URL;
 }
 
-interface VerifiedFeedTenant {
-    feedUrl: URL;
-    tenantId: string | undefined;
-}
-
 export async function getFederatedWorkloadIdentityCredentials(serviceConnectionName: string, tenantId?: string) : Promise<string | undefined>{
     const serverType = tl.getVariable("System.ServerType");
     if (serverType?.toLowerCase() !== "hosted") {
@@ -83,7 +78,7 @@ export async function getFeedTenantId(
     const parsedFeedUrl = typeof feedUrl === "string"
         ? parseAzureArtifactsFeedUrl(feedUrl)
         : feedUrl;
-    return (await getVerifiedFeedTenant(parsedFeedUrl, protocolType)).tenantId;
+    return await getVerifiedFeedTenantId(parsedFeedUrl, protocolType);
 }
 
 export async function getFederatedWorkloadIdentityCredentialsForFeed(
@@ -91,14 +86,14 @@ export async function getFederatedWorkloadIdentityCredentialsForFeed(
     feedUrl: URL,
     protocolType: ProtocolType = ProtocolType.NuGet
 ): Promise<FederatedFeedCredentials | undefined> {
-    const verifiedFeed = await getVerifiedFeedTenant(feedUrl, protocolType);
-    if (!verifiedFeed.tenantId) {
+    const tenantId = await getVerifiedFeedTenantId(feedUrl, protocolType);
+    if (!tenantId) {
         throw new Error(tl.loc("Error_FeedTenantUnavailable"));
     }
 
     const accessToken = await getFederatedWorkloadIdentityCredentials(
         serviceConnectionName,
-        verifiedFeed.tenantId
+        tenantId
     );
     if (!accessToken) {
         return undefined;
@@ -106,22 +101,20 @@ export async function getFederatedWorkloadIdentityCredentialsForFeed(
 
     return {
         accessToken,
-        feedUrl: verifiedFeed.feedUrl
+        feedUrl
     };
 }
 
-async function getVerifiedFeedTenant(
+async function getVerifiedFeedTenantId(
     feedUrl: URL,
     protocolType: ProtocolType
-): Promise<VerifiedFeedTenant> {
+): Promise<string | undefined> {
     const verifiedFeedUrl = await verifyAzureArtifactsFeedUrl(feedUrl, protocolType);
     const tenantDiscoveryUrl = getTenantDiscoveryUrl(
         verifiedFeedUrl,
         protocolType
     );
-    const tenantId = await getResourceTenantId(tenantDiscoveryUrl);
-
-    return { feedUrl: verifiedFeedUrl, tenantId };
+    return await getResourceTenantId(tenantDiscoveryUrl);
 }
 
 function getTenantDiscoveryUrl(feedUrl: URL, protocolType: ProtocolType): URL {
