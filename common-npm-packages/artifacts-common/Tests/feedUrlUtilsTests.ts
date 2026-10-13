@@ -134,6 +134,109 @@ export function feedUrlUtilsTests() {
         );
     });
 
+    it("accepts a legacy feed with a modern authenticated mapping", async () => {
+        packagingUris = ["https://pkgs.dev.azure.com/source/"];
+        const feedUrlUtils = require("../feedUrlUtils");
+
+        const verifiedUrl = await feedUrlUtils.verifyAzureArtifactsFeedUrl(
+            new URL("https://target.pkgs.visualstudio.com/feed"),
+            ProtocolType.NuGet
+        );
+
+        assert.strictEqual(
+            verifiedUrl.href,
+            "https://target.pkgs.visualstudio.com/feed"
+        );
+    });
+
+    it("accepts a modern feed with a legacy authenticated mapping", async () => {
+        packagingUris = ["https://source.pkgs.visualstudio.com/"];
+        const feedUrlUtils = require("../feedUrlUtils");
+
+        const verifiedUrl = await feedUrlUtils.verifyAzureArtifactsFeedUrl(
+            new URL("https://pkgs.dev.azure.com/target/feed"),
+            ProtocolType.NuGet
+        );
+
+        assert.strictEqual(
+            verifiedUrl.href,
+            "https://pkgs.dev.azure.com/target/feed"
+        );
+    });
+
+    it("accepts a dev.azure.com URL with a Packaging mapping", async () => {
+        packagingUris = ["https://pkgs.dev.azure.com/source/"];
+        const feedUrlUtils = require("../feedUrlUtils");
+
+        const verifiedUrl = await feedUrlUtils.verifyAzureArtifactsFeedUrl(
+            new URL("https://dev.azure.com/target/"),
+            ProtocolType.Universal
+        );
+
+        assert.strictEqual(
+            verifiedUrl.href,
+            "https://dev.azure.com/target/"
+        );
+    });
+
+    it("accepts a Packaging URL with a dev.azure.com mapping", async () => {
+        packagingUris = ["https://dev.azure.com/source/"];
+        const feedUrlUtils = require("../feedUrlUtils");
+
+        const verifiedUrl = await feedUrlUtils.verifyAzureArtifactsFeedUrl(
+            new URL("https://pkgs.dev.azure.com/target/"),
+            ProtocolType.Universal
+        );
+
+        assert.strictEqual(
+            verifiedUrl.href,
+            "https://pkgs.dev.azure.com/target/"
+        );
+    });
+
+    it("accepts a cross-organization CodeDev feed", async () => {
+        packagingUris = ["https://source.codedev.ms/"];
+        const feedUrlUtils = require("../feedUrlUtils");
+
+        const verifiedUrl = await feedUrlUtils.verifyAzureArtifactsFeedUrl(
+            new URL("https://target.codedev.ms/feed"),
+            ProtocolType.NuGet
+        );
+
+        assert.strictEqual(
+            verifiedUrl.href,
+            "https://target.codedev.ms/feed"
+        );
+    });
+
+    it("accepts equivalent DevFabric Packaging hosts", async () => {
+        packagingUris = ["https://source.vsts.me/"];
+        const feedUrlUtils = require("../feedUrlUtils");
+
+        const verifiedUrl = await feedUrlUtils.verifyAzureArtifactsFeedUrl(
+            new URL("https://pkgs.devppe.azure.com/target/feed"),
+            ProtocolType.NuGet
+        );
+
+        assert.strictEqual(
+            verifiedUrl.href,
+            "https://pkgs.devppe.azure.com/target/feed"
+        );
+    });
+
+    it("does not authorize a DevFabric feed from a production mapping", async () => {
+        packagingUris = ["https://pkgs.dev.azure.com/source/"];
+        const feedUrlUtils = require("../feedUrlUtils");
+
+        await assert.rejects(
+            () => feedUrlUtils.verifyAzureArtifactsFeedUrl(
+                new URL("https://target.codedev.ms/feed"),
+                ProtocolType.NuGet
+            ),
+            /Error_FeedUrlUntrustedHost/
+        );
+    });
+
     it("rejects HTTP before authenticated discovery", async () => {
         const feedUrlUtils = require("../feedUrlUtils");
 

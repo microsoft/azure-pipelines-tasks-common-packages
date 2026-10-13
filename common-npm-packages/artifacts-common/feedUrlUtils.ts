@@ -67,7 +67,31 @@ function isUrlOnSameHost(candidate: URL, trustedUrl: URL): boolean {
         return true;
     }
 
-    return isVisualStudioHost(candidate) && isVisualStudioHost(trustedUrl);
+    return (
+        isProductionAzureArtifactsHost(candidate) &&
+        isProductionAzureArtifactsHost(trustedUrl)
+    ) || (
+        isDevFabricAzureArtifactsHost(candidate) &&
+        isDevFabricAzureArtifactsHost(trustedUrl)
+    );
+}
+
+function isProductionAzureArtifactsHost(url: URL): boolean {
+    const hostname = url.hostname.toLowerCase();
+    return hostname === "dev.azure.com" ||
+        hostname === "pkgs.dev.azure.com" ||
+        isVisualStudioHost(url);
+}
+
+function isDevFabricAzureArtifactsHost(url: URL): boolean {
+    const hostname = url.hostname.toLowerCase();
+    return isHostOrSubdomain(hostname, "codedev.ms") ||
+        isHostOrSubdomain(hostname, "vsts.me") ||
+        isHostOrSubdomain(hostname, "devppe.azure.com");
+}
+
+function isHostOrSubdomain(hostname: string, domain: string): boolean {
+    return hostname === domain || hostname.endsWith(`.${domain}`);
 }
 
 function isVisualStudioHost(url: URL): boolean {
