@@ -7,16 +7,14 @@ import * as sinon from 'sinon';
 
 import { applyXdtTransformation } from "../xdttransformationutility";
 import { detectFileEncoding } from "../fileencoding";
-import { WebDeploymentCompatibilityFixEnabled } from "../featureFlags";
 
+const WebDeploymentCompatibilityFixEnabled = "WebDeploymentCompatibilityFixEnabled";
 
 export function runL1XdtTransformTests(this: Mocha.Suite) {
-    [undefined, 'true'].forEach(featureValue => {
-        describe(featureValue === undefined ? 'Hardened XDT enabled by default' : 'Hardened XDT explicitly enabled', function() {
-            runXdtTransformTests.call(this, featureValue);
-        });
+    describe('Hardened XDT explicitly enabled', function() {
+        runXdtTransformTests.call(this);
     });
-    describe('Hardened XDT explicitly disabled', runDisabledXdtTransformTests);
+    describe('Hardened XDT disabled', runDisabledXdtTransformTests);
 }
 
 function runDisabledXdtTransformTests(this: Mocha.Suite) {
@@ -52,9 +50,15 @@ function runDisabledXdtTransformTests(this: Mocha.Suite) {
         }
     });
 
-    ['false', 'FALSE'].forEach(value => {
-        it('Rejects ' + value + ' without reading files or executing XDT, even with the removed unsafe opt-out', () => {
-            process.env[flagEnvironmentVariable] = value;
+    [undefined, 'false', 'invalid'].forEach(value => {
+        it('Rejects ' + (value === undefined ? 'an absent feature' : value) +
+            ' without reading files or executing XDT, even with the removed unsafe opt-out', () => {
+            if (value === undefined) {
+                delete process.env[flagEnvironmentVariable];
+            }
+            else {
+                process.env[flagEnvironmentVariable] = value;
+            }
             process.env['AZP_ALLOW_UNSAFE_XDT_TRANSFORMS'] = 'true';
             const sourceFile = getFixture('Web.config');
             const originalSource = fs.readFileSync(sourceFile);
@@ -66,7 +70,7 @@ function runDisabledXdtTransformTests(this: Mocha.Suite) {
             [getFixture('Web.Debug.config'), unsafeTransformFile,
                 getFixture('Missing.Transform.config')].forEach(transformFile => {
                 assert.throws(() => applyXdtTransformation(sourceFile, transformFile),
-                    /DistributedTask.Tasks.WebDeploymentCompatibilityFixEnabled is false.*No unhardened transformation was run/i);
+                    /DistributedTask.Tasks.WebDeploymentCompatibilityFixEnabled is not enabled.*No unhardened transformation was run/i);
             });
             assert.strictEqual(read.callCount, 0, 'Disabled transformations must not read source or transform bytes');
             assert.strictEqual(open.callCount, 0, 'Disabled transformations must not open files');
@@ -83,7 +87,7 @@ function runDisabledXdtTransformTests(this: Mocha.Suite) {
     }
 }
 
-function runXdtTransformTests(this: Mocha.Suite, featureValue?: string) {
+function runXdtTransformTests(this: Mocha.Suite) {
     this.timeout(parseInt(process.env.TASK_TEST_TIMEOUT) || 20000);
     const temporaryTransformFiles: string[] = [];
     const flagEnvironmentVariable = 'DISTRIBUTEDTASK_TASKS_WEBDEPLOYMENTCOMPATIBILITYFIXENABLED';
@@ -93,12 +97,7 @@ function runXdtTransformTests(this: Mocha.Suite, featureValue?: string) {
 
     beforeEach(done => {
         previousFlagValue = process.env[flagEnvironmentVariable];
-        if (featureValue === undefined) {
-            delete process.env[flagEnvironmentVariable];
-        }
-        else {
-            process.env[flagEnvironmentVariable] = featureValue;
-        }
+        process.env[flagEnvironmentVariable] = 'true';
         tl.cp(getAbsolutePath('Web.config'), getAbsolutePath('Web_test.config'), '-f', false);
  
         done();
@@ -535,7 +534,7 @@ function runXdtTransformTests(this: Mocha.Suite, featureValue?: string) {
         done();
     });
 
-    it('Rejects invalid feature-flag values before reading or executing the transform', function() {
+    it('Treats invalid feature-flag values as disabled before reading or executing the transform', function() {
         const transformFile = writeTemporaryTransformFile('Web.DefaultCompatibility.config',
             '<?xml version="1.0" encoding="iso-ir-100"?>' +
             '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform" />');
@@ -547,7 +546,7 @@ function runXdtTransformTests(this: Mocha.Suite, featureValue?: string) {
             ['not-true', '1', ' true ', 'true\r\n', 'false\n'].forEach(value => {
                 process.env[flagEnvironmentVariable] = value;
                 assert.throws(() => applyXdtTransformation(getAbsolutePath('Web_test.config'), transformFile),
-                    /value must be 'true' or 'false'/i);
+                    /pipeline feature .* is not enabled/i);
             });
             assert.strictEqual(read.callCount, 0);
             assert.strictEqual(execute.callCount, 0);
@@ -557,14 +556,12 @@ function runXdtTransformTests(this: Mocha.Suite, featureValue?: string) {
         }
     });
 
-    it('Retains encoding hardening for empty and case-insensitive enabled flag values', function() {
+    it('Retains encoding hardening for a case-insensitive true feature value', function() {
         const transformFile = writeTemporaryTransformFile('Web.EnabledSecurityFlag.config',
             '<?xml version="1.0" encoding="utf-7"?>' +
             '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform" />');
-        ['', 'TRUE'].forEach(value => {
-            process.env[flagEnvironmentVariable] = value;
-            assert.throws(() => applyXdtTransformation(getAbsolutePath('Web_test.config'), transformFile), /utf-7/i);
-        });
+        process.env[flagEnvironmentVariable] = 'TRUE';
+        assert.throws(() => applyXdtTransformation(getAbsolutePath('Web_test.config'), transformFile), /utf-7/i);
     });
 
     it('Reads the compatibility flag on each transformation rather than at module load', function() {
@@ -582,18 +579,16 @@ function runXdtTransformTests(this: Mocha.Suite, featureValue?: string) {
         process.env[flagEnvironmentVariable] = 'false';
         assert.throws(() => applyXdtTransformation(sourceFile, transformFile),
             /No unhardened transformation was run/i);
-        [undefined, '', 'TRUE'].forEach(value => {
-            if (value === undefined) {
-                delete process.env[flagEnvironmentVariable];
-            }
-            else {
-                process.env[flagEnvironmentVariable] = value;
-            }
+        ['true', 'TRUE'].forEach(value => {
+            process.env[flagEnvironmentVariable] = value;
             fs.writeFileSync(sourceFile,
                 '<configuration><appSettings><add key="Setting1" value="Original" /></appSettings></configuration>');
             applyXdtTransformation(sourceFile, transformFile);
             assert(fs.readFileSync(sourceFile, 'utf8').indexOf('RuntimeFlag') !== -1);
         });
+        delete process.env[flagEnvironmentVariable];
+        assert.throws(() => applyXdtTransformation(sourceFile, transformFile),
+            /No unhardened transformation was run/i);
         process.env[flagEnvironmentVariable] = 'false';
         assert.throws(() => applyXdtTransformation(sourceFile, transformFile),
             /No unhardened transformation was run/i);

@@ -3,7 +3,6 @@ import fs = require('fs');
 import path = require('path');
 import { spawnSync } from 'child_process';
 import { Package } from './packageUtility';
-import { isWebDeploymentCompatibilityFixEnabled } from './featureFlags';
 import * as winreg from 'winreg';
 import * as semver from 'semver';
 
@@ -62,7 +61,8 @@ export function getMSDeployCmdArgs(webAppPackage: string, webAppName: string, pr
 
     const secureInvocationEnabled = tl.getPipelineFeature('SecureMSDeployCommandExecution');
     // Depends on SecureMSDeployCommandExecution; see the README rollout matrix.
-    const compatibilityFixEnabled = secureInvocationEnabled && isWebDeploymentCompatibilityFixEnabled();
+    const compatibilityFixEnabled = secureInvocationEnabled &&
+        tl.getPipelineFeature('WebDeploymentCompatibilityFixEnabled');
     if (secureInvocationEnabled) {
         validateNoUnsafeCharacters(webAppPackage, 'package path', compatibilityFixEnabled);
         validateNoUnsafeCharacters(webAppName, 'web app name', compatibilityFixEnabled);
