@@ -2,7 +2,7 @@
 
 ## Hardened XDT and compatibility rollout flag
 
-Version 4.281.5 gates the original XDT security hardening from PR #665 and the
+Version 4.282.0 gates the original XDT security hardening from PR #665 and the
 compatibility fixes below in the common package using
 `DistributedTask.Tasks.WebDeploymentCompatibilityFixEnabled`. The package uses
 `tl.getPipelineFeature` directly, matching other task feature rollouts. The
@@ -23,7 +23,7 @@ on each operation, not cached when the module loads.
 Consuming tasks must adopt the published common-package version containing this
 flag; they do not need duplicate gating logic or new task inputs. A dependency
 range alone does not update a task's locked, bundled package. The prepared
-4.281.5 version is not yet published, and task dependencies remain on 4.281.3.
+4.282.0 version is not yet published, and task dependencies remain on 4.281.3.
 
 To explicitly enable the behavior, supply non-secret pipeline variables:
 
@@ -55,7 +55,7 @@ pipelines that request XDT fail closed.
 
 ## XML transformation compatibility
 
-With the compatibility flag enabled, version 4.281.5 restores support for the
+With the compatibility flag enabled, version 4.282.0 restores support for the
 Latin-1 encoding aliases `iso-ir-100`,
 `csISOLatin1`, `cp819`, and `ibm819` in XDT transform declarations. Encoding names
 are matched case-insensitively.
