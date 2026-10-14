@@ -96,13 +96,30 @@ export function entraWifUserServiceConnectionUtilsTests() {
             }
         });
         mocker.registerMock("azure-devops-node-api", {
-            getBearerHandler: (token: string) => {
+            getBearerHandler: (
+                token: string,
+                allowCrossOriginAuthentication: boolean
+            ) => {
                 if (trackOidcCalls) {
-                    calls.push(`bearer:${token}`);
+                    calls.push(
+                        `bearer:${token}:${allowCrossOriginAuthentication}`
+                    );
                 }
                 return {};
             },
             WebApi: class {
+                constructor(
+                    _serviceUrl: string,
+                    _handler: unknown,
+                    options: { maxRedirects?: number }
+                ) {
+                    if (trackOidcCalls) {
+                        calls.push(
+                            `web-api:${options.maxRedirects ?? "default"}`
+                        );
+                    }
+                }
+
                 public async getTaskApi() {
                     if (trackOidcCalls) {
                         calls.push("task-api");
@@ -195,7 +212,8 @@ export function entraWifUserServiceConnectionUtilsTests() {
         assert.strictEqual(token, "access-token");
         assert.deepStrictEqual(calls, [
             "system-token",
-            "bearer:system-token",
+            "bearer:system-token:false",
+            "web-api:default",
             "task-api",
             "create-oidc:project-id:build:plan-id:job-id:service-connection",
             "fetch:https://login.windows.net/service-connection-tenant/oauth2/v2.0/token"

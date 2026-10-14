@@ -22,7 +22,7 @@ export function requireHttpsUrl(value: string | URL): URL {
 
 export function getWebApiWithProxy(serviceUri: string, accessToken: string, options: IRequestOptions = {}): api.WebApi {
     serviceUri = requireHttpsUrl(serviceUri).href;
-    const credentialHandler = api.getBasicHandler('vsts', accessToken);
+    const credentialHandler = api.getBasicHandler('vsts', accessToken, false);
     const defaultOptions: IRequestOptions = {
         proxy: tl.getHttpProxyConfiguration(serviceUri),
         allowRetries: true,

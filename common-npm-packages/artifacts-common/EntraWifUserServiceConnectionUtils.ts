@@ -158,8 +158,8 @@ async function getOidcToken(serviceConnectionName: string): Promise<string> {
     }
     const webApi = new api.WebApi(
         systemServiceUrl,
-        api.getBearerHandler(systemAccessToken),
-        { keepAlive: true, maxRedirects: 0 }
+        api.getBearerHandler(systemAccessToken, false),
+        { keepAlive: true }
     );
     const taskApi = await webApi.getTaskApi();
     const response = await taskApi.createOidcToken(

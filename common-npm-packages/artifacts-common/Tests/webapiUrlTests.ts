@@ -2,6 +2,9 @@ import * as assert from "assert";
 import * as mocker from "azure-pipelines-task-lib/lib-mocker";
 
 export function webapiUrlTests() {
+    let basicHandlerArgs: unknown[];
+    let webApiArgs: unknown[];
+
     before(() => {
         mocker.disable();
         mocker.enable({
@@ -15,11 +18,24 @@ export function webapiUrlTests() {
     });
 
     beforeEach(() => {
+        basicHandlerArgs = [];
+        webApiArgs = [];
         mocker.resetCache();
         mocker.registerAllowable("path");
         mocker.registerAllowable("../webapi");
-        mocker.registerAllowable("azure-devops-node-api");
+        mocker.registerMock("azure-devops-node-api", {
+            getBasicHandler: (...args: unknown[]) => {
+                basicHandlerArgs = args;
+                return {};
+            },
+            WebApi: class {
+                constructor(...args: unknown[]) {
+                    webApiArgs = args;
+                }
+            }
+        });
         mocker.registerMock("azure-pipelines-task-lib/task", {
+            getHttpProxyConfiguration: () => undefined,
             loc: (key: string) => key,
             setResourcePath: () => {}
         });
@@ -78,6 +94,26 @@ export function webapiUrlTests() {
             ),
             /Error_UrlHttpsRequired/
         );
+    });
+
+    it("allows redirects without forwarding credentials across origins", () => {
+        const utils = require("../webapi");
+
+        utils.getWebApiWithProxy(
+            "https://devops.example.test/organization/",
+            "system-token"
+        );
+
+        assert.deepStrictEqual(
+            basicHandlerArgs,
+            ["vsts", "system-token", false]
+        );
+        const options = webApiArgs[2] as {
+            allowRedirects?: boolean;
+            maxRedirects?: number;
+        };
+        assert.strictEqual(options.allowRedirects, undefined);
+        assert.strictEqual(options.maxRedirects, undefined);
     });
 
 }

@@ -27,11 +27,7 @@ export async function getConnectionDataForProtocol(
         );
 
         // Get _apis/connectionData from the packaging service
-        const webApi = api.getWebApiWithProxy(
-            serviceUri,
-            accessToken,
-            { maxRedirects: 0 }
-        );
+        const webApi = api.getWebApiWithProxy(serviceUri, accessToken);
         const locationApi = await webApi.getLocationsApi();
         tl.debug(`Acquiring connection data for: ${serviceUri}`);
         const connectionData = await locationApi.getConnectionData(ConnectOptions.IncludeServices);
@@ -66,11 +62,7 @@ export async function getPackagingRouteUrl(
             accessToken
         );
 
-        const webApi = api.getWebApiWithProxy(
-            serviceUri,
-            accessToken,
-            { maxRedirects: 0 }
-        );
+        const webApi = api.getWebApiWithProxy(serviceUri, accessToken);
         const data = await webApi.vsoClient.getVersioningData(apiVersion, protocols.ProtocolType[protocolType], locationGuid, { feedId: feedId, project: project });
 
         tl.debug('Resolved Route: ' + data.requestUrl);
@@ -91,8 +83,7 @@ async function getServiceUriFromAreaId(
 
     const webApi = api.getWebApiWithProxy(
         api.requireHttpsUrl(rootServiceUrl).href,
-        accessToken,
-        { maxRedirects: 0 }
+        accessToken
     );
     const locationApi = await webApi.getLocationsApi();
 
