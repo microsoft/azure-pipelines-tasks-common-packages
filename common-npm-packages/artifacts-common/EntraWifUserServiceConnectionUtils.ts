@@ -1,7 +1,7 @@
 import path = require("path");
 import * as tl from 'azure-pipelines-task-lib/task';
 import * as api from "azure-devops-node-api";
-import { getSystemAccessToken } from "./webapi";
+import { getSystemAccessToken, requireHttpsUrl } from "./webapi";
 import fetch from "node-fetch";
 import { retryOnException } from "./retryUtils";
 import { verifyAzureArtifactsFeedUrl } from "./feedUrlUtils";
@@ -149,7 +149,9 @@ async function getResourceTenantId(serviceUrl: URL): Promise<string | undefined>
 
 async function getOidcToken(serviceConnectionName: string): Promise<string> {
     const systemServiceUrl =
-        tl.getEndpointUrlRequired("SYSTEMVSSCONNECTION");
+        requireHttpsUrl(
+            tl.getEndpointUrlRequired("SYSTEMVSSCONNECTION")
+        ).href;
     const systemAccessToken = getSystemAccessToken();
     const webApi = new api.WebApi(
         systemServiceUrl,

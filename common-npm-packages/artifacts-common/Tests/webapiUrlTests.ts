@@ -40,14 +40,23 @@ export function webapiUrlTests() {
         );
     });
 
-    it("accepts an HTTPS URL with embedded credentials", () => {
+    it("accepts an HTTPS URL with an embedded username", () => {
         const utils = require("../webapi");
 
-        assert.strictEqual(
-            utils.requireHttpsUrl(
+        assert.doesNotThrow(
+            () => utils.requireHttpsUrl(
                 "https://user@example.test/organization/"
-            ).href,
-            "https://user@example.test/organization/"
+            )
+        );
+    });
+
+    it("accepts an HTTPS URL with an embedded password", () => {
+        const utils = require("../webapi");
+
+        assert.doesNotThrow(
+            () => utils.requireHttpsUrl(
+                "https://user:password@example.test/organization/"
+            )
         );
     });
 

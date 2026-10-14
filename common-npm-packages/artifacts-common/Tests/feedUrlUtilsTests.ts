@@ -105,18 +105,20 @@ export function feedUrlUtilsTests() {
         );
     });
 
-    it("accepts embedded credentials on an authenticated Azure Artifacts host", async () => {
+    it("rejects embedded credentials on an authenticated Azure Artifacts host", async () => {
         const feedUrlUtils = require("../feedUrlUtils");
 
-        const verifiedUrl = await feedUrlUtils.verifyAzureArtifactsFeedUrl(
+        await assert.rejects(async () => {
+            const verifiedUrl = await feedUrlUtils.verifyAzureArtifactsFeedUrl(
             new URL("https://username:password@pkgs.example.test/organization/feed"),
             ProtocolType.NuGet
         );
 
-        assert.strictEqual(
-            verifiedUrl.href,
+            assert.strictEqual(
+                verifiedUrl.href,
             "https://username:password@pkgs.example.test/organization/feed"
-        );
+            );
+        }, /Error_UrlCredentialsNotAllowed/);
     });
 
     it("accepts another Azure DevOps-owned visualstudio.com packaging host", async () => {

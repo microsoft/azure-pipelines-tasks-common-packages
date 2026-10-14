@@ -16,6 +16,10 @@ export async function verifyAzureArtifactsFeedUrl(
     protocolType: ProtocolType = ProtocolType.NuGet
 ): Promise<URL> {
     const candidate = requireHttpsUrl(feedUrl);
+    if (candidate.username || candidate.password) {
+        throw new Error(tl.loc("Error_UrlCredentialsNotAllowed"));
+    }
+
     const connectionData = await getConnectionDataForProtocol(protocolType);
     if (!connectionData?.locationServiceData) {
         throw new Error(tl.loc("Error_FeedUrlUntrustedHost"));

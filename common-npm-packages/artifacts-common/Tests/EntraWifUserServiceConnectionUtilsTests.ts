@@ -10,6 +10,7 @@ export function entraWifUserServiceConnectionUtilsTests() {
     let tenantRedirectLocation: string | undefined;
     let headRedirectMode: string | undefined;
     let serverType: string | undefined;
+    let systemServiceUrl: string;
 
     before(() => {
         mocker.disable();
@@ -31,6 +32,7 @@ export function entraWifUserServiceConnectionUtilsTests() {
         tenantRedirectLocation = undefined;
         headRedirectMode = undefined;
         serverType = "Hosted";
+        systemServiceUrl = "https://devops.example.test/organization/";
         process.env.SYSTEM_COLLECTIONURI = "https://devops.example.test/organization/";
 
         mocker.resetCache();
@@ -43,7 +45,7 @@ export function entraWifUserServiceConnectionUtilsTests() {
         mocker.registerMock("azure-pipelines-task-lib/task", {
             debug: () => {},
             getEndpointUrlRequired: () =>
-                "https://devops.example.test/organization/",
+                systemServiceUrl,
             getEndpointAuthorizationParameterRequired: (_name: string, parameter: string) =>
                 parameter === "ServicePrincipalId" ? "client-id" : "service-connection-tenant",
             getVariable: (name: string) => {
@@ -82,6 +84,13 @@ export function entraWifUserServiceConnectionUtilsTests() {
                     calls.push("system-token");
                 }
                 return "system-token";
+            },
+            requireHttpsUrl: (value: string) => {
+                const url = new URL(value);
+                if (url.protocol !== "https:") {
+                    throw new Error("Error_UrlHttpsRequired");
+                }
+                return url;
             }
         });
         mocker.registerMock("azure-devops-node-api", {
@@ -189,6 +198,21 @@ export function entraWifUserServiceConnectionUtilsTests() {
             "create-oidc:project-id:build:plan-id:job-id:service-connection",
             "fetch:https://login.windows.net/service-connection-tenant/oauth2/v2.0/token"
         ]);
+    });
+
+    it("rejects an HTTP system endpoint before obtaining the system token", async () => {
+        systemServiceUrl = "http://devops.example.test/organization/";
+        trackOidcCalls = true;
+        const utils = require("../EntraWifUserServiceConnectionUtils");
+
+        await assert.rejects(
+            () => utils.getFederatedWorkloadIdentityCredentials(
+                "service-connection"
+            ),
+            /Error_UrlHttpsRequired/
+        );
+
+        assert.deepStrictEqual(calls, []);
     });
 
     it("accepts legacy string feed URLs and defaults to NuGet", async () => {
