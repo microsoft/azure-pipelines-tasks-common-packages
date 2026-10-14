@@ -5,8 +5,24 @@ import * as tl from 'azure-pipelines-task-lib/task';
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
+export function requireHttpsUrl(value: string | URL): URL {
+    let url: URL;
+    try {
+        url = typeof value === "string" ? new URL(value) : value;
+    } catch {
+        throw new Error(tl.loc("Error_UrlInvalid"));
+    }
+
+    if (url.protocol.toLowerCase() !== "https:") {
+        throw new Error(tl.loc("Error_UrlHttpsRequired"));
+    }
+
+    return url;
+}
+
 export function getWebApiWithProxy(serviceUri: string, accessToken: string, options: IRequestOptions = {}): api.WebApi {
-    const credentialHandler = api.getBasicHandler('vsts', accessToken);
+    serviceUri = requireHttpsUrl(serviceUri).href;
+    const credentialHandler = api.getBasicHandler('vsts', accessToken, false);
     const defaultOptions: IRequestOptions = {
         proxy: tl.getHttpProxyConfiguration(serviceUri),
         allowRetries: true,
@@ -29,4 +45,3 @@ export function getSystemAccessToken(): string {
         tl.warning('Could not determine credentials to use');
     }
 }
-

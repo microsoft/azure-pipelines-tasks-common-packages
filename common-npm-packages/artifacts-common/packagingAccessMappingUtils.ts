@@ -1,4 +1,5 @@
 import { AccessMapping, LocationServiceData } from "azure-devops-node-api/interfaces/LocationsInterfaces";
+import { requireHttpsUrl } from "./webapi";
 
 /**
  * Represents information about an URI used to access a service (e.g. https://pkgs.dev.azure.com/contoso/)
@@ -44,6 +45,15 @@ export function getPackagingAccessMappings(locationServiceData: LocationServiceD
             isPublic: isDefaultAccessMapping || isCommonAccessMapping,
             isDefault: isDefaultAccessMapping
         }
+    });
+}
+
+export function getHttpsPackagingAccessMappings(
+    locationServiceData: LocationServiceData
+): PackagingAccessMapping[] {
+    return getPackagingAccessMappings(locationServiceData).map(mapping => {
+        requireHttpsUrl(mapping.uri);
+        return mapping;
     });
 }
 
