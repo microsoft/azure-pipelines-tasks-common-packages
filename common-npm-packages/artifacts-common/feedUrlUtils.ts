@@ -13,7 +13,7 @@ tl.setResourcePath(path.join(__dirname, "module.json"), true);
  */
 export async function verifyAzureArtifactsFeedUrl(
     feedUrl: string | URL,
-    protocolType: ProtocolType = ProtocolType.NuGet
+    protocolType: ProtocolType
 ): Promise<URL> {
     const candidate = requireHttpsUrl(feedUrl);
     if (candidate.username || candidate.password) {

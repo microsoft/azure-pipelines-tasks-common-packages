@@ -11,6 +11,7 @@ export function entraWifUserServiceConnectionUtilsTests() {
     let headRedirectMode: string | undefined;
     let serverType: string | undefined;
     let systemServiceUrl: string;
+    let systemAccessToken: string | undefined;
 
     before(() => {
         mocker.disable();
@@ -33,6 +34,7 @@ export function entraWifUserServiceConnectionUtilsTests() {
         headRedirectMode = undefined;
         serverType = "Hosted";
         systemServiceUrl = "https://devops.example.test/organization/";
+        systemAccessToken = "system-token";
         process.env.SYSTEM_COLLECTIONURI = "https://devops.example.test/organization/";
 
         mocker.resetCache();
@@ -83,7 +85,7 @@ export function entraWifUserServiceConnectionUtilsTests() {
                 if (trackOidcCalls) {
                     calls.push("system-token");
                 }
-                return "system-token";
+                return systemAccessToken;
             },
             requireHttpsUrl: (value: string) => {
                 const url = new URL(value);
@@ -213,6 +215,21 @@ export function entraWifUserServiceConnectionUtilsTests() {
         );
 
         assert.deepStrictEqual(calls, []);
+    });
+
+    it("rejects a missing system access token before constructing the client", async () => {
+        systemAccessToken = undefined;
+        trackOidcCalls = true;
+        const utils = require("../EntraWifUserServiceConnectionUtils");
+
+        await assert.rejects(
+            () => utils.getFederatedWorkloadIdentityCredentials(
+                "service-connection"
+            ),
+            /Error_SystemAccessTokenUnavailable/
+        );
+
+        assert.deepStrictEqual(calls, ["system-token"]);
     });
 
     it("accepts legacy string feed URLs and defaults to NuGet", async () => {

@@ -17,6 +17,7 @@
         "Error_FederatedTokenAquisitionFailed": "Failed to aquire federated token.",
         "Error_FeedUrlUntrustedHost": "The feed URL is not within an authenticated Azure Artifacts access mapping.",
         "Error_FeedTenantUnavailable": "The Azure Artifacts endpoint did not return its Azure DevOps resource tenant.",
+        "Error_SystemAccessTokenUnavailable": "The system access token is unavailable.",
         "Error_UrlHttpsRequired": "The URL must use HTTPS.",
         "Error_UrlCredentialsNotAllowed": "The URL must not contain embedded credentials.",
         "Error_UrlInvalid": "The URL is invalid.",

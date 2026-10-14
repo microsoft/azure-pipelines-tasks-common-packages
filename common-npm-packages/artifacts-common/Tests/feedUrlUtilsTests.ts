@@ -66,16 +66,7 @@ export function feedUrlUtilsTests() {
             "https://pkgs.example.test/organization/_packaging/feed/pypi/simple"
         );
         assert.strictEqual(connectionDataCalls, 1);
-    });
-
-    it("defaults omitted protocols to NuGet discovery", async () => {
-        const feedUrlUtils = require("../feedUrlUtils");
-
-        await feedUrlUtils.verifyAzureArtifactsFeedUrl(
-            new URL("https://pkgs.example.test/organization/feed")
-        );
-
-        assert.strictEqual(connectionDataProtocol, ProtocolType.NuGet);
+        assert.strictEqual(connectionDataProtocol, ProtocolType.PyPi);
     });
 
     it("rejects a feed on an origin not returned by authenticated discovery", async () => {

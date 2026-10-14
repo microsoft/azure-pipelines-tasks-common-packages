@@ -79,7 +79,7 @@ export async function getFeedTenantId(
 export async function getFederatedWorkloadIdentityCredentialsForFeed(
     serviceConnectionName: string,
     feedUrl: string | URL,
-    protocolType: ProtocolType = ProtocolType.NuGet
+    protocolType: ProtocolType
 ): Promise<FederatedFeedCredentials | undefined> {
     const verifiedFeedUrl = await verifyAzureArtifactsFeedUrl(feedUrl, protocolType);
     const tenantId = await getTenantIdForVerifiedFeed(verifiedFeedUrl, protocolType);
@@ -153,6 +153,9 @@ async function getOidcToken(serviceConnectionName: string): Promise<string> {
             tl.getEndpointUrlRequired("SYSTEMVSSCONNECTION")
         ).href;
     const systemAccessToken = getSystemAccessToken();
+    if (!systemAccessToken) {
+        throw new Error(tl.loc("Error_SystemAccessTokenUnavailable"));
+    }
     const webApi = new api.WebApi(
         systemServiceUrl,
         api.getBearerHandler(systemAccessToken),
