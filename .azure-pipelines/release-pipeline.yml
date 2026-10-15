@@ -101,8 +101,8 @@ extends:
               echo "ERROR: npm pack produced no .tgz files."
               exit 1
             fi
-            if [ "$expected_count" -ne 15 ]; then
-              echo "ERROR: Expected 15 publishable packages, found $expected_count."
+            if [ "$expected_count" -ne 16 ]; then
+              echo "ERROR: Expected 16 publishable packages, found $expected_count."
               exit 1
             fi
             if [ "$actual_count" -ne "$expected_count" ]; then

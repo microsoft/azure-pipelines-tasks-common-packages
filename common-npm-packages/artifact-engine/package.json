@@ -1,0 +1,54 @@
+{
+  "name": "artifact-engine",
+  "version": "2.278.0",
+  "description": "Artifact Engine to download artifacts from jenkins, teamcity, vsts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/microsoft/azure-pipelines-tasks-common-packages.git",
+    "directory": "common-npm-packages/artifact-engine"
+  },
+  "keywords": [
+    "artifact"
+  ],
+  "license": "MIT",
+  "main": "Engine/index.js",
+  "author": {
+    "name": "omeshp",
+    "email": "omeshp@microsoft.com"
+  },
+  "dependencies": {
+    "azure-pipelines-task-lib": "^5.278.0",
+    "handlebars": "4.7.9",
+    "typed-rest-client": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "assert": "1.4.1",
+    "nconf": "^0.12.0",
+    "nock": "^13.5.6",
+    "sinon": "^19.0.2",
+    "typescript": "^5.7.2"
+  },
+  "files": [
+    "Engine/**/*.js",
+    "Models/**/*.js",
+    "Store/**/*.js",
+    "Providers/**/*.js",
+    "Providers/*.handlebars",
+    "Engine/**/*.d.ts",
+    "Models/**/*.d.ts",
+    "Store/**/*.d.ts",
+    "Providers/**/*d.ts",
+    "LICENSE",
+    "README.md",
+    "ThirdPartyNotices.txt",
+    "lib.json",
+    "Strings/**"
+  ],
+  "scripts": {
+    "test": "mocha",
+    "test:coverage": "nyc mocha",
+    "build": "node make.js",
+    "build:ci": "node make.js"
+  }
+}
