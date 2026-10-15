@@ -4,7 +4,6 @@ import { ApplicationTokenCredentials } from "azure-pipelines-tasks-azure-arm-res
 import { AzureRMEndpoint } from "azure-pipelines-tasks-azure-arm-rest/azure-arm-endpoint";
 import * as webClient from "azure-pipelines-tasks-azure-arm-rest/webClient";
 import * as tl from "azure-pipelines-task-lib/task";
-import Q = require('q');
 import path = require('path');
 
 import AuthenticationTokenProvider from "./authenticationtokenprovider";
@@ -102,51 +101,51 @@ export default class ACRAuthenticationTokenProvider extends AuthenticationTokenP
         }
     }
 
-    private static _getACRToken(AADToken: string, endpointName: string, registryURL: string, retryCount: number, timeToWait: number): Q.Promise<string> {
+    private static _getACRToken(AADToken: string, endpointName: string, registryURL: string, retryCount: number, timeToWait: number): Promise<string> {
         tl.debug("Attempting to convert AAD Token to an ACR token");
-        let deferred = Q.defer<string>();
-        let tenantID = tl.getEndpointAuthorizationParameter(endpointName, 'tenantid', true);
-        let webRequest = new webClient.WebRequest();
-        webRequest.method = "POST";
-        const retryLimit = 5
-        webRequest.uri = `https://${registryURL}/oauth2/exchange`;
-        webRequest.body = (
-            `grant_type=access_token&service=${registryURL}&tenant=${tenantID}&access_token=${AADToken}`
-        );
-        webRequest.headers = {
-            "Content-Type": "application/x-www-form-urlencoded"
-        };
-        webClient.sendRequest(webRequest).then(
-            (response: webClient.WebResponse) => {
-                if (response.statusCode === 200) {
-                    deferred.resolve(response.body.refresh_token);
-                }
-                else if (response.statusCode == 429 || response.statusCode == 500) {
-                    if (retryCount < retryLimit) {
-                        if (response.statusCode == 429) {
-                            tl.debug("Too many requests were made to get ACR token. Retrying...");
-                        } else {
-                            tl.debug("Internal server error occurred. Retrying...")
+        return new Promise<string>((resolve, reject) => {
+            let tenantID = tl.getEndpointAuthorizationParameter(endpointName, 'tenantid', true);
+            let webRequest = new webClient.WebRequest();
+            webRequest.method = "POST";
+            const retryLimit = 5
+            webRequest.uri = `https://${registryURL}/oauth2/exchange`;
+            webRequest.body = (
+                `grant_type=access_token&service=${registryURL}&tenant=${tenantID}&access_token=${AADToken}`
+            );
+            webRequest.headers = {
+                "Content-Type": "application/x-www-form-urlencoded"
+            };
+            webClient.sendRequest(webRequest).then(
+                (response: webClient.WebResponse) => {
+                    if (response.statusCode === 200) {
+                        resolve(response.body.refresh_token);
+                    }
+                    else if (response.statusCode == 429 || response.statusCode == 500) {
+                        if (retryCount < retryLimit) {
+                            if (response.statusCode == 429) {
+                                tl.debug("Too many requests were made to get ACR token. Retrying...");
+                            } else {
+                                tl.debug("Internal server error occurred. Retrying...")
+                            }
+                            let waitedTime = 2000 + timeToWait * 2;
+                            retryCount += 1;
+                            setTimeout(() => {
+                                resolve(this._getACRToken(AADToken, endpointName, registryURL, retryCount, waitedTime));
+                            }, waitedTime);
                         }
-                        let waitedTime = 2000 + timeToWait * 2;
-                        retryCount += 1;
-                        setTimeout(() => {
-                            deferred.resolve(this._getACRToken(AADToken, endpointName, registryURL, retryCount, waitedTime));
-                        }, waitedTime);
+                        else {
+                            reject(tl.loc('CouldNotFetchAccessTokenforACRStatusCode', response.statusCode, response.statusMessage));
+                        }
                     }
                     else {
-                        deferred.reject(tl.loc('CouldNotFetchAccessTokenforACRStatusCode', response.statusCode, response.statusMessage));
+                        reject(tl.loc('CouldNotFetchAccessTokenforMSIDueToACRNotConfiguredProperlyStatusCode', response.statusCode, response.statusMessage));
                     }
+                },
+                (error) => {
+                    reject(error)
                 }
-                else {
-                    deferred.reject(tl.loc('CouldNotFetchAccessTokenforMSIDueToACRNotConfiguredProperlyStatusCode', response.statusCode, response.statusMessage));
-                }
-            },
-            (error) => {
-                deferred.reject(error)
-            }
-        );
-        return deferred.promise;
+            );
+        });
     }
 
     private async _getMSIAuthenticationToken(retryCount: number, timeToWait: number): Promise<RegistryAuthenticationToken> {
