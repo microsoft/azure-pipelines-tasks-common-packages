@@ -81,6 +81,41 @@ operation is rejected, so there is no unvalidated fallback.
 to the transform document; the separate Latin-1 compatibility check also reads
 the source encoding to prevent data corruption.
 
+## DOCTYPE blocking and rollback
+
+Version 4.282.1 adds this check.
+
+When XDT is enabled by `DistributedTask.Tasks.WebDeploymentCompatibilityFixEnabled`,
+transform files containing `<!DOCTYPE` (case-insensitive) are rejected by default.
+The check runs on the decoded transform before DOM parsing and semantic validation,
+including for UTF-16 LE files. All DOCTYPEs are blocked, including internal and
+external DTD subsets, because .NET applies DTD attribute defaults that the
+JavaScript validator does not see. The broad check also rejects this literal text
+inside comments or CDATA. Remove DOCTYPE declarations and DTD dependencies from
+transform files.
+
+The independent kill-switch
+`DistributedTask.Tasks.XdtDoctypeBlockDisabled` uses `tl.getPipelineFeature`:
+
+| Kill-switch value | DOCTYPE check |
+| --- | --- |
+| Unset / false / other | Active (default) |
+| true (case-insensitive) | Skipped for emergency rollback |
+
+The agent environment variable is
+`DISTRIBUTEDTASK_TASKS_XDTDOCTYPEBLOCKDISABLED`. The switch is read on each
+transformation. Setting it to `true` restores the previous DOCTYPE behavior and
+reintroduces the DTD validation gap; use it only temporarily while fixing affected
+transforms. It does not bypass encoding, import, custom-type, or compatibility
+validation, and does not enable XDT when the compatibility flag is disabled.
+
+The dedicated `TaskHub` / `XdtDoctypeBlock` telemetry feature (separate from
+`XdtTransformationSecurity`, so it can be queried on its own) records
+`{result: "blocked", reason: "doctype"}`,
+`{result: "passed", reason: "doctypeCheckPassed"}`, or
+`{result: "skipped", reason: "doctypeCheckDisabled"}`. Monitor blocks for rollout
+impact and skipped checks for kill-switch use.
+
 ## Secure MSDeploy compatibility
 
 When both flags are enabled, MSDeploy is started directly
