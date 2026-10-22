@@ -1,6 +1,7 @@
 import tl = require('azure-pipelines-task-lib/task');
 import path = require('path');
 import fs = require('fs');
+import { sanitizeForLoggingCommand } from './sanitize';
 
 var varUtility = require ('./variableutility.js');
 var fileEncoding = require('./fileencoding.js');
@@ -179,13 +180,13 @@ export function jsonVariableSubstitution(absolutePath, jsonSubFiles, substituteA
     let isSubstitutionApplied: boolean = false;
     let emptyFiles: string[] = [];
     for(let jsonSubFile of jsonSubFiles) {
-        console.log(tl.loc('JSONvariableSubstitution' , jsonSubFile));
+        console.log(tl.loc('JSONvariableSubstitution' , sanitizeForLoggingCommand(jsonSubFile)));
         var matchFiles = utility.findfiles(path.join(absolutePath, jsonSubFile));
         if(matchFiles.length === 0) {
             throw new Error(tl.loc('NOJSONfilematchedwithspecificpattern', jsonSubFile));
         }
         for(let file of matchFiles) {
-            console.log("Processing file: " + file);
+            console.log("Processing file: " + sanitizeForLoggingCommand(file));
             var fileBuffer: Buffer = fs.readFileSync(file);
             if (fileBuffer.length > 4){
             var fileEncodeType = fileEncoding.detectFileEncoding(file, fileBuffer);
@@ -200,7 +201,7 @@ export function jsonVariableSubstitution(absolutePath, jsonSubFiles, substituteA
             catch(exception) {
                 throw Error(tl.loc('JSONParseError', file, exception));
             }
-            console.log(tl.loc('JSONvariableSubstitution' , file));
+            console.log(tl.loc('JSONvariableSubstitution' , sanitizeForLoggingCommand(file)));
             if(substituteAllTypes) {
                 isSubstitutionApplied = substituteJsonVariableV2(jsonObject, envVarObject) || isSubstitutionApplied;
             }
@@ -216,7 +217,7 @@ export function jsonVariableSubstitution(absolutePath, jsonSubFiles, substituteA
         }
     }
     if (emptyFiles.length > 0) {
-        console.log(`The following input files either empty: ${emptyFiles.join(', ')}. No substitution was performed.`);
+        console.log(`The following input files either empty: ${emptyFiles.map(sanitizeForLoggingCommand).join(', ')}. No substitution was performed.`);
     }
     
     return isSubstitutionApplied;

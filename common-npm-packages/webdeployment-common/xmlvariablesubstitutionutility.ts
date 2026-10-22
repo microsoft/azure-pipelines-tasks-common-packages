@@ -1,6 +1,7 @@
 import tl = require('azure-pipelines-task-lib/task');
 import fs = require('fs');
 import path = require('path');
+import { sanitizeForLoggingCommand } from './sanitize';
 
 var varUtility = require ('./variableutility.js');
 var ltxdomutility = require("./ltxdomutility.js");
@@ -105,7 +106,7 @@ export function substituteXmlVariables(configFile, tags, variableMap, parameterF
     if( !tl.stats(configFile).isFile()) {
         return;
     }
-    console.log(tl.loc('VariableSubstitutionInitiated' , configFile));
+    console.log(tl.loc('VariableSubstitutionInitiated' , sanitizeForLoggingCommand(configFile)));
     var fileBuffer: Buffer = fs.readFileSync(configFile);
     var fileEncodeType = fileEncoding.detectFileEncoding(configFile, fileBuffer);
     var webConfigContent: string = fileBuffer.toString(fileEncodeType[0]);
@@ -165,10 +166,10 @@ export function substituteXmlVariables(configFile, tags, variableMap, parameterF
             domContent = domContent.split(replacableTokenValue).join(replacableTokenValues[replacableTokenValue]);
         }
         tl.writeFile(configFile, domContent, fileEncodeType[0]);
-        console.log(tl.loc('ConfigFileUpdated' , configFile ));
+        console.log(tl.loc('ConfigFileUpdated' , sanitizeForLoggingCommand(configFile) ));
     }
     else {
-        console.log(tl.loc('SkippedUpdatingFile' , configFile));
+        console.log(tl.loc('SkippedUpdatingFile' , sanitizeForLoggingCommand(configFile)));
     }
     
     return isSubstitutionApplied;

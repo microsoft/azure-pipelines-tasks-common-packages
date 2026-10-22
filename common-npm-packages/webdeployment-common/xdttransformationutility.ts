@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import path = require('path');
 import { DOMParser } from '@xmldom/xmldom';
 import { detectFileEncoding } from './fileencoding';
+import { sanitizeForLoggingCommand } from './sanitize';
 
 const xdtNamespace = 'http://schemas.microsoft.com/XML-Document-Transform';
 // Built-in XDT transform/locator type names. Verified by reflecting the concrete (non-abstract)
@@ -530,7 +531,7 @@ export function specialXdtTransformation(rootFolder, transformConfig, sourceConf
         
         for(var transformXmlFile in transformXmlFiles) {                
             if(sourceXmlFiles[transformXmlFile.toLowerCase()] || tl.exist(transformXmlFile)) {
-                console.log(tl.loc('ApplyingXDTtransformation' , transformXmlFile , sourceXmlFile));
+                console.log(tl.loc('ApplyingXDTtransformation' , sanitizeForLoggingCommand(transformXmlFile) , sanitizeForLoggingCommand(sourceXmlFile)));
                 applyXdtTransformation(sourceXmlFile, transformXmlFile, destinationXmlFile);
                 isTransformationApplied = true;
             }
