@@ -165,9 +165,38 @@ function validateXdtTransformFile(transformFile: string, sourceFile: string): vo
 
     validateUtf16DecoderAgreement(transformFile, transformDeclaredEncoding, transformEncoding);
 
-    const transformDocument = parseTransformFile(transformFile, transformBuffer.toString(transformEncoding as BufferEncoding));
+    const xmlString = transformBuffer.toString(transformEncoding as BufferEncoding);
+    validateNoDoctype(transformFile, xmlString);
+
+    const transformDocument = parseTransformFile(transformFile, xmlString);
     validateXdtNode(transformFile, transformDocument.documentElement);
     validateLatin1TransformCompatibility(sourceFile, transformFile, transformDeclaredEncoding, transformBuffer);
+}
+
+function validateNoDoctype(transformFile: string, xmlString: string): void {
+    if (tl.getPipelineFeature('XdtDoctypeBlockDisabled')) {
+        publishXdtDoctypeTelemetry('skipped', 'doctypeCheckDisabled');
+        return;
+    }
+
+    // DTD defaults are applied by .NET but not by the JS validator.
+    if (/<!DOCTYPE/i.test(xmlString)) {
+        publishXdtDoctypeTelemetry('blocked', 'doctype');
+        throw new Error(tl.loc('XdtTransformationDoctypeNotAllowed', transformFile));
+    }
+
+    publishXdtDoctypeTelemetry('passed', 'doctypeCheckPassed');
+}
+
+// Dedicated feature so DOCTYPE-check events can be queried separately from the other XDT security events.
+function publishXdtDoctypeTelemetry(result: string, reason: string): void {
+    try {
+        const payload = JSON.stringify({ result: result, reason: reason });
+        console.log('##vso[telemetry.publish area=TaskHub;feature=XdtDoctypeBlock]' + payload);
+    }
+    catch (error) {
+        tl.debug('Unable to publish XDT DOCTYPE telemetry: ' + (error && error.message ? error.message : error));
+    }
 }
 
 function validateLatin1TransformCompatibility(
