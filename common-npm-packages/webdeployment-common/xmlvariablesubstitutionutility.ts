@@ -1,7 +1,7 @@
 import tl = require('azure-pipelines-task-lib/task');
 import fs = require('fs');
 import path = require('path');
-import { sanitizeForLoggingCommand } from './sanitize';
+import { VsoCommandMode } from 'azure-pipelines-task-lib/externaloutput';
 
 var varUtility = require ('./variableutility.js');
 var ltxdomutility = require("./ltxdomutility.js");
@@ -82,7 +82,7 @@ function substituteValueinParameterFile(parameterFilePath, parameterSubValue) {
     tl.debug("Parameter file " + parameterFilePath + " updated.");
 }
 
-export function substituteAppSettingsVariables(folderPath, isFolderBasedDeployment, fileName?: string) {
+export function substituteAppSettingsVariables(folderPath, isFolderBasedDeployment, fileName?: string, vsoCommandMode: VsoCommandMode = 'disabled') {
     let configFiles = tl.findMatch(folderPath, fileName ? fileName : "**/*.config");
     // parameters.xml is considered when fileName is not provided or filename explicitly mentions parameters.xml
     let parameterFilePath = !fileName || fileName.toLocaleLowerCase().indexOf("parameters.xml") != -1 ? path.join(folderPath, 'parameters.xml') : null;
@@ -95,18 +95,19 @@ export function substituteAppSettingsVariables(folderPath, isFolderBasedDeployme
     let variableMap = varUtility.getVariableMap();
     let tags = ["applicationSettings", "appSettings", "connectionStrings", "configSections"];
     for(var configFile of configFiles) {
-        substituteXmlVariables(configFile, tags, variableMap, parameterFilePath);
+        substituteXmlVariables(configFile, tags, variableMap, parameterFilePath, vsoCommandMode);
     }
 }
 
-export function substituteXmlVariables(configFile, tags, variableMap, parameterFilePath) {
+export function substituteXmlVariables(configFile, tags, variableMap, parameterFilePath, vsoCommandMode: VsoCommandMode = 'disabled') {
+    const outputOptions: tl.ExternalOutputOptions = { source: 'repository', vsoCommandMode };
     if(!tl.exist(configFile)) {
         throw new Error(tl.loc("Configfiledoesntexists", configFile));
     }
     if( !tl.stats(configFile).isFile()) {
         return;
     }
-    console.log(tl.loc('VariableSubstitutionInitiated' , sanitizeForLoggingCommand(configFile)));
+    tl.writeExternalOutput(tl.loc('VariableSubstitutionInitiated', configFile) + '\n', outputOptions);
     var fileBuffer: Buffer = fs.readFileSync(configFile);
     var fileEncodeType = fileEncoding.detectFileEncoding(configFile, fileBuffer);
     var webConfigContent: string = fileBuffer.toString(fileEncodeType[0]);
@@ -166,10 +167,10 @@ export function substituteXmlVariables(configFile, tags, variableMap, parameterF
             domContent = domContent.split(replacableTokenValue).join(replacableTokenValues[replacableTokenValue]);
         }
         tl.writeFile(configFile, domContent, fileEncodeType[0]);
-        console.log(tl.loc('ConfigFileUpdated' , sanitizeForLoggingCommand(configFile) ));
+        tl.writeExternalOutput(tl.loc('ConfigFileUpdated', configFile) + '\n', outputOptions);
     }
     else {
-        console.log(tl.loc('SkippedUpdatingFile' , sanitizeForLoggingCommand(configFile)));
+        tl.writeExternalOutput(tl.loc('SkippedUpdatingFile', configFile) + '\n', outputOptions);
     }
     
     return isSubstitutionApplied;
