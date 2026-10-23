@@ -1,14 +1,15 @@
 import tl = require('azure-pipelines-task-lib/task');
+import { VsoCommandMode } from 'azure-pipelines-task-lib/externaloutput';
 import * as ParameterParser from './ParameterParserUtility';
 import { PackageType } from './packageUtility';
 import { parse } from './ParameterParserUtility';
+import * as jsonSubstitutionUtility from './jsonvariablesubstitutionutility';
+import * as xmlSubstitutionUtility from './xmlvariablesubstitutionutility';
+import * as xdtTransformationUtility from './xdttransformationutility';
 var deployUtility = require('./utility.js');
 var generateWebConfigUtil = require('./webconfigutil.js');
-var jsonSubstitutionUtility = require('azure-pipelines-tasks-webdeployment-common/jsonvariablesubstitutionutility.js');
-var xmlSubstitutionUtility = require('azure-pipelines-tasks-webdeployment-common/xmlvariablesubstitutionutility.js');
-var xdtTransformationUtility = require('azure-pipelines-tasks-webdeployment-common/xdttransformationutility.js');
 
-export function fileTransformations(isFolderBasedDeployment: boolean, JSONFiles: any, xmlTransformation: boolean, xmlVariableSubstitution: boolean, folderPath: string, isMSBuildPackage: boolean) {
+export function fileTransformations(isFolderBasedDeployment: boolean, JSONFiles: any, xmlTransformation: boolean, xmlVariableSubstitution: boolean, folderPath: string, isMSBuildPackage: boolean, vsoCommandMode: VsoCommandMode = 'disabled') {
 
     if(xmlTransformation) {
         if(isMSBuildPackage) {
@@ -26,7 +27,7 @@ export function fileTransformations(isFolderBasedDeployment: boolean, JSONFiles:
             if(environmentName && environmentName.toLowerCase() != 'release') {
                 transformConfigs.push(environmentName + ".config");
             }
-            var isTransformationApplied: boolean = xdtTransformationUtility.basicXdtTransformation(folderPath, transformConfigs);
+            var isTransformationApplied: boolean = xdtTransformationUtility.basicXdtTransformation(folderPath, transformConfigs, vsoCommandMode);
 
             if(isTransformationApplied)
             {
@@ -40,17 +41,17 @@ export function fileTransformations(isFolderBasedDeployment: boolean, JSONFiles:
     }
 
     if(xmlVariableSubstitution) {
-        xmlSubstitutionUtility.substituteAppSettingsVariables(folderPath, isFolderBasedDeployment);
+        xmlSubstitutionUtility.substituteAppSettingsVariables(folderPath, isFolderBasedDeployment, undefined, vsoCommandMode);
         console.log(tl.loc('XMLvariablesubstitutionappliedsuccessfully'));
     }
 
     if(JSONFiles.length != 0) {
-        jsonSubstitutionUtility.jsonVariableSubstitution(folderPath, JSONFiles);
+        jsonSubstitutionUtility.jsonVariableSubstitution(folderPath, JSONFiles, undefined, vsoCommandMode);
         console.log(tl.loc('JSONvariablesubstitutionappliedsuccessfully'));
     }
 }
 
-export function advancedFileTransformations(isFolderBasedDeployment: boolean, targetFiles: any, xmlTransformation: boolean, variableSubstitutionFileFormat: string, folderPath: string, transformationRules: any) {
+export function advancedFileTransformations(isFolderBasedDeployment: boolean, targetFiles: any, xmlTransformation: boolean, variableSubstitutionFileFormat: string, folderPath: string, transformationRules: any, vsoCommandMode: VsoCommandMode = 'disabled') {
 
     if(xmlTransformation) {
         if(!tl.osType().match(/^Win/)) {
@@ -65,10 +66,10 @@ export function advancedFileTransformations(isFolderBasedDeployment: boolean, ta
                         tl.error(tl.loc("MissingArgumentsforXMLTransformation"));
                     }
                     else if(Object.keys(args).length > 2) {
-                        isTransformationApplied = xdtTransformationUtility.specialXdtTransformation(folderPath, args["transform"].value, args["xml"].value, args["result"].value) && isTransformationApplied;
+                        isTransformationApplied = xdtTransformationUtility.specialXdtTransformation(folderPath, args["transform"].value, args["xml"].value, args["result"].value, vsoCommandMode) && isTransformationApplied;
                     }
                     else {
-                        isTransformationApplied = xdtTransformationUtility.specialXdtTransformation(folderPath, args["transform"].value, args["xml"].value) && isTransformationApplied;
+                        isTransformationApplied = xdtTransformationUtility.specialXdtTransformation(folderPath, args["transform"].value, args["xml"].value, undefined, vsoCommandMode) && isTransformationApplied;
                     }
                 });
             }
@@ -78,7 +79,7 @@ export function advancedFileTransformations(isFolderBasedDeployment: boolean, ta
                 if(environmentName && environmentName.toLowerCase() != 'release') {
                     transformConfigs.push(environmentName + ".config");
                 }
-                isTransformationApplied = xdtTransformationUtility.basicXdtTransformation(folderPath, transformConfigs);
+                isTransformationApplied = xdtTransformationUtility.basicXdtTransformation(folderPath, transformConfigs, vsoCommandMode);
             }
 
             if(isTransformationApplied) {
@@ -92,11 +93,11 @@ export function advancedFileTransformations(isFolderBasedDeployment: boolean, ta
 
     if(variableSubstitutionFileFormat === "xml") {
         if(targetFiles.length == 0) {
-            xmlSubstitutionUtility.substituteAppSettingsVariables(folderPath, isFolderBasedDeployment);
+            xmlSubstitutionUtility.substituteAppSettingsVariables(folderPath, isFolderBasedDeployment, undefined, vsoCommandMode);
         }
         else {
             targetFiles.forEach(function(fileName) {
-                xmlSubstitutionUtility.substituteAppSettingsVariables(folderPath, isFolderBasedDeployment, fileName);
+                xmlSubstitutionUtility.substituteAppSettingsVariables(folderPath, isFolderBasedDeployment, fileName, vsoCommandMode);
             });
         }
 
@@ -109,12 +110,12 @@ export function advancedFileTransformations(isFolderBasedDeployment: boolean, ta
         if(!targetFiles || targetFiles.length == 0) {
             targetFiles = ["**/*.json"];
         }
-        jsonSubstitutionUtility.jsonVariableSubstitution(folderPath, targetFiles, true);
+        jsonSubstitutionUtility.jsonVariableSubstitution(folderPath, targetFiles, true, vsoCommandMode);
         console.log(tl.loc('JSONvariablesubstitutionappliedsuccessfully'));
     }
 }
 
-export function enhancedFileTransformations(isFolderBasedDeployment: boolean, xmlTransformation: boolean, folderPath: string, transformationRules: any, xmlTargetFiles: any, jsonTargetFiles: any) {
+export function enhancedFileTransformations(isFolderBasedDeployment: boolean, xmlTransformation: boolean, folderPath: string, transformationRules: any, xmlTargetFiles: any, jsonTargetFiles: any, vsoCommandMode: VsoCommandMode = 'disabled') {
 
     if(xmlTransformation) {
         if(!tl.osType().match(/^Win/)) {
@@ -129,10 +130,10 @@ export function enhancedFileTransformations(isFolderBasedDeployment: boolean, xm
                         tl.error(tl.loc("MissingArgumentsforXMLTransformation"));
                     }
                     else if(Object.keys(args).length > 2) {
-                        isTransformationApplied = xdtTransformationUtility.specialXdtTransformation(folderPath, args["transform"].value, args["xml"].value, args["result"].value) && isTransformationApplied;
+                        isTransformationApplied = xdtTransformationUtility.specialXdtTransformation(folderPath, args["transform"].value, args["xml"].value, args["result"].value, vsoCommandMode) && isTransformationApplied;
                     }
                     else {
-                        isTransformationApplied = xdtTransformationUtility.specialXdtTransformation(folderPath, args["transform"].value, args["xml"].value) && isTransformationApplied;
+                        isTransformationApplied = xdtTransformationUtility.specialXdtTransformation(folderPath, args["transform"].value, args["xml"].value, undefined, vsoCommandMode) && isTransformationApplied;
                     }
                 });
             }
@@ -149,7 +150,7 @@ export function enhancedFileTransformations(isFolderBasedDeployment: boolean, xm
     if(xmlTargetFiles.length > 0)
     {
         xmlTargetFiles.forEach(function(fileName) {
-            isSubstitutionApplied = xmlSubstitutionUtility.substituteAppSettingsVariables(folderPath, isFolderBasedDeployment, fileName) || isSubstitutionApplied;
+            xmlSubstitutionUtility.substituteAppSettingsVariables(folderPath, isFolderBasedDeployment, fileName, vsoCommandMode);
         });
 
         if(isSubstitutionApplied) {
@@ -164,7 +165,7 @@ export function enhancedFileTransformations(isFolderBasedDeployment: boolean, xm
     let InputErrors = tl.getBoolInput('errorOnInvalidSubstitution', false);
     if(jsonTargetFiles.length > 0)
     {
-        isSubstitutionApplied = jsonSubstitutionUtility.jsonVariableSubstitution(folderPath, jsonTargetFiles, true);
+        isSubstitutionApplied = jsonSubstitutionUtility.jsonVariableSubstitution(folderPath, jsonTargetFiles, true, vsoCommandMode);
         if(isSubstitutionApplied) {
             console.log(tl.loc('JSONvariablesubstitutionappliedsuccessfully'));
         }
