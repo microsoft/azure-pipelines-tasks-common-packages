@@ -12,6 +12,24 @@ import { detectFileEncoding } from "../fileencoding";
 const WebDeploymentCompatibilityFixEnabled = "WebDeploymentCompatibilityFixEnabled";
 
 export function runL1XdtTransformTests(this: Mocha.Suite) {
+    // The DOCTYPE check reports telemetry by printing a ##vso[telemetry.publish ...] line. On a real agent that
+    // line is forwarded to production telemetry, so swallow only those lines while these tests run. Per-test
+    // spies/stubs wrap this function and still record their calls.
+    const doctypeTelemetryPrefix = '##vso[telemetry.publish area=TaskHub;feature=XdtDoctypeBlock]';
+    let originalConsoleLog: typeof console.log;
+    beforeEach(() => {
+        originalConsoleLog = console.log;
+        console.log = function(...args: any[]) {
+            if (typeof args[0] === 'string' && args[0].indexOf(doctypeTelemetryPrefix) === 0) {
+                return;
+            }
+            originalConsoleLog.apply(console, args);
+        };
+    });
+    afterEach(() => {
+        console.log = originalConsoleLog;
+    });
+
     describe('Hardened XDT explicitly enabled', function() {
         runXdtTransformTests.call(this);
     });
@@ -161,7 +179,7 @@ function runXdtTransformTests(this: Mocha.Suite) {
                     const destinationFile = writeTemporaryTransformFile('Web.DoctypeDestination.config', 'unchanged');
                     const parse = sandbox.spy(DOMParser.prototype, 'parseFromString');
                     const execute = sandbox.stub(tl, 'execSync').throws(new Error('XDT must not execute'));
-                    const telemetry = sandbox.spy(console, 'log');
+                    const telemetry = sandbox.stub(console, 'log');
 
                     assert.throws(() => applyXdtTransformation(sourceFile, transformFile, destinationFile),
                         /contains a DOCTYPE declaration/);
@@ -192,7 +210,7 @@ function runXdtTransformTests(this: Mocha.Suite) {
             const transformFile = writeTemporaryTransformFile('Web.NoDoctype.config', cleanXml);
             const read = sandbox.spy(fs, 'readFileSync');
             const execute = sandbox.stub(tl, 'execSync').returns({ code: 0, stdout: '', stderr: '' });
-            const telemetry = sandbox.spy(console, 'log');
+            const telemetry = sandbox.stub(console, 'log');
 
             applyXdtTransformation(getAbsolutePath('Web_test.config'), transformFile);
 
@@ -205,7 +223,7 @@ function runXdtTransformTests(this: Mocha.Suite) {
             const transformFile = writeTemporaryTransformFile('Web.DoctypeRollback.config',
                 '<!DOCTYPE configuration>' + cleanXml);
             const execute = sandbox.stub(tl, 'execSync').returns({ code: 0, stdout: '', stderr: '' });
-            const telemetry = sandbox.spy(console, 'log');
+            const telemetry = sandbox.stub(console, 'log');
 
             ['true', 'TRUE'].forEach(value => {
                 process.env[doctypeFlagEnvironmentVariable] = value;
