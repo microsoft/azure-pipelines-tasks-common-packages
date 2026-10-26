@@ -1,5 +1,70 @@
 # Web deployment common
 
+## Filename diagnostics and caller-owned VSO command mode
+
+Version 4.282.1 uses `azure-pipelines-task-lib` external-output APIs (dependency
+`^5.281.2`) for JSON, XML, and XDT filename diagnostics. Filesystem matching,
+reads, writes, and XDT arguments always use the original paths. The writer adds
+a trailing newline to each informational diagnostic, preserving the previous
+`console.log` framing. Basic XDT filename diagnostics retain debug severity.
+
+The following APIs accept a trailing optional `vsoCommandMode` of type
+`VsoCommandMode` from `azure-pipelines-task-lib/externaloutput`:
+
+| Module | API | Mode parameter |
+| --- | --- | --- |
+| `fileTransformationsUtility` | `fileTransformations`, `advancedFileTransformations`, `enhancedFileTransformations` | 7th |
+| `jsonvariablesubstitutionutility` | `jsonVariableSubstitution` | 4th (after `substituteAllTypes`) |
+| `xmlvariablesubstitutionutility` | `substituteAppSettingsVariables` | 4th (after `fileName`) |
+| `xmlvariablesubstitutionutility` | `substituteXmlVariables` | 5th |
+| `xdttransformationutility` | `basicXdtTransformation` | 3rd |
+| `xdttransformationutility` | `specialXdtTransformation` | 5th (after `destinationConfig`) |
+
+Omitted or `undefined` modes explicitly default to **`disabled`** for compatibility
+with existing unconfigured callers, rather than task-lib's `blockOnly` default.
+Existing argument positions remain unchanged; pass `undefined` for preceding
+optional arguments when needed.
+
+| Mode | Blocks exact `##vso[` markers | Task-lib command telemetry |
+| --- | --- | --- |
+| `disabled` (package default) | No | No |
+| `telemetryOnly` | No | Yes |
+| `blockOnly` | Yes | No |
+| `blockAndTelemetry` | Yes | Yes |
+
+**Callers must explicitly choose `blockOnly` or `blockAndTelemetry` to protect
+these diagnostics. Default/disabled and telemetry-only callers are not protected.**
+The consuming task owns mode selection and any shared rollout policy; this package
+does not read a new feature flag or cache process-global logging policy.
+
+For example, a consuming task can pass its chosen policy through the public API:
+
+```typescript
+import { VsoCommandMode } from 'azure-pipelines-task-lib/externaloutput';
+import { enhancedFileTransformations } from 'azure-pipelines-tasks-webdeployment-common/fileTransformationsUtility';
+
+const vsoCommandMode: VsoCommandMode = 'blockOnly';
+enhancedFileTransformations(
+    true, false, folderPath, [], ['**/*.config'], ['**/*.json'], vsoCommandMode);
+```
+
+Blocking delegates to task-lib's exact-marker behavior: `##vso[` becomes
+`##_vso[` wherever it occurs, including after CR/LF. Surrounding text and
+newlines remain intact; mixed-case markers and `##[` formatting markers are
+not normalized. No VSO commands are allowlisted for these repository-origin
+diagnostics. Telemetry is task-lib command metadata only, not filenames,
+command arguments/data, file contents, or substitution values. This mode is
+scoped to filename diagnostics, not all other task logs or subprocess output.
+Consuming tasks must adopt the published package and pass their selected mode;
+updating this package alone does not opt existing tasks into blocking.
+
+FileTransform adoption is deferred to the consuming task. After this package is
+published, FileTransform must update its dependency and lockfile to bundle the
+published version and explicitly pass its shared RM policy mode:
+`EnableVsoCommandBlockingRMTasks` enabled selects `blockAndTelemetry`, while
+disabled or unset selects `telemetryOnly` (which does not block commands).
+This common package does not read that policy or any task-specific kill switch.
+
 ## Hardened XDT and compatibility rollout flag
 
 Version 4.282.0 gates the original XDT security hardening from PR #665 and the
