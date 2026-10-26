@@ -155,23 +155,27 @@ function runXdtTransformTests(this: Mocha.Suite) {
     describe('DOCTYPE validation', function() {
         let sandbox: sinon.SinonSandbox;
         const cleanXml = '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform" />';
+        const doctypeTestCases: { name: string, declaration?: string, xml?: string }[] = [
+            { name: 'plain', declaration: '<!DOCTYPE configuration>' },
+            { name: 'internal subset', declaration: '<!DOCTYPE configuration [<!ATTLIST configuration label CDATA "default">]>' },
+            { name: 'SYSTEM subset', declaration: '<!DOCTYPE configuration SYSTEM "https://example.invalid/transform.dtd">' },
+            { name: 'PUBLIC subset', declaration: '<!DOCTYPE configuration PUBLIC "-//Example//DTD Configuration//EN" "https://example.invalid/transform.dtd">' },
+            { name: 'mixed case', declaration: '<!DoCtYpE configuration>' },
+            { name: 'comment', declaration: '<!-- <!DOCTYPE configuration> -->' },
+            // Valid XML whose only DOCTYPE text is literal CDATA content; the check is intentionally textual.
+            { name: 'CDATA', xml: '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">' +
+                '<![CDATA[ <!DOCTYPE configuration> ]]></configuration>' }
+        ];
 
         beforeEach(() => {
             sandbox = sinon.createSandbox();
         });
         afterEach(() => sandbox.restore());
 
-        [
-            { name: 'plain', declaration: '<!DOCTYPE configuration>' },
-            { name: 'internal subset', declaration: '<!DOCTYPE configuration [<!ATTLIST configuration label CDATA "default">]>' },
-            { name: 'SYSTEM subset', declaration: '<!DOCTYPE configuration SYSTEM "https://example.invalid/transform.dtd">' },
-            { name: 'PUBLIC subset', declaration: '<!DOCTYPE configuration PUBLIC "-//Example//DTD Configuration//EN" "https://example.invalid/transform.dtd">' },
-            { name: 'mixed case', declaration: '<!DoCtYpE configuration>' },
-            { name: 'comment', declaration: '<!-- <!DOCTYPE configuration> -->' }
-        ].forEach(testCase => {
+        doctypeTestCases.forEach(testCase => {
             (['utf8', 'utf16le'] as BufferEncoding[]).forEach(encoding => {
                 it('Blocks ' + testCase.name + ' in ' + encoding + ' before parsing or execution', () => {
-                    const content = Buffer.from(testCase.declaration + cleanXml, encoding);
+                    const content = Buffer.from(testCase.xml || testCase.declaration + cleanXml, encoding);
                     const transformFile = writeTemporaryBinaryFile('Web.Doctype.config',
                         encoding === 'utf16le' ? Buffer.concat([Buffer.from([0xFF, 0xFE]), content]) : content);
                     const sourceFile = getAbsolutePath('Web_test.config');
@@ -263,6 +267,30 @@ function runXdtTransformTests(this: Mocha.Suite) {
                 /No unhardened transformation was run/i);
             assert.strictEqual(read.callCount, 0);
             assert.strictEqual(execute.callCount, 0);
+        });
+
+        it('Applies a DTD-backed transform with the real ctt.exe only when the rollback switch is on', function() {
+            if (tl.getPlatform() !== tl.Platform.Windows) {
+                this.skip();
+            }
+
+            const originalSource = '<configuration><appSettings><add key="Setting1" value="Original" /></appSettings></configuration>';
+            const sourceFile = writeTemporaryTransformFile('Web.DoctypeRealSource.config', originalSource);
+            // The DTD supplies the transform attributes; the JS validator cannot see them, ctt.exe applies them.
+            const transformFile = writeTemporaryTransformFile('Web.DoctypeRealTransform.config',
+                '<!DOCTYPE configuration [<!ATTLIST add xdt:Locator CDATA "Match(key)" ' +
+                'xdt:Transform CDATA "SetAttributes(value)">]>' +
+                '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">' +
+                '<appSettings><add key="Setting1" value="RollbackApplied" /></appSettings></configuration>');
+
+            assert.throws(() => applyXdtTransformation(sourceFile, transformFile), /contains a DOCTYPE declaration/);
+            assert.strictEqual(fs.readFileSync(sourceFile, 'utf8'), originalSource,
+                'The default must block before ctt.exe changes the source');
+
+            process.env[doctypeFlagEnvironmentVariable] = 'true';
+            applyXdtTransformation(sourceFile, transformFile);
+            assert(fs.readFileSync(sourceFile, 'utf8').indexOf('RollbackApplied') !== -1,
+                'The rollback switch must restore the previous end-to-end transformation result');
         });
 
         function assertTelemetry(telemetry: sinon.SinonSpy, result: string, reason: string, count = 1): void {
