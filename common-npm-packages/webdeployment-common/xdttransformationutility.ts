@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import path = require('path');
 import { DOMParser } from '@xmldom/xmldom';
 import { detectFileEncoding } from './fileencoding';
+import { VsoCommandMode } from 'azure-pipelines-task-lib/externaloutput';
 
 const xdtNamespace = 'http://schemas.microsoft.com/XML-Document-Transform';
 // Built-in XDT transform/locator type names. Verified by reflecting the concrete (non-abstract)
@@ -451,7 +452,7 @@ function isXdtNode(node: Element | Attr, localName: string): boolean {
 * @param    transformConfigs  The array of transform config names, ex : ["Release.config", "EnvName.config"]
 * 
 */
-export function basicXdtTransformation(rootFolder, transformConfigs): boolean {
+export function basicXdtTransformation(rootFolder, transformConfigs, vsoCommandMode: VsoCommandMode = 'disabled'): boolean {
     var sourceXmlFiles = expandWildcardPattern(rootFolder, '**/*.config');
     var isTransformationApplied = false;
     Object.keys(sourceXmlFiles).forEach( function(sourceXmlFile) {
@@ -460,7 +461,8 @@ export function basicXdtTransformation(rootFolder, transformConfigs): boolean {
         transformConfigs.forEach( function(transformConfig) {
             var transformXmlFile = path.join(path.dirname(sourceXmlFile), sourceBasename + "." + transformConfig);
             if(sourceXmlFiles[transformXmlFile.toLowerCase()]) {
-                tl.debug('Applying XDT Transformation : ' + transformXmlFile + ' -> ' + sourceXmlFile);
+                tl.debugExternalOutput('Applying XDT Transformation : ' + transformXmlFile + ' -> ' + sourceXmlFile,
+                    { source: 'repository', vsoCommandMode });
                 applyXdtTransformation(sourceXmlFile, transformXmlFile);
                 isTransformationApplied = true;
             }
@@ -480,7 +482,8 @@ export function basicXdtTransformation(rootFolder, transformConfigs): boolean {
 * Performs XDT transformations using ctt.exe
 * 
 */
-export function specialXdtTransformation(rootFolder, transformConfig, sourceConfig, destinationConfig?: string): boolean {
+export function specialXdtTransformation(rootFolder, transformConfig, sourceConfig, destinationConfig?: string, vsoCommandMode: VsoCommandMode = 'disabled'): boolean {
+    const outputOptions: tl.ExternalOutputOptions = { source: 'repository', vsoCommandMode };
     var sourceXmlFiles = expandWildcardPattern(rootFolder, sourceConfig);
     var isTransformationApplied = false;
 
@@ -530,7 +533,7 @@ export function specialXdtTransformation(rootFolder, transformConfig, sourceConf
         
         for(var transformXmlFile in transformXmlFiles) {                
             if(sourceXmlFiles[transformXmlFile.toLowerCase()] || tl.exist(transformXmlFile)) {
-                console.log(tl.loc('ApplyingXDTtransformation' , transformXmlFile , sourceXmlFile));
+                tl.writeExternalOutput(tl.loc('ApplyingXDTtransformation', transformXmlFile, sourceXmlFile) + '\n', outputOptions);
                 applyXdtTransformation(sourceXmlFile, transformXmlFile, destinationXmlFile);
                 isTransformationApplied = true;
             }
