@@ -19,6 +19,8 @@ The following APIs accept a trailing optional `vsoCommandMode` of type
 | `xmlvariablesubstitutionutility` | `substituteXmlVariables` | 5th |
 | `xdttransformationutility` | `basicXdtTransformation` | 3rd |
 | `xdttransformationutility` | `specialXdtTransformation` | 5th (after `destinationConfig`) |
+| `utility` | `generateTemporaryFolderForDeployment` | 4th (archive extraction, since 4.282.2) |
+| `ziputility` | `unzip` | 3rd (since 4.282.2) |
 
 Omitted or `undefined` modes explicitly default to **`disabled`** for compatibility
 with existing unconfigured callers, rather than task-lib's `blockOnly` default.
@@ -54,7 +56,10 @@ newlines remain intact; mixed-case markers and `##[` formatting markers are
 not normalized. No VSO commands are allowlisted for these repository-origin
 diagnostics. Telemetry is task-lib command metadata only, not filenames,
 command arguments/data, file contents, or substitution values. This mode is
-scoped to filename diagnostics, not all other task logs or subprocess output.
+scoped to the listed diagnostics and, since 4.282.2, archive extraction. Extraction
+uses the caller's mode for tool command display, stdout/stderr, and path debug
+messages on unzip, 7-Zip, and PowerShell paths. Raw tool arguments and extracted
+filenames remain unchanged; other subprocesses and logs are not covered.
 Consuming tasks must adopt the published package and pass their selected mode;
 updating this package alone does not opt existing tasks into blocking.
 
