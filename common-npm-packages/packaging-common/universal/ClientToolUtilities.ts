@@ -1,4 +1,3 @@
-import AdmZip = require('adm-zip');
 import * as vsts from 'azure-devops-node-api';
 import os = require("os");
 import * as path from "path";
@@ -102,8 +101,8 @@ export async function extractZip(file: string, toolName: string): Promise<string
         throw new Error("parameter 'file' is required");
     }
     let dest = _createExtractFolder(toolName);
-    let zip = new AdmZip(file);
-    zip.extractAllTo(dest, true);
+
+    await tl.extractZip(file, { dir: dest, overwrite: true });
     return dest;
 }
 

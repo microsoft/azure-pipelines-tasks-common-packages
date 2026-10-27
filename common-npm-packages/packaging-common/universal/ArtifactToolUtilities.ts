@@ -1,6 +1,5 @@
 // Placed as a separate file for the purpose of unit testing
 // TODO: Update functions in this file to call the implementations in ClientToolUtilities.ts
-import AdmZip = require('adm-zip');
 import os = require("os");
 import * as path from "path";
 import * as semver from "semver";
@@ -34,8 +33,7 @@ export async function extractZip(file: string): Promise<string> {
         throw new Error("parameter 'file' is required");
     }
     let dest = _createExtractFolder();
-    let zip = new AdmZip(file);
-    zip.extractAllTo(dest, true);
+    await tl.extractZip(file, { dir: dest, overwrite: true });
     return dest;
 }
 

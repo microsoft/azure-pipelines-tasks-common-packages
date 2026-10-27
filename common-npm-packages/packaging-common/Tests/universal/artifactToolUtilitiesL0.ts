@@ -54,8 +54,8 @@ export function artifactToolUtilities() {
             retryOnExceptionHelper: (fn: () => Promise<any>, _retries: number, _delay: number) => fn()
         };
 
-        const mockAdmZip = function() {
-            return { extractAllTo: () => {} };
+        const mockZipUtility = {
+            extractZip: (_file: string, options: { dir: string; overwrite: boolean }) => Promise.resolve(options.dir)
         };
 
         const mockOs = {
@@ -66,7 +66,7 @@ export function artifactToolUtilities() {
         mocker.registerMock("azure-pipelines-task-lib/task", mockTl);
         mocker.registerMock("azure-pipelines-tool-lib/tool", mockToollib);
         mocker.registerMock("../locationUtilities", mockPkgLocationUtils);
-        mocker.registerMock("adm-zip", mockAdmZip);
+        mocker.registerMock("azure-pipelines-task-lib/ziputility", mockZipUtility);
         mocker.registerMock("os", mockOs);
 
         return { mockToollib };
