@@ -6,6 +6,9 @@ import { detectFileEncoding } from './fileencoding';
 import { VsoCommandMode } from 'azure-pipelines-task-lib/externaloutput';
 
 const xdtNamespace = 'http://schemas.microsoft.com/XML-Document-Transform';
+const defaultXdtTelemetryFeature = 'XdtTransformationSecurity';
+// Separate feature so DOCTYPE-check events can be queried independently of the other XDT security events.
+const doctypeTelemetryFeature = 'XdtDoctypeBlock';
 // Built-in XDT transform/locator type names. Verified by reflecting the concrete (non-abstract)
 // subclasses of Microsoft.Web.XmlTransform.Transform / .Locator in the bundled ctt.exe
 // (Microsoft.Web.XmlTransform v1.6.0.51029). Any transform/locator type outside this set can only
@@ -176,28 +179,17 @@ function validateXdtTransformFile(transformFile: string, sourceFile: string): vo
 
 function validateNoDoctype(transformFile: string, xmlString: string): void {
     if (tl.getPipelineFeature('XdtDoctypeBlockDisabled')) {
-        publishXdtDoctypeTelemetry('skipped', 'doctypeCheckDisabled');
+        publishXdtSecurityTelemetry('skipped', 'doctypeCheckDisabled', doctypeTelemetryFeature);
         return;
     }
 
     // DTD defaults are applied by .NET but not by the JS validator.
     if (/<!DOCTYPE/i.test(xmlString)) {
-        publishXdtDoctypeTelemetry('blocked', 'doctype');
+        publishXdtSecurityTelemetry('blocked', 'doctype', doctypeTelemetryFeature);
         throw new Error(tl.loc('XdtTransformationDoctypeNotAllowed', transformFile));
     }
 
-    publishXdtDoctypeTelemetry('passed', 'doctypeCheckPassed');
-}
-
-// Dedicated feature so DOCTYPE-check events can be queried separately from the other XDT security events.
-function publishXdtDoctypeTelemetry(result: string, reason: string): void {
-    try {
-        const payload = JSON.stringify({ result: result, reason: reason });
-        console.log('##vso[telemetry.publish area=TaskHub;feature=XdtDoctypeBlock]' + payload);
-    }
-    catch (error) {
-        tl.debug('Unable to publish XDT DOCTYPE telemetry: ' + (error && error.message ? error.message : error));
-    }
+    publishXdtSecurityTelemetry('passed', 'doctypeCheckPassed', doctypeTelemetryFeature);
 }
 
 function validateLatin1TransformCompatibility(
@@ -350,10 +342,10 @@ function describeError(error: any): string {
     return error && error.message ? error.message : String(error);
 }
 
-function publishXdtSecurityTelemetry(result: string, reason: string): void {
+function publishXdtSecurityTelemetry(result: string, reason: string, feature: string = defaultXdtTelemetryFeature): void {
     try {
         const payload = JSON.stringify({ result: result, reason: reason });
-        console.log('##vso[telemetry.publish area=TaskHub;feature=XdtTransformationSecurity]' + payload);
+        console.log('##vso[telemetry.publish area=TaskHub;feature=' + feature + ']' + payload);
     }
     catch (error) {
         tl.debug('Unable to publish XDT transformation security telemetry: ' + (error && error.message ? error.message : error));

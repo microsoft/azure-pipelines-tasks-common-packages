@@ -148,7 +148,7 @@ the source encoding to prevent data corruption.
 
 ## DOCTYPE blocking and rollback
 
-Version 4.282.1 adds this check.
+Version 4.282.2 adds this check.
 
 When XDT is enabled by `DistributedTask.Tasks.WebDeploymentCompatibilityFixEnabled`,
 transform files containing `<!DOCTYPE` (case-insensitive) are rejected by default.
