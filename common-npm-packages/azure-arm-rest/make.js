@@ -9,6 +9,7 @@ const openSSLUrls = {
     'openssl3.5.8': 'https://vstsagenttools.blob.core.windows.net/tools/openssl/3.5.8/M279/openssl.zip',
     'openssl3.5.9': 'https://vstsagenttools.blob.core.windows.net/tools/openssl/3.5.9/M282/openssl.zip'
 };
+
 util.rm('-rf', buildPath);
 util.run(path.join(__dirname, 'node_modules/.bin/tsc') + ' --outDir ' + buildPath);
 
