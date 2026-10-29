@@ -11,10 +11,10 @@ export function OpenSSLCheck(defaultTimeout = 2000) {
     }
 
     [{
-        openSSLVersion: '3.4.2',
+        openSSLVersion: '3.5.8',
         featureFlagValue: false
     }, {
-        openSSLVersion: '3.5.8',
+        openSSLVersion: '3.5.9',
         featureFlagValue: true
     }].forEach(({ openSSLVersion, featureFlagValue }) => {
         it(`azure-arm-rest check openssl path openssl${openSSLVersion}`, function (done: Mocha.Done) {
