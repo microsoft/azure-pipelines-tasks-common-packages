@@ -18,6 +18,7 @@
         "XdtTransformationInvalidXdtNamespaceNode": "The XML transform file %s contains the XDT node '%s' without a namespace-aware local name. The transform was blocked because its namespace could not be validated safely.",
         "XdtTransformationMalformedXmlDeclaration": "Unable to read the XML declaration of %s. The file starts with '<?xml' but the declaration is not terminated. Correct the XML declaration and try again.",
         "XdtTransformationFeatureDisabled": "Cannot apply XML transform %s because pipeline feature %s is not enabled. No unhardened transformation was run.",
+        "XdtTransformationDoctypeNotAllowed": "The XML transform file %s contains a DOCTYPE declaration, which is not supported by Azure Pipelines XML transformations. Remove the DOCTYPE declaration and any DTD dependencies. No transformation was run.",
         "JSONParseError": "Unable to parse JSON file: %s. Error: %s",
         "NOJSONfilematchedwithspecificpattern": "NO JSON file matched with specific pattern: %s.",
         "FailedToApplyTransformation": "Unable to apply transformation for the given package. Verify the following.",
