@@ -7,7 +7,7 @@ const { downloadArchive } = require('../build-scripts/downloadArchive');
 const buildPath = path.join(__dirname, './_build');
 const openSSLUrls = {
     'openssl3.5.8': 'https://vstsagenttools.blob.core.windows.net/tools/openssl/3.5.8/M279/openssl.zip',
-    'openssl3.4.2': 'https://vstsagenttools.blob.core.windows.net/tools/openssl/3.4.2/M262/openssl.zip'
+    'openssl3.5.9': 'https://vstsagenttools.blob.core.windows.net/tools/openssl/3.5.9/M282/openssl.zip'
 };
 
 util.rm('-rf', buildPath);
