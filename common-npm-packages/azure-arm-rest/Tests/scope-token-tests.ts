@@ -1,5 +1,16 @@
 import assert = require("assert");
-import { ApplicationTokenCredentials } from '../azure-arm-common';
+import type { ApplicationTokenCredentials as Credentials } from '../azure-arm-common';
+
+// These credential-constructor tests exercise the modern path independently of the CI host.
+const originalNodeVersion = process.version;
+let ApplicationTokenCredentials: typeof Credentials;
+try {
+    Object.defineProperty(process, "version", { value: "v24.0.0", configurable: true });
+    ApplicationTokenCredentials = require("../azure-arm-common").ApplicationTokenCredentials;
+} finally {
+    Object.defineProperty(process, "version", { value: originalNodeVersion, configurable: true });
+}
+
 import { publishKuduAuthModeTelemetry } from '../azureAppServiceUtility';
 import { getMockEndpoint, nock } from './mock_utils';
 import fs = require('fs');
@@ -15,6 +26,7 @@ const proxyEnvironmentVariables = [
     "AGENT_PROXYPASSWORD",
     "AGENT_PROXYBYPASSLIST"
 ];
+nock.disableNetConnect();
 
 // Installs the ARM (ADAL) nock interceptor that answers the client-credentials token
 // request with "DUMMY_ACCESS_TOKEN". This is the ARM-audience token that acquireTokenForScope
@@ -24,7 +36,7 @@ getMockEndpoint();
 // Builds a Service Principal (key) credential wired to the same tenant/authority/secret the
 // mock nock interceptor expects. useMSAL=false forces the ADAL path so getToken() is served
 // by nock rather than a real network/MSAL call.
-function makeCreds(allowScopeLevelToken: boolean, scopes: any): ApplicationTokenCredentials {
+function makeCreds(allowScopeLevelToken: boolean, scopes: any): Credentials {
     return new ApplicationTokenCredentials(
         "MOCK_SERVICE_CONNECTION",
         "MOCK_SPN_ID",
@@ -46,7 +58,7 @@ function makeCreds(allowScopeLevelToken: boolean, scopes: any): ApplicationToken
     );
 }
 
-function makeManagedIdentityCreds(allowScopeLevelToken = true): any {
+function makeManagedIdentityCreds(allowScopeLevelToken = true, clientId?: string): any {
     return new ApplicationTokenCredentials(
         "MOCK_SERVICE_CONNECTION",
         undefined,
@@ -57,7 +69,7 @@ function makeManagedIdentityCreds(allowScopeLevelToken = true): any {
         "https://management.azure.com/",
         false,
         "ManagedServiceIdentity",
-        undefined,
+        clientId,
         undefined,
         undefined,
         undefined,
@@ -421,6 +433,30 @@ class ScopeTokenTests {
         }
     }
 
+    public static async managedIdentityScopedClientId() {
+        try {
+            nock("http://169.254.169.254", { reqheaders: { "Metadata": true } })
+                .get("/metadata/identity/oauth2/token")
+                .query({
+                    "api-version": "2018-02-01",
+                    "resource": "https://appservice",
+                    "client_id": "MOCK_USER_ASSIGNED_CLIENT"
+                })
+                .reply(200, {
+                    access_token: "DUMMY_USER_ASSIGNED_TOKEN",
+                    expires_in: 3600
+                });
+            const creds = makeManagedIdentityCreds(true, "MOCK_USER_ASSIGNED_CLIENT");
+            const client = await creds.buildMSAL();
+            const result = await client.acquireTokenByClientCredential({ scopes: ["https://appservice/.default"] });
+            assert.strictEqual(result.accessToken, "DUMMY_USER_ASSIGNED_TOKEN");
+            console.log("MSI_SCOPED_CLIENT_ID: preserved");
+        } catch (error) {
+            console.log(error);
+            tl.setResult(tl.TaskResult.Failed, "managedIdentityScopedClientId should have passed but failed");
+        }
+    }
+
     // Feature disabled -> preserve the previous Managed Identity resource even if MSAL supplies
     // a different requested scope to the token provider.
     public static async managedIdentityLegacyResourceWhenFeatureDisabled() {
@@ -440,7 +476,7 @@ class ScopeTokenTests {
                     expires_in: 3600
                 });
 
-            const creds = makeManagedIdentityCreds(false);
+            const creds = makeManagedIdentityCreds(false, "MOCK_USER_ASSIGNED_CLIENT");
             const msalClient = await creds.buildMSAL();
             const result = await msalClient.acquireTokenByClientCredential({
                 scopes: ["https://appservice/.default"]
@@ -584,6 +620,7 @@ async function RUNTESTS() {
     await ScopeTokenTests.featureDisabledDoesNotReadProxy();
     await ScopeTokenTests.scopedTokenSuccessOnLegacyNode();
     await ScopeTokenTests.managedIdentityScopeResource();
+    await ScopeTokenTests.managedIdentityScopedClientId();
     await ScopeTokenTests.managedIdentityLegacyResourceWhenFeatureDisabled();
     await ScopeTokenTests.federatedTokenFileCleanup();
     await ScopeTokenTests.unknownKuduAuthMode();

@@ -24,6 +24,7 @@ import webClient = require('./webClient');
 /// Dynamic msal loading based on the node version
 const nodeVersion = parseInt(process.version.split('.')[0].replace('v', ''));
 const msalVer = nodeVersion < 16 ? "msalv1" : "msalv3";
+const useAzureIdentity = nodeVersion >= 22;
 
 // Maximum backoff timeout for creating AAD token in milliseconds
 const MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT = 15000;
@@ -31,11 +32,9 @@ const MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT = 15000;
 tl.debug('Using ' + msalVer);
 const msal = require(msalVer);
 
-/// Dynamic @azure/identity loading based on the node version
-/// The @azure/identity package depends on @azure/msal-node which uses modern JavaScript features like optional chaining
-/// that are not supported in Node 10. We only load it when running on Node 14+.
+// Consumer SDK dependency trees require Node 22+; older task handlers use MSAL.
 let azureIdentity: any;
-if (nodeVersion >= 16) {
+if (useAzureIdentity) {
     azureIdentity = require("@azure/identity");
 }
 
@@ -269,10 +268,9 @@ export class ApplicationTokenCredentials {
         }
     }
 
-    // Extracted as its own (overridable) method purely so tests can simulate the Node <16 branch
-    // of acquireTokenForScope without needing an actual Node 10 runtime.
+    // Tests can override the runtime decision without changing the authentication paths.
     private supportsModernIdentity(): boolean {
-        return nodeVersion >= 16;
+        return useAzureIdentity;
     }
 
     private async getMSAL(): Promise<any> /*Promise<msal.ConfidentialClientApplication>*/ {
@@ -406,7 +404,9 @@ export class ApplicationTokenCredentials {
                         : undefined;
                     resourceId = this.getResourceIdFromScope(requestedScope);
                 }
-                webRequest.uri = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=" + apiVersion + "&resource=" + resourceId;
+                const clientId = this.allowScopeLevelToken && resourceId !== this.activeDirectoryResourceId && this.msiClientId
+                    ? "&client_id=" + encodeURIComponent(this.msiClientId) : "";
+                webRequest.uri = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=" + apiVersion + "&resource=" + resourceId + clientId;
                 webRequest.headers = {
                     "Metadata": true
                 };
@@ -533,8 +533,8 @@ export class ApplicationTokenCredentials {
         return msalInstance;
     }
 
-    // scopeOverride lets callers (e.g. acquireTokenForScope on Node <16, where @azure/identity is
-    // unavailable) request a specific scope/audience via MSAL instead of the default ARM audience.
+    // scopeOverride lets older task handlers request a specific scope/audience via MSAL
+    // instead of the default ARM audience.
     // Callers must always pass one of our own hardcoded per-cloud entries from the `scopes` map
     // built in azure-arm-endpoint.ts (getScopesByEnvironment) - e.g. appservice:
     // 'https://appservice.azure.com/.default'. Those literals already include the "/.default"
@@ -552,6 +552,10 @@ export class ApplicationTokenCredentials {
             const request: any /*msal.ClientCredentialRequest*/ = {
                 scopes: [effectiveScopeOverride || (this.activeDirectoryResourceId + "/.default")]
             };
+            if (effectiveScopeOverride && this.scheme === AzureModels.Scheme.WorkloadIdentityFederation && msalVer === "msalv3") {
+                // The cached ARM client may hold an expired assertion; scoped requests need a fresh one.
+                request.clientAssertion = await this.getFederatedToken();
+            }
             const response = await msalApp.acquireTokenByClientCredential(request);
             tl.debug(`MSAL - retrieved token - isFromCache?: ${response.fromCache}`);
             return response.accessToken;
@@ -583,10 +587,8 @@ export class ApplicationTokenCredentials {
             if (this.allowScopeLevelToken && this.scopes && this.scopes[scopeKind]) {
                 tl.debug(`allowScopeLevelToken is enabled, using scope: ${this.scopes[scopeKind]}`);
                 if (!this.supportsModernIdentity()) {
-                    // @azure/identity requires Node 16+, but MSAL (msalv1) already supports SPN,
-                    // MSI, and WIF client-credential flows on Node 10. Request the same mapped
-                    // scope/audience through MSAL instead of falling back to the ARM audience, so
-                    // Node 10 agents get a genuine App Service-scoped token, not a compromise.
+                    // Keep the mapped audience with the compatible client: MSAL v1 on Node 10,
+                    // MSAL v3 on Node 16/20. Do not fall back to an ARM-audience token.
                     tl.debug(`Node ${nodeVersion} detected; using MSAL to acquire scoped token instead of @azure/identity.`);
                     const token = await this.getMSALToken(false, 3, 2000, this.scopes[scopeKind]);
                     // acquireTokenForScope is only ever called for the App Service/Kudu scenario
@@ -708,7 +710,7 @@ export class ApplicationTokenCredentials {
         tl.debug(`buildCredentialByScheme called. scheme = ${AzureModels.Scheme[this.scheme]}`);
         
         if (!azureIdentity) {
-            throw new Error(`@azure/identity is not supported on Node ${nodeVersion}. Please use Node 16 or higher for this authentication scheme.`);
+            throw new Error(`@azure/identity is not supported on Node ${nodeVersion}. Please use Node 22 or higher for this authentication scheme.`);
         }
 
         // Point @azure/identity credentials at the service connection's Entra authority so that

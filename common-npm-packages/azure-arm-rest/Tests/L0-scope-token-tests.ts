@@ -1,12 +1,56 @@
 import assert = require("assert");
 import * as ttm from 'azure-pipelines-task-lib/mock-test';
 import * as path from 'path';
+import { execFileSync } from 'child_process';
 
 export function ScopeTokenTests(defaultTimeout = 2000) {
+    for (const runtime of [10, 16, 20, 22, 24]) {
+        for (const feature of ["undefined", "false", "true"]) {
+            it(`selects a compatible scoped-token client on Node ${runtime}, feature ${feature}`, function () {
+                this.timeout(defaultTimeout);
+                const output = execFileSync(process.execPath, [
+                    path.join(__dirname, "scope-token-runtime-tests.js"), String(runtime), feature
+                ], { encoding: "utf8", timeout: defaultTimeout });
+                assert(output.includes("RUNTIME_SCOPE_TEST_PASSED"));
+            });
+
+        }
+    }
+
+    for (const runtime of [16, 20]) {
+        for (const feature of ["undefined", "false", "true"]) {
+            it(`refreshes scoped WIF assertions on Node ${runtime}, feature ${feature}`, function () {
+                this.timeout(defaultTimeout);
+                const output = execFileSync(process.execPath, [
+                    path.join(__dirname, "scope-token-runtime-tests.js"), String(runtime), feature, "refresh", "WorkloadIdentityFederation"
+                ], { encoding: "utf8", timeout: defaultTimeout });
+                assert(output.includes("RUNTIME_SCOPE_TEST_PASSED"));
+            });
+
+            it(`preserves scoped managed identity selection on Node ${runtime}, feature ${feature}`, function () {
+                this.timeout(defaultTimeout);
+                const output = execFileSync(process.execPath, [
+                    path.join(__dirname, "scope-token-runtime-tests.js"), String(runtime), feature,
+                    "msi", "ManagedServiceIdentity", "MOCK_USER_ASSIGNED_CLIENT"
+                ], { encoding: "utf8", timeout: defaultTimeout });
+                assert(output.includes("RUNTIME_SCOPE_TEST_PASSED"));
+            });
+        }
+
+        it(`does not fall back to ARM after scoped MSAL failure on Node ${runtime}`, function () {
+            this.timeout(defaultTimeout);
+            const output = execFileSync(process.execPath, [
+                path.join(__dirname, "scope-token-runtime-tests.js"), String(runtime), "true", "failure"
+            ], { encoding: "utf8", timeout: defaultTimeout });
+            assert(output.includes("RUNTIME_SCOPE_TEST_PASSED"));
+        });
+    }
+
     it('acquireTokenForScope honors scoped-token behavior and feature gating', function (done: Mocha.Done) {
         this.timeout(defaultTimeout);
         let tp = path.join(__dirname, 'scope-token-tests.js');
         let tr: ttm.MockTestRunner = new ttm.MockTestRunner(tp);
+        tr.nodePath = process.execPath;
 
         tr.runAsync()
             .then(() => {
@@ -30,6 +74,8 @@ export function ScopeTokenTests(defaultTimeout = 2000) {
                 scopedTokenSuccessOnLegacyNode(tr);
                 console.log("\tvalidating Managed Identity scope resource selection");
                 managedIdentityScopeResource(tr);
+                assert(tr.stdOutContained("MSI_SCOPED_CLIENT_ID: preserved"),
+                    "Scoped managed identity must retain the configured user-assigned client ID");
                 console.log("\tvalidating Managed Identity legacy resource when feature is disabled");
                 managedIdentityLegacyResourceWhenFeatureDisabled(tr);
                 console.log("\tvalidating federated token file cleanup");
