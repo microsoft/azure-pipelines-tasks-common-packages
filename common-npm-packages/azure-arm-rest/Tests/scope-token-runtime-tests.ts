@@ -11,10 +11,18 @@ let msalClient: string;
 async function run() {
     try {
         Object.defineProperty(process, "version", { value: `v${runtime}.0.0`, configurable: true });
+        const tl = require("azure-pipelines-task-lib/task");
+        if (feature === "undefined") {
+            delete process.env.DISTRIBUTEDTASK_TASKS_ALLOWSCOPELEVELTOKEN;
+        } else {
+            tl.setVariable("DistributedTask.Tasks.AllowScopeLevelToken", feature);
+        }
+        const enabled = tl.getPipelineFeature("ALLOWSCOPELEVELTOKEN");
+        const loadIdentity = runtime >= 16;
         (Module as any)._load = function (request: string) {
             if (request === "@azure/identity") {
                 identityLoads++;
-                assert(runtime >= 22, "Azure Identity must not load below its supported Node runtime");
+                assert(loadIdentity, "SDK imports must match the runtime and feature-flag baseline");
                 return {};
             }
             if (request === "msalv1" || request === "msalv3") {
@@ -24,10 +32,7 @@ async function run() {
         };
 
         const { ApplicationTokenCredentials } = require("../azure-arm-common");
-        const tl = require("azure-pipelines-task-lib/task");
         require("nock").disableNetConnect();
-        tl.setVariable("DistributedTask.Tasks.AllowScopeLevelToken", feature === "undefined" ? "" : feature);
-        const enabled = tl.getPipelineFeature("ALLOWSCOPELEVELTOKEN");
         const managedIdentity = process.argv[4] === "msi";
         const appServiceScope = managedIdentity ? "https://appservice/.default" : "https://appservice.azure.cn/.default";
         const armResource = managedIdentity ? "https://management.azure.com/" : "https://management.chinacloudapi.cn";
@@ -113,7 +118,7 @@ async function run() {
         const useIdentity = enabled && runtime >= 22;
         const token = await creds.acquireTokenForScope("appservice");
         assert.strictEqual(token, useIdentity ? "MOCK_IDENTITY_TOKEN" : "MOCK_MSAL_TOKEN");
-        assert.strictEqual(identityLoads, runtime >= 22 ? 1 : 0);
+        assert.strictEqual(identityLoads, loadIdentity ? 1 : 0);
         assert.strictEqual(msalClient, runtime < 16 ? "msalv1" : "msalv3");
         assert.strictEqual(identityCalls, useIdentity ? 1 : 0);
         assert.strictEqual(msalCalls, useIdentity ? 0 : 1);

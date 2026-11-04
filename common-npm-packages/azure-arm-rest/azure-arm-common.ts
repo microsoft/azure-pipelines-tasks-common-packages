@@ -24,7 +24,6 @@ import webClient = require('./webClient');
 /// Dynamic msal loading based on the node version
 const nodeVersion = parseInt(process.version.split('.')[0].replace('v', ''));
 const msalVer = nodeVersion < 16 ? "msalv1" : "msalv3";
-const useAzureIdentity = nodeVersion >= 22;
 
 // Maximum backoff timeout for creating AAD token in milliseconds
 const MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT = 15000;
@@ -32,9 +31,11 @@ const MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT = 15000;
 tl.debug('Using ' + msalVer);
 const msal = require(msalVer);
 
-// Consumer SDK dependency trees require Node 22+; older task handlers use MSAL.
+/// Dynamic @azure/identity loading based on the node version
+/// The @azure/identity package depends on @azure/msal-node which uses modern JavaScript features like optional chaining
+/// that are not supported in Node 10. We only load it when running on Node 14+.
 let azureIdentity: any;
-if (useAzureIdentity) {
+if (nodeVersion >= 16) {
     azureIdentity = require("@azure/identity");
 }
 
@@ -268,9 +269,10 @@ export class ApplicationTokenCredentials {
         }
     }
 
-    // Tests can override the runtime decision without changing the authentication paths.
+    // Extracted as its own (overridable) method purely so tests can simulate the Node <16 branch
+    // of acquireTokenForScope without needing an actual Node 10 runtime.
     private supportsModernIdentity(): boolean {
-        return useAzureIdentity;
+        return nodeVersion >= 22;
     }
 
     private async getMSAL(): Promise<any> /*Promise<msal.ConfidentialClientApplication>*/ {
@@ -403,10 +405,11 @@ export class ApplicationTokenCredentials {
                         ? appTokenProviderParameters.scopes[0]
                         : undefined;
                     resourceId = this.getResourceIdFromScope(requestedScope);
+                    if (resourceId !== this.activeDirectoryResourceId && this.msiClientId) {
+                        resourceId += "&client_id=" + encodeURIComponent(this.msiClientId);
+                    }
                 }
-                const clientId = this.allowScopeLevelToken && resourceId !== this.activeDirectoryResourceId && this.msiClientId
-                    ? "&client_id=" + encodeURIComponent(this.msiClientId) : "";
-                webRequest.uri = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=" + apiVersion + "&resource=" + resourceId + clientId;
+                webRequest.uri = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=" + apiVersion + "&resource=" + resourceId;
                 webRequest.headers = {
                     "Metadata": true
                 };
@@ -552,7 +555,7 @@ export class ApplicationTokenCredentials {
             const request: any /*msal.ClientCredentialRequest*/ = {
                 scopes: [effectiveScopeOverride || (this.activeDirectoryResourceId + "/.default")]
             };
-            if (effectiveScopeOverride && this.scheme === AzureModels.Scheme.WorkloadIdentityFederation && msalVer === "msalv3") {
+            if (this.allowScopeLevelToken && effectiveScopeOverride && this.scheme === AzureModels.Scheme.WorkloadIdentityFederation && msalVer === "msalv3") {
                 // The cached ARM client may hold an expired assertion; scoped requests need a fresh one.
                 request.clientAssertion = await this.getFederatedToken();
             }
@@ -710,7 +713,7 @@ export class ApplicationTokenCredentials {
         tl.debug(`buildCredentialByScheme called. scheme = ${AzureModels.Scheme[this.scheme]}`);
         
         if (!azureIdentity) {
-            throw new Error(`@azure/identity is not supported on Node ${nodeVersion}. Please use Node 22 or higher for this authentication scheme.`);
+            throw new Error(`@azure/identity is not supported on Node ${nodeVersion}. Please use Node 16 or higher for this authentication scheme.`);
         }
 
         // Point @azure/identity credentials at the service connection's Entra authority so that
