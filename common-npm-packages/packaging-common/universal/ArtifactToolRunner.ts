@@ -39,6 +39,7 @@ function getCommandString(toolPath: string, command: string[]){
 }
 
 export function runArtifactTool(artifactToolPath: string, command: string[], execOptions: IExecOptions): IExecSyncResult{
+    execOptions = { ...execOptions, externalOutput: { source: "childProcess" } };
 
     if (tl.osType() === "Windows_NT" || artifactToolPath.trim().toLowerCase().endsWith(".exe")) {
         return tl.execSync(artifactToolPath, command, execOptions);
@@ -47,7 +48,9 @@ export function runArtifactTool(artifactToolPath: string, command: string[], exe
         fs.chmodSync(artifactToolPath, "755");
 
         if (!execOptions.silent) {
-            execOptions.outStream.write(getCommandString(artifactToolPath, command) + os.EOL);
+            tl.writeExternalOutput(getCommandString(artifactToolPath, command) + os.EOL, {
+                ...execOptions.externalOutput, destination: execOptions.outStream
+            });
         }
 
         const spawnOptions = { ...execOptions, maxBuffer: 1024 * 1024 * 1024 };
@@ -55,11 +58,15 @@ export function runArtifactTool(artifactToolPath: string, command: string[], exe
         let result = child.spawnSync(artifactToolPath, command, spawnOptions);
 
         if (!execOptions.silent && result.stdout && result.stdout.length > 0) {
-            execOptions.outStream.write(result.stdout);
+            tl.writeExternalOutput(result.stdout, {
+                ...execOptions.externalOutput, destination: execOptions.outStream
+            });
         }
 
         if (!execOptions.silent && result.stderr && result.stderr.length > 0) {
-            execOptions.errStream.write(result.stderr);
+            tl.writeExternalOutput(result.stderr, {
+                ...execOptions.externalOutput, destination: execOptions.errStream
+            });
         }
 
         let res: IExecSyncResult = <IExecSyncResult>{ code: result.status, error: result.error };

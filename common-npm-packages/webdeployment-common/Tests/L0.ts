@@ -11,8 +11,10 @@ import { runL1ValidateFileEncodingTests } from "./L1ValidateFileEncoding";
 import { runParameterParserUtilityTests } from "./L0ParameterParserUtility";
 import { runL1ZipUtilityTests } from "./L1ZipUtility";
 import { runL1SecureMSDeployTests } from "./L1SecureMSDeploy";
+import { runFileDiagnosticsTests } from "./L0FileDiagnostics";
 
 describe('Web deployment common tests', () => {
+    describe('File diagnostics', runFileDiagnosticsTests);
     describe('GetMSDeployCmdArgs tests', runGetMSDeployCmdArgsTests);
     describe('GetWebDeployErrorCode tests', runGetWebDeployErrorCodeTests);
     describe('SecureMSDeployValidation tests', runSecureMSDeployValidationTests);

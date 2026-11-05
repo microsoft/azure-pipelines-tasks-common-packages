@@ -4,19 +4,36 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as ltx from 'ltx';
 import * as sinon from 'sinon';
+import { DOMParser } from '@xmldom/xmldom';
 
 import { applyXdtTransformation } from "../xdttransformationutility";
 import { detectFileEncoding } from "../fileencoding";
-import { WebDeploymentCompatibilityFixEnabled } from "../featureFlags";
 
+const WebDeploymentCompatibilityFixEnabled = "WebDeploymentCompatibilityFixEnabled";
 
 export function runL1XdtTransformTests(this: Mocha.Suite) {
-    [undefined, 'true'].forEach(featureValue => {
-        describe(featureValue === undefined ? 'Hardened XDT enabled by default' : 'Hardened XDT explicitly enabled', function() {
-            runXdtTransformTests.call(this, featureValue);
-        });
+    // The DOCTYPE check reports telemetry by printing a ##vso[telemetry.publish ...] line. On a real agent that
+    // line is forwarded to production telemetry, so swallow only those lines while these tests run. Per-test
+    // spies/stubs wrap this function and still record their calls.
+    const doctypeTelemetryPrefix = '##vso[telemetry.publish area=TaskHub;feature=XdtDoctypeBlock]';
+    let originalConsoleLog: typeof console.log;
+    beforeEach(() => {
+        originalConsoleLog = console.log;
+        console.log = function(...args: any[]) {
+            if (typeof args[0] === 'string' && args[0].indexOf(doctypeTelemetryPrefix) === 0) {
+                return;
+            }
+            originalConsoleLog.apply(console, args);
+        };
     });
-    describe('Hardened XDT explicitly disabled', runDisabledXdtTransformTests);
+    afterEach(() => {
+        console.log = originalConsoleLog;
+    });
+
+    describe('Hardened XDT explicitly enabled', function() {
+        runXdtTransformTests.call(this);
+    });
+    describe('Hardened XDT disabled', runDisabledXdtTransformTests);
 }
 
 function runDisabledXdtTransformTests(this: Mocha.Suite) {
@@ -52,9 +69,15 @@ function runDisabledXdtTransformTests(this: Mocha.Suite) {
         }
     });
 
-    ['false', 'FALSE'].forEach(value => {
-        it('Rejects ' + value + ' without reading files or executing XDT, even with the removed unsafe opt-out', () => {
-            process.env[flagEnvironmentVariable] = value;
+    [undefined, 'false', 'invalid'].forEach(value => {
+        it('Rejects ' + (value === undefined ? 'an absent feature' : value) +
+            ' without reading files or executing XDT, even with the removed unsafe opt-out', () => {
+            if (value === undefined) {
+                delete process.env[flagEnvironmentVariable];
+            }
+            else {
+                process.env[flagEnvironmentVariable] = value;
+            }
             process.env['AZP_ALLOW_UNSAFE_XDT_TRANSFORMS'] = 'true';
             const sourceFile = getFixture('Web.config');
             const originalSource = fs.readFileSync(sourceFile);
@@ -66,7 +89,7 @@ function runDisabledXdtTransformTests(this: Mocha.Suite) {
             [getFixture('Web.Debug.config'), unsafeTransformFile,
                 getFixture('Missing.Transform.config')].forEach(transformFile => {
                 assert.throws(() => applyXdtTransformation(sourceFile, transformFile),
-                    /DistributedTask.Tasks.WebDeploymentCompatibilityFixEnabled is false.*No unhardened transformation was run/i);
+                    /DistributedTask.Tasks.WebDeploymentCompatibilityFixEnabled is not enabled.*No unhardened transformation was run/i);
             });
             assert.strictEqual(read.callCount, 0, 'Disabled transformations must not read source or transform bytes');
             assert.strictEqual(open.callCount, 0, 'Disabled transformations must not open files');
@@ -83,22 +106,21 @@ function runDisabledXdtTransformTests(this: Mocha.Suite) {
     }
 }
 
-function runXdtTransformTests(this: Mocha.Suite, featureValue?: string) {
+function runXdtTransformTests(this: Mocha.Suite) {
     this.timeout(parseInt(process.env.TASK_TEST_TIMEOUT) || 20000);
     const temporaryTransformFiles: string[] = [];
     const flagEnvironmentVariable = 'DISTRIBUTEDTASK_TASKS_WEBDEPLOYMENTCOMPATIBILITYFIXENABLED';
+    const doctypeFlagEnvironmentVariable = 'DISTRIBUTEDTASK_TASKS_XDTDOCTYPEBLOCKDISABLED';
     let previousFlagValue: string;
+    let previousDoctypeFlagValue: string;
 
     tl.setResourcePath(path.join(__dirname, '..', 'module.json'));
 
     beforeEach(done => {
         previousFlagValue = process.env[flagEnvironmentVariable];
-        if (featureValue === undefined) {
-            delete process.env[flagEnvironmentVariable];
-        }
-        else {
-            process.env[flagEnvironmentVariable] = featureValue;
-        }
+        previousDoctypeFlagValue = process.env[doctypeFlagEnvironmentVariable];
+        process.env[flagEnvironmentVariable] = 'true';
+        delete process.env[doctypeFlagEnvironmentVariable];
         tl.cp(getAbsolutePath('Web.config'), getAbsolutePath('Web_test.config'), '-f', false);
  
         done();
@@ -114,6 +136,12 @@ function runXdtTransformTests(this: Mocha.Suite, featureValue?: string) {
             tl.debug(error);
         }
         finally {
+            if (previousDoctypeFlagValue === undefined) {
+                delete process.env[doctypeFlagEnvironmentVariable];
+            }
+            else {
+                process.env[doctypeFlagEnvironmentVariable] = previousDoctypeFlagValue;
+            }
             if (previousFlagValue === undefined) {
                 delete process.env[flagEnvironmentVariable];
             }
@@ -121,6 +149,154 @@ function runXdtTransformTests(this: Mocha.Suite, featureValue?: string) {
                 process.env[flagEnvironmentVariable] = previousFlagValue;
             }
             done();
+        }
+    });
+
+    describe('DOCTYPE validation', function() {
+        let sandbox: sinon.SinonSandbox;
+        const cleanXml = '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform" />';
+        const doctypeTestCases: { name: string, declaration?: string, xml?: string }[] = [
+            { name: 'plain', declaration: '<!DOCTYPE configuration>' },
+            { name: 'internal subset', declaration: '<!DOCTYPE configuration [<!ATTLIST configuration label CDATA "default">]>' },
+            { name: 'SYSTEM subset', declaration: '<!DOCTYPE configuration SYSTEM "https://example.invalid/transform.dtd">' },
+            { name: 'PUBLIC subset', declaration: '<!DOCTYPE configuration PUBLIC "-//Example//DTD Configuration//EN" "https://example.invalid/transform.dtd">' },
+            { name: 'mixed case', declaration: '<!DoCtYpE configuration>' },
+            { name: 'comment', declaration: '<!-- <!DOCTYPE configuration> -->' },
+            // Valid XML whose only DOCTYPE text is literal CDATA content; the check is intentionally textual.
+            { name: 'CDATA', xml: '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">' +
+                '<![CDATA[ <!DOCTYPE configuration> ]]></configuration>' }
+        ];
+
+        beforeEach(() => {
+            sandbox = sinon.createSandbox();
+        });
+        afterEach(() => sandbox.restore());
+
+        doctypeTestCases.forEach(testCase => {
+            (['utf8', 'utf16le'] as BufferEncoding[]).forEach(encoding => {
+                it('Blocks ' + testCase.name + ' in ' + encoding + ' before parsing or execution', () => {
+                    const content = Buffer.from(testCase.xml || testCase.declaration + cleanXml, encoding);
+                    const transformFile = writeTemporaryBinaryFile('Web.Doctype.config',
+                        encoding === 'utf16le' ? Buffer.concat([Buffer.from([0xFF, 0xFE]), content]) : content);
+                    const sourceFile = getAbsolutePath('Web_test.config');
+                    const originalSource = fs.readFileSync(sourceFile);
+                    const destinationFile = writeTemporaryTransformFile('Web.DoctypeDestination.config', 'unchanged');
+                    const parse = sandbox.spy(DOMParser.prototype, 'parseFromString');
+                    const execute = sandbox.stub(tl, 'execSync').throws(new Error('XDT must not execute'));
+                    const telemetry = sandbox.stub(console, 'log');
+
+                    assert.throws(() => applyXdtTransformation(sourceFile, transformFile, destinationFile),
+                        /contains a DOCTYPE declaration/);
+                    assert.strictEqual(parse.callCount, 0);
+                    assert.strictEqual(execute.callCount, 0);
+                    assert.deepStrictEqual(fs.readFileSync(sourceFile), originalSource);
+                    assert.strictEqual(fs.readFileSync(destinationFile, 'utf8'), 'unchanged');
+                    assertTelemetry(telemetry, 'blocked', 'doctype');
+                });
+            });
+        });
+
+        [undefined, 'false', 'invalid'].forEach(value => {
+            it('Keeps blocking active for kill-switch value ' + String(value), () => {
+                if (value !== undefined) {
+                    process.env[doctypeFlagEnvironmentVariable] = value;
+                }
+                const transformFile = writeTemporaryTransformFile('Web.DoctypeFlag.config',
+                    '<!DOCTYPE configuration>' + cleanXml);
+                const execute = sandbox.stub(tl, 'execSync').throws(new Error('XDT must not execute'));
+                assert.throws(() => applyXdtTransformation(getAbsolutePath('Web_test.config'), transformFile),
+                    /contains a DOCTYPE declaration/);
+                assert.strictEqual(execute.callCount, 0);
+            });
+        });
+
+        it('Passes clean XML, reads the transform once, and reports passed telemetry', () => {
+            const transformFile = writeTemporaryTransformFile('Web.NoDoctype.config', cleanXml);
+            const read = sandbox.spy(fs, 'readFileSync');
+            const execute = sandbox.stub(tl, 'execSync').returns({ code: 0, stdout: '', stderr: '' });
+            const telemetry = sandbox.stub(console, 'log');
+
+            applyXdtTransformation(getAbsolutePath('Web_test.config'), transformFile);
+
+            assert.strictEqual(read.withArgs(transformFile).callCount, 1);
+            assert.strictEqual(execute.callCount, 1);
+            assertTelemetry(telemetry, 'passed', 'doctypeCheckPassed');
+        });
+
+        it('Reads the rollback switch on each transformation and reports skipped telemetry', () => {
+            const transformFile = writeTemporaryTransformFile('Web.DoctypeRollback.config',
+                '<!DOCTYPE configuration>' + cleanXml);
+            const execute = sandbox.stub(tl, 'execSync').returns({ code: 0, stdout: '', stderr: '' });
+            const telemetry = sandbox.stub(console, 'log');
+
+            ['true', 'TRUE'].forEach(value => {
+                process.env[doctypeFlagEnvironmentVariable] = value;
+                applyXdtTransformation(getAbsolutePath('Web_test.config'), transformFile);
+            });
+            assert.strictEqual(execute.callCount, 2);
+            assertTelemetry(telemetry, 'skipped', 'doctypeCheckDisabled', 2);
+
+            delete process.env[doctypeFlagEnvironmentVariable];
+            assert.throws(() => applyXdtTransformation(getAbsolutePath('Web_test.config'), transformFile),
+                /contains a DOCTYPE declaration/);
+            assert.strictEqual(execute.callCount, 2);
+        });
+
+        it('Retains import and encoding validation when the DOCTYPE check is disabled', () => {
+            process.env[doctypeFlagEnvironmentVariable] = 'true';
+            const importFile = writeTemporaryTransformFile('Web.DoctypeRollbackImport.config',
+                '<!DOCTYPE configuration>' +
+                '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">' +
+                '<xdt:Import assembly="CustomTransform" namespace="CustomTransform" /></configuration>');
+            const encodingFile = writeTemporaryTransformFile('Web.DoctypeRollbackEncoding.config',
+                '<?xml version="1.0" encoding="utf-7"?>' + cleanXml);
+            const execute = sandbox.stub(tl, 'execSync').throws(new Error('XDT must not execute'));
+
+            assert.throws(() => applyXdtTransformation(getAbsolutePath('Web_test.config'), importFile), /xdt:Import/);
+            assert.throws(() => applyXdtTransformation(getAbsolutePath('Web_test.config'), encodingFile), /utf-7/i);
+            assert.strictEqual(execute.callCount, 0);
+        });
+
+        it('Does not enable XDT when the compatibility flag is disabled', () => {
+            process.env[doctypeFlagEnvironmentVariable] = 'true';
+            process.env[flagEnvironmentVariable] = 'false';
+            const read = sandbox.spy(fs, 'readFileSync');
+            const execute = sandbox.stub(tl, 'execSync').throws(new Error('XDT must not execute'));
+
+            assert.throws(() => applyXdtTransformation(getAbsolutePath('Web_test.config'), 'Missing.config'),
+                /No unhardened transformation was run/i);
+            assert.strictEqual(read.callCount, 0);
+            assert.strictEqual(execute.callCount, 0);
+        });
+
+        it('Applies a DTD-backed transform with the real ctt.exe only when the rollback switch is on', function() {
+            if (tl.getPlatform() !== tl.Platform.Windows) {
+                this.skip();
+            }
+
+            const originalSource = '<configuration><appSettings><add key="Setting1" value="Original" /></appSettings></configuration>';
+            const sourceFile = writeTemporaryTransformFile('Web.DoctypeRealSource.config', originalSource);
+            // The DTD supplies the transform attributes; the JS validator cannot see them, ctt.exe applies them.
+            const transformFile = writeTemporaryTransformFile('Web.DoctypeRealTransform.config',
+                '<!DOCTYPE configuration [<!ATTLIST add xdt:Locator CDATA "Match(key)" ' +
+                'xdt:Transform CDATA "SetAttributes(value)">]>' +
+                '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">' +
+                '<appSettings><add key="Setting1" value="RollbackApplied" /></appSettings></configuration>');
+
+            assert.throws(() => applyXdtTransformation(sourceFile, transformFile), /contains a DOCTYPE declaration/);
+            assert.strictEqual(fs.readFileSync(sourceFile, 'utf8'), originalSource,
+                'The default must block before ctt.exe changes the source');
+
+            process.env[doctypeFlagEnvironmentVariable] = 'true';
+            applyXdtTransformation(sourceFile, transformFile);
+            assert(fs.readFileSync(sourceFile, 'utf8').indexOf('RollbackApplied') !== -1,
+                'The rollback switch must restore the previous end-to-end transformation result');
+        });
+
+        function assertTelemetry(telemetry: sinon.SinonSpy, result: string, reason: string, count = 1): void {
+            const expected = '##vso[telemetry.publish area=TaskHub;feature=XdtDoctypeBlock]' +
+                JSON.stringify({ result, reason });
+            assert.strictEqual(telemetry.getCalls().filter(call => call.args[0] === expected).length, count);
         }
     });
 
@@ -238,7 +414,7 @@ function runXdtTransformTests(this: Mocha.Suite, featureValue?: string) {
 
         assert.throws(
             () => applyXdtTransformation(getAbsolutePath('Web_test.config'), transformFile),
-            /parse XML transform file|xdt:Import/i,
+            /contains a DOCTYPE declaration/,
             'Should fail closed on transform files that use a DTD/entity to hide xdt:Import');
         done();
     });
@@ -535,7 +711,7 @@ function runXdtTransformTests(this: Mocha.Suite, featureValue?: string) {
         done();
     });
 
-    it('Rejects invalid feature-flag values before reading or executing the transform', function() {
+    it('Treats invalid feature-flag values as disabled before reading or executing the transform', function() {
         const transformFile = writeTemporaryTransformFile('Web.DefaultCompatibility.config',
             '<?xml version="1.0" encoding="iso-ir-100"?>' +
             '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform" />');
@@ -547,7 +723,7 @@ function runXdtTransformTests(this: Mocha.Suite, featureValue?: string) {
             ['not-true', '1', ' true ', 'true\r\n', 'false\n'].forEach(value => {
                 process.env[flagEnvironmentVariable] = value;
                 assert.throws(() => applyXdtTransformation(getAbsolutePath('Web_test.config'), transformFile),
-                    /value must be 'true' or 'false'/i);
+                    /pipeline feature .* is not enabled/i);
             });
             assert.strictEqual(read.callCount, 0);
             assert.strictEqual(execute.callCount, 0);
@@ -557,14 +733,12 @@ function runXdtTransformTests(this: Mocha.Suite, featureValue?: string) {
         }
     });
 
-    it('Retains encoding hardening for empty and case-insensitive enabled flag values', function() {
+    it('Retains encoding hardening for a case-insensitive true feature value', function() {
         const transformFile = writeTemporaryTransformFile('Web.EnabledSecurityFlag.config',
             '<?xml version="1.0" encoding="utf-7"?>' +
             '<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform" />');
-        ['', 'TRUE'].forEach(value => {
-            process.env[flagEnvironmentVariable] = value;
-            assert.throws(() => applyXdtTransformation(getAbsolutePath('Web_test.config'), transformFile), /utf-7/i);
-        });
+        process.env[flagEnvironmentVariable] = 'TRUE';
+        assert.throws(() => applyXdtTransformation(getAbsolutePath('Web_test.config'), transformFile), /utf-7/i);
     });
 
     it('Reads the compatibility flag on each transformation rather than at module load', function() {
@@ -582,18 +756,16 @@ function runXdtTransformTests(this: Mocha.Suite, featureValue?: string) {
         process.env[flagEnvironmentVariable] = 'false';
         assert.throws(() => applyXdtTransformation(sourceFile, transformFile),
             /No unhardened transformation was run/i);
-        [undefined, '', 'TRUE'].forEach(value => {
-            if (value === undefined) {
-                delete process.env[flagEnvironmentVariable];
-            }
-            else {
-                process.env[flagEnvironmentVariable] = value;
-            }
+        ['true', 'TRUE'].forEach(value => {
+            process.env[flagEnvironmentVariable] = value;
             fs.writeFileSync(sourceFile,
                 '<configuration><appSettings><add key="Setting1" value="Original" /></appSettings></configuration>');
             applyXdtTransformation(sourceFile, transformFile);
             assert(fs.readFileSync(sourceFile, 'utf8').indexOf('RuntimeFlag') !== -1);
         });
+        delete process.env[flagEnvironmentVariable];
+        assert.throws(() => applyXdtTransformation(sourceFile, transformFile),
+            /No unhardened transformation was run/i);
         process.env[flagEnvironmentVariable] = 'false';
         assert.throws(() => applyXdtTransformation(sourceFile, transformFile),
             /No unhardened transformation was run/i);

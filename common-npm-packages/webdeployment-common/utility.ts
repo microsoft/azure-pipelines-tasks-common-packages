@@ -3,6 +3,7 @@ import * as os from "os";
 import tl = require('azure-pipelines-task-lib/task');
 import { PackageType } from './packageUtility';
 import zipUtility = require('./ziputility');
+import { VsoCommandMode } from 'azure-pipelines-task-lib/externaloutput';
 /**
  * Validates the input package and finds out input type
  *
@@ -176,7 +177,7 @@ export function copyDirectory(sourceDirectory: string, destDirectory: string) {
     }
 }
 
-export async function generateTemporaryFolderForDeployment(isFolderBasedDeployment: boolean, webDeployPkg: string, packageType: PackageType) {  
+export async function generateTemporaryFolderForDeployment(isFolderBasedDeployment: boolean, webDeployPkg: string, packageType: PackageType, vsoCommandMode: VsoCommandMode = 'disabled') {
     var folderName = tl.getVariable('Agent.TempDirectory') ? tl.getVariable('Agent.TempDirectory') : tl.getVariable('System.DefaultWorkingDirectory');
     var folderPath = generateTemporaryFolderOrZipPath(folderName, true);
     if(isFolderBasedDeployment || packageType === PackageType.jar) {
@@ -185,7 +186,7 @@ export async function generateTemporaryFolderForDeployment(isFolderBasedDeployme
         tl.debug('Copied Web Package: ' + webDeployPkg + ' to temporary location: ' + folderPath + ' successfully.');
     }
     else {
-        await zipUtility.unzip(webDeployPkg, folderPath);
+        await zipUtility.unzip(webDeployPkg, folderPath, vsoCommandMode);
     }
     return folderPath;
 }

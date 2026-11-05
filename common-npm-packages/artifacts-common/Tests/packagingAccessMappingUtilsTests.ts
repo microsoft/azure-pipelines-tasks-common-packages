@@ -1,5 +1,10 @@
 import * as assert from "assert";
-import { getPackagingAccessMappings, PackagingAccessMapping } from "../packagingAccessMappingUtils";
+import * as tl from "azure-pipelines-task-lib/task";
+import {
+    getHttpsPackagingAccessMappings,
+    getPackagingAccessMappings,
+    PackagingAccessMapping
+} from "../packagingAccessMappingUtils";
 
 export function packagingAccessMappingUtilsTests() {
     const standardDefaultAccessMappingMoniker = "PublicAccessMapping";
@@ -115,17 +120,73 @@ export function packagingAccessMappingUtilsTests() {
             accessMappings: [
                 {
                     moniker: "MissingSlashAccessMapping",
-                    accessPoint: "http://pkgs.dev.azure.com/contoso"
+                    accessPoint: "https://pkgs.dev.azure.com/contoso"
                 }
             ]});
 
         assert.deepEqual(mappings, [
             {
-                uri: "http://pkgs.dev.azure.com/contoso/",
+                uri: "https://pkgs.dev.azure.com/contoso/",
                 isPublic: false,
                 isDefault: false
             }
         ]);
+
+        done();
+    });
+
+    it("getPackagingAccessMappings preserves legacy HTTP access mappings", (done: MochaDone) => {
+        const mappings = getPackagingAccessMappings({
+            defaultAccessMappingMoniker: standardDefaultAccessMappingMoniker,
+            accessMappings: [
+                {
+                    moniker: "LegacyAccessMapping",
+                    accessPoint: "http://server.example/collection"
+                }
+            ]
+        });
+
+        assert.strictEqual(
+            mappings[0].uri,
+            "http://server.example/collection/"
+        );
+
+        done();
+    });
+
+    it("getHttpsPackagingAccessMappings rejects HTTP access mappings", (done: MochaDone) => {
+        assert.throws(
+            () => getHttpsPackagingAccessMappings({
+                defaultAccessMappingMoniker: standardDefaultAccessMappingMoniker,
+                accessMappings: [
+                    {
+                        moniker: "InsecureAccessMapping",
+                        accessPoint: "http://server.example/collection"
+                    }
+                ]
+            }),
+            (error: Error) =>
+                error.message === tl.loc("Error_UrlHttpsRequired")
+        );
+
+        done();
+    });
+
+    it("getHttpsPackagingAccessMappings preserves the normalized mapping", (done: MochaDone) => {
+        const mappings = getHttpsPackagingAccessMappings({
+            defaultAccessMappingMoniker: standardDefaultAccessMappingMoniker,
+            accessMappings: [
+                {
+                    moniker: "SecureAccessMapping",
+                    accessPoint: "HTTPS://PKGS.EXAMPLE.TEST:443/collection"
+                }
+            ]
+        });
+
+        assert.strictEqual(
+            mappings[0].uri,
+            "HTTPS://PKGS.EXAMPLE.TEST:443/collection/"
+        );
 
         done();
     });

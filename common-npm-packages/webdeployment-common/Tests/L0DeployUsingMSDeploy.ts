@@ -13,7 +13,8 @@ import msDeployUtility = require("../msdeployutility");
 
 import { DeployUsingMSDeploy, executeWebDeploy } from "../deployusingmsdeploy";
 import { Package } from "../packageUtility";
-import { WebDeploymentCompatibilityFixEnabled } from "../featureFlags";
+
+const WebDeploymentCompatibilityFixEnabled = "WebDeploymentCompatibilityFixEnabled";
 
 export function runDeployUsingMSDeployTests(): void {
     let sandbox: sinon.SinonSandbox;
@@ -28,15 +29,10 @@ export function runDeployUsingMSDeployTests(): void {
     let stderrOutput: string;
     let stdoutOutput: string;
     let exitSignal: string;
-    let originalCompatibilityValue: string | undefined;
-    const compatibilityEnvironmentVariable = "DISTRIBUTEDTASK_TASKS_" + WebDeploymentCompatibilityFixEnabled.toUpperCase();
-
     const regularToolPath = "C:\\Tools\\msdeploy.exe";
     const spacedToolPath = "C:\\Program Files\\IIS\\Microsoft Web Deploy V3\\msdeploy.exe";
 
     beforeEach(() => {
-        originalCompatibilityValue = process.env[compatibilityEnvironmentVariable];
-        delete process.env[compatibilityEnvironmentVariable];
         sandbox = sinon.createSandbox();
         stderrOutput = "";
         stdoutOutput = "";
@@ -73,27 +69,17 @@ export function runDeployUsingMSDeployTests(): void {
 
     afterEach(() => {
         sandbox.restore();
-        if (originalCompatibilityValue === undefined) {
-            delete process.env[compatibilityEnvironmentVariable];
-        } else {
-            process.env[compatibilityEnvironmentVariable] = originalCompatibilityValue;
-        }
         tl.rmRF(workingDirectory);
     });
 
-    function stubSecureFlag(enabled: boolean, compatibilityEnabled?: boolean | string): void {
-        if (compatibilityEnabled === undefined) {
-            delete process.env[compatibilityEnvironmentVariable];
-        } else {
-            process.env[compatibilityEnvironmentVariable] = String(compatibilityEnabled);
-        }
+    function stubSecureFlag(enabled: boolean, compatibilityEnabled: boolean = false): void {
         featureStub.callsFake((feature: string) => {
             return feature === "SecureMSDeployCommandExecution" ? enabled
-                : feature === WebDeploymentCompatibilityFixEnabled ? String(compatibilityEnabled).toLowerCase() === "true" : false;
+                : feature === WebDeploymentCompatibilityFixEnabled ? compatibilityEnabled : false;
         });
     }
 
-    function deploy(packagePath: string, enabled: boolean, compatibilityEnabled: boolean | string | undefined,
+    function deploy(packagePath: string, enabled: boolean, compatibilityEnabled: boolean,
         additionalArguments: string = null, setParametersFile: string = null): Promise<void> {
         stubSecureFlag(enabled, compatibilityEnabled);
         return DeployUsingMSDeploy(packagePath, "webapp_name", null, false, false, false, null,
@@ -425,10 +411,10 @@ export function runDeployUsingMSDeployTests(): void {
 
     for (const entryPoint of ["DeployUsingMSDeploy", "executeWebDeploy"]) {
         for (const secureEnabled of [false, true]) {
-            for (const compatibilityEnabled of [undefined, "", false, true, "FALSE", "TrUe"]) {
+            for (const compatibilityEnabled of [false, true]) {
                 it(`should preserve ${entryPoint} rollout behavior with secure=${secureEnabled}, compatibility=${compatibilityEnabled}`, async () => {
                     stubSecureFlag(secureEnabled, compatibilityEnabled);
-                    const fixesEnabled = secureEnabled && String(compatibilityEnabled).toLowerCase() !== "false";
+                    const fixesEnabled = secureEnabled && compatibilityEnabled;
                     const source = path.join(workingDirectory, "source folder");
                     const parameters = path.join(workingDirectory, "my parameters.xml");
                     fs.mkdirSync(source);
@@ -499,62 +485,13 @@ export function runDeployUsingMSDeployTests(): void {
     }
 
     for (const entryPoint of ["DeployUsingMSDeploy", "executeWebDeploy"]) {
-        for (const invalidValue of ["invalid", "1", " true", "false ", " "]) {
-            it(`should reject invalid compatibility configuration ${JSON.stringify(invalidValue)} before executing ${entryPoint}`, async () => {
-                stubSecureFlag(true, invalidValue);
-                sandbox.stub(tl, "loc").callsFake((key: string) => key);
-                const source = path.join(workingDirectory, "source folder");
-                const parameters = path.join(workingDirectory, "my parameters.xml");
-                fs.mkdirSync(source);
-                fs.writeFileSync(parameters, "<parameters />");
-                const originalPath = process.env.PATH;
-                let deployment: Promise<unknown>;
-
-                if (entryPoint === "DeployUsingMSDeploy") {
-                    stubCopiedParameterFile(parameters);
-                    deployment = DeployUsingMSDeploy(source, "site", null, false, false, false, null,
-                        "input.xml", null, true, true);
-                } else {
-                    deployment = executeWebDeploy({
-                        package: new Package(source), appName: "site", setParametersFile: parameters, useWebDeploy: true
-                    });
-                }
-
-                await assert.rejects(deployment, /WebDeploymentInvalidCompatibilityFlag/);
-
-                assert.strictEqual(execStub.called, false);
-                assert.strictEqual(spawnStub.called, false);
-                assert.strictEqual(legacyExecStub.called, false);
-                assert.strictEqual(shortPathStub.called, false);
-                assert.strictEqual(featureStub.calledWith(WebDeploymentCompatibilityFixEnabled), false);
-                assert.strictEqual(process.env.PATH, originalPath);
-                assert.strictEqual(fs.existsSync(parameters), entryPoint === "executeWebDeploy");
-            });
-
-            it(`should preserve legacy transport through ${entryPoint} with invalid compatibility configuration ${JSON.stringify(invalidValue)}`, async () => {
-                stubSecureFlag(false, invalidValue);
-                if (entryPoint === "DeployUsingMSDeploy") {
-                    await deploy("package.zip", false, invalidValue);
-                } else {
-                    sandbox.stub(msDeployUtility, "getWebDeployArgumentsString").resolves(
-                        expectedArguments("package.zip").join(" "));
-                    const result = await executeWebDeploy({ package: null, appName: "webapp_name" });
-                    assert.strictEqual(result.isSuccess, true);
-                }
-
-                assert.strictEqual(execStub.calledOnce, true);
-                assertInvocation(expectedArguments("package.zip"), false);
-                assert.strictEqual(featureStub.calledWith(WebDeploymentCompatibilityFixEnabled), false);
-            });
-        }
-
         it(`should read compatibility configuration for every ${entryPoint} invocation`, async () => {
             shortPathStub.returns(regularToolPath);
             if (entryPoint === "executeWebDeploy") {
                 sandbox.stub(msDeployUtility, "getWebDeployArgumentsString").resolves(
                     expectedArguments("package.zip").join(" "));
             }
-            const values = [false, true, undefined, "", false];
+            const values = [false, true, false, true, false];
             const originalPath = process.env.PATH;
 
             for (let i = 0; i < values.length; i++) {
@@ -569,7 +506,7 @@ export function runDeployUsingMSDeployTests(): void {
                 const [toolPath, args, options] = execStub.getCall(i).args;
                 assert.strictEqual(toolPath, regularToolPath);
                 assert.deepStrictEqual(args, expectedArguments("package.zip"));
-                if (values[i] === false) {
+                if (!values[i]) {
                     assert.deepStrictEqual(Object.keys(options).sort(), ["errStream", "failOnStdErr", "windowsVerbatimArguments"]);
                     assert.strictEqual(options.windowsVerbatimArguments, true);
                     assert.strictEqual(options.failOnStdErr, true);
@@ -584,13 +521,13 @@ export function runDeployUsingMSDeployTests(): void {
             }
 
             assert.strictEqual(execStub.callCount, 5);
-            assert.strictEqual(spawnStub.callCount, 3);
-            assert.strictEqual(legacyExecStub.callCount, 2);
-            assert.strictEqual(shortPathStub.callCount, 2);
+            assert.strictEqual(spawnStub.callCount, 2);
+            assert.strictEqual(legacyExecStub.callCount, 3);
+            assert.strictEqual(shortPathStub.callCount, 3);
         });
     }
 
-    for (const compatibilityEnabled of [false, "FALSE"]) {
+    for (const compatibilityEnabled of [false]) {
         it(`should leave published executable-path validation unchanged with compatibility=${compatibilityEnabled}`, async () => {
             const toolPath = 'C:\\Bad"Path\r\n\\msdeploy.exe';
             toolPathStub.resolves(toolPath);

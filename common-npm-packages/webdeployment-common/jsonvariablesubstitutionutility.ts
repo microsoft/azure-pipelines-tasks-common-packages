@@ -1,6 +1,7 @@
 import tl = require('azure-pipelines-task-lib/task');
 import path = require('path');
 import fs = require('fs');
+import { VsoCommandMode } from 'azure-pipelines-task-lib/externaloutput';
 
 var varUtility = require ('./variableutility.js');
 var fileEncoding = require('./fileencoding.js');
@@ -174,18 +175,19 @@ export function stripJsonComments(content) {
     return contentWithoutComments;
 }
 
-export function jsonVariableSubstitution(absolutePath, jsonSubFiles, substituteAllTypes?: boolean) {
+export function jsonVariableSubstitution(absolutePath, jsonSubFiles, substituteAllTypes?: boolean, vsoCommandMode: VsoCommandMode = 'disabled') {
+    const outputOptions: tl.ExternalOutputOptions = { source: 'repository', vsoCommandMode };
     var envVarObject = createEnvTree(tl.getVariables());
     let isSubstitutionApplied: boolean = false;
     let emptyFiles: string[] = [];
     for(let jsonSubFile of jsonSubFiles) {
-        console.log(tl.loc('JSONvariableSubstitution' , jsonSubFile));
+        tl.writeExternalOutput(tl.loc('JSONvariableSubstitution', jsonSubFile) + '\n', outputOptions);
         var matchFiles = utility.findfiles(path.join(absolutePath, jsonSubFile));
         if(matchFiles.length === 0) {
             throw new Error(tl.loc('NOJSONfilematchedwithspecificpattern', jsonSubFile));
         }
         for(let file of matchFiles) {
-            console.log("Processing file: " + file);
+            tl.writeExternalOutput("Processing file: " + file + '\n', outputOptions);
             var fileBuffer: Buffer = fs.readFileSync(file);
             if (fileBuffer.length > 4){
             var fileEncodeType = fileEncoding.detectFileEncoding(file, fileBuffer);
@@ -200,7 +202,7 @@ export function jsonVariableSubstitution(absolutePath, jsonSubFiles, substituteA
             catch(exception) {
                 throw Error(tl.loc('JSONParseError', file, exception));
             }
-            console.log(tl.loc('JSONvariableSubstitution' , file));
+            tl.writeExternalOutput(tl.loc('JSONvariableSubstitution', file) + '\n', outputOptions);
             if(substituteAllTypes) {
                 isSubstitutionApplied = substituteJsonVariableV2(jsonObject, envVarObject) || isSubstitutionApplied;
             }
@@ -216,7 +218,7 @@ export function jsonVariableSubstitution(absolutePath, jsonSubFiles, substituteA
         }
     }
     if (emptyFiles.length > 0) {
-        console.log(`The following input files either empty: ${emptyFiles.join(', ')}. No substitution was performed.`);
+        tl.writeExternalOutput(`The following input files either empty: ${emptyFiles.join(', ')}. No substitution was performed.\n`, outputOptions);
     }
     
     return isSubstitutionApplied;

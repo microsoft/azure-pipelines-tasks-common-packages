@@ -9,15 +9,22 @@ import { ConnectionData } from 'azure-devops-node-api/interfaces/LocationsInterf
  * Gets the raw connection data (direct representation of _apis/connectionData) for the service hosting a particular protocol
  * @param protocolType The packaging protocol, e.g. 'NuGet'
  */
-export async function getConnectionDataForProtocol(protocolType: protocols.ProtocolType) : Promise<ConnectionData> {
+export async function getConnectionDataForProtocol(
+    protocolType: protocols.ProtocolType
+): Promise<ConnectionData> {
     // Retry getting the connection data (which also potentially includes a network call to find the packaging service first),
     // since we've previously had reliability issues here.
     return await retryOnException(async () => {
         // Determine where the Packaging service lives
         tl.debug('Finding the URI for the packaging service');
+        const serviceUrl =
+            tl.getEndpointUrlRequired("SYSTEMVSSCONNECTION");
         const accessToken = api.getSystemAccessToken();
-        const areaId = protocols.getAreaIdForProtocol(protocolType);
-        const serviceUri = await getServiceUriFromAreaId(areaId, accessToken);
+        const serviceUri = await getServiceUriFromAreaId(
+            protocols.getAreaIdForProtocol(protocolType),
+            serviceUrl,
+            accessToken
+        );
 
         // Get _apis/connectionData from the packaging service
         const webApi = api.getWebApiWithProxy(serviceUri, accessToken);
@@ -46,37 +53,45 @@ export async function getPackagingRouteUrl(
 
     tl.debug('Finding route for location ' + locationGuid);
     return await retryOnException(async () => {
+        const serviceUrl =
+            tl.getEndpointUrlRequired("SYSTEMVSSCONNECTION");
         const accessToken = api.getSystemAccessToken();
-        const areaId = protocols.getAreaIdForProtocol(protocolType);
-        const serviceUri = await getServiceUriFromAreaId(areaId, accessToken);
+        const serviceUri = await getServiceUriFromAreaId(
+            protocols.getAreaIdForProtocol(protocolType),
+            serviceUrl,
+            accessToken
+        );
 
         const webApi = api.getWebApiWithProxy(serviceUri, accessToken);
         const data = await webApi.vsoClient.getVersioningData(apiVersion, protocols.ProtocolType[protocolType], locationGuid, { feedId: feedId, project: project });
 
         tl.debug('Resolved Route: ' + data.requestUrl);
-        return data.requestUrl;
+        return api.requireHttpsUrl(data.requestUrl).href;
     }, 3, 1000);
 }
 
-/**
- * Gets the URI of the service that hosts an area.
- */
-async function getServiceUriFromAreaId(areaId: string, accessToken: string): Promise<string> {
-    const tfsCollectionUrl = tl.getVariable('System.TeamFoundationCollectionUri');
+async function getServiceUriFromAreaId(
+    areaId: string,
+    rootServiceUrl: string,
+    accessToken: string
+): Promise<string> {
     const serverType = tl.getVariable('System.ServerType');
     if (!serverType || serverType.toLowerCase() !== 'hosted') {
-        tl.debug(`Using '${tfsCollectionUrl}' as the service URI since this is on-premises`);
-        return tfsCollectionUrl;
+        tl.debug(`Using '${rootServiceUrl}' as the service URI since this is on-premises`);
+        return rootServiceUrl;
     }
 
-    const webApi = api.getWebApiWithProxy(tfsCollectionUrl, accessToken);
+    const webApi = api.getWebApiWithProxy(
+        api.requireHttpsUrl(rootServiceUrl).href,
+        accessToken
+    );
     const locationApi = await webApi.getLocationsApi();
 
-    tl.debug(`Getting URI for area ID ${areaId} from ${tfsCollectionUrl}`);
+    tl.debug(`Getting URI for area ID ${areaId} from ${rootServiceUrl}`);
     try {
         const serviceUriFromArea = await locationApi.getResourceArea(areaId);
         tl.debug(`Acquired the resource area: ${JSON.stringify(serviceUriFromArea)}`);
-        return serviceUriFromArea.locationUrl;
+        return api.requireHttpsUrl(serviceUriFromArea.locationUrl).href;
     } catch (error) {
         tl.debug(`Failed to obtain the service URI for area ID ${areaId}`);
         if (error instanceof Error) {

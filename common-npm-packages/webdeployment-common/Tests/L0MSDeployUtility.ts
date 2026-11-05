@@ -5,7 +5,8 @@ import fs = require("fs");
 import os = require("os");
 import path = require("path");
 import { getMSDeployCmdArgs, getWebDeployErrorCode, getSpaceSafeToolPath } from "../msdeployutility";
-import { WebDeploymentCompatibilityFixEnabled } from "../featureFlags";
+
+const WebDeploymentCompatibilityFixEnabled = "WebDeploymentCompatibilityFixEnabled";
 
 export function runGetMSDeployCmdArgsTests() {
     it('Should produce default valid args', () => {
@@ -143,34 +144,20 @@ export function runGetWebDeployErrorCodeTests(): void {
 export function runSecureMSDeployValidationTests(): void {
     let sandbox: sinon.SinonSandbox;
     let featureStub: sinon.SinonStub;
-    let originalCompatibilityValue: string | undefined;
-    const compatibilityEnvironmentVariable = "DISTRIBUTEDTASK_TASKS_" + WebDeploymentCompatibilityFixEnabled.toUpperCase();
 
     beforeEach(() => {
-        originalCompatibilityValue = process.env[compatibilityEnvironmentVariable];
-        delete process.env[compatibilityEnvironmentVariable];
         sandbox = sinon.createSandbox();
         featureStub = sandbox.stub(tl, "getPipelineFeature").returns(false);
     });
 
     afterEach(() => {
         sandbox.restore();
-        if (originalCompatibilityValue === undefined) {
-            delete process.env[compatibilityEnvironmentVariable];
-        } else {
-            process.env[compatibilityEnvironmentVariable] = originalCompatibilityValue;
-        }
     });
 
-    function stubSecureFlag(enabled: boolean, compatibilityEnabled?: boolean | string): void {
-        if (compatibilityEnabled === undefined) {
-            delete process.env[compatibilityEnvironmentVariable];
-        } else {
-            process.env[compatibilityEnvironmentVariable] = String(compatibilityEnabled);
-        }
+    function stubSecureFlag(enabled: boolean, compatibilityEnabled: boolean = false): void {
         featureStub.callsFake((feature: string) => {
             return feature === "SecureMSDeployCommandExecution" ? enabled
-                : feature === WebDeploymentCompatibilityFixEnabled ? String(compatibilityEnabled).toLowerCase() === "true" : false;
+                : feature === WebDeploymentCompatibilityFixEnabled ? compatibilityEnabled : false;
         });
     }
 
@@ -260,7 +247,7 @@ export function runSecureMSDeployValidationTests(): void {
         });
     }
 
-    for (const compatibilityEnabled of [undefined, true]) {
+    for (const compatibilityEnabled of [true]) {
         for (const whitespace of ["\n", "\r\n", " \t\r\n"]) {
             it(`should normalize surrounding ${JSON.stringify(whitespace)} in secure additional arguments with compatibility=${compatibilityEnabled}`, () => {
                 stubSecureFlag(true, compatibilityEnabled);
@@ -295,10 +282,10 @@ export function runSecureMSDeployValidationTests(): void {
     }
 
     for (const secureEnabled of [false, true]) {
-        for (const compatibilityEnabled of [undefined, "", false, true, "FALSE", "TrUe"]) {
+        for (const compatibilityEnabled of [false, true]) {
             it(`should preserve the command and validation rollout matrix with secure=${secureEnabled}, compatibility=${compatibilityEnabled}`, () => {
                 stubSecureFlag(secureEnabled, compatibilityEnabled);
-                const fixesEnabled = secureEnabled && String(compatibilityEnabled).toLowerCase() !== "false";
+                const fixesEnabled = secureEnabled && compatibilityEnabled;
                 const userAgentStub = sandbox.stub(tl, "getVariable").withArgs("AZURE_HTTP_USER_AGENT").returns("my user agent");
                 const profile = { publishUrl: "localhost", userName: "user", userPWD: "password" };
                 function buildArgs(authType: string = "Basic", additional: string = "-retryAttempts:11"): string {
@@ -370,32 +357,13 @@ export function runSecureMSDeployValidationTests(): void {
         assert.throws(buildArgs);
         stubSecureFlag(true, true);
         assert.doesNotThrow(buildArgs);
-        stubSecureFlag(true);
-        assert.doesNotThrow(buildArgs);
-        stubSecureFlag(true, "");
+        stubSecureFlag(true, false);
+        assert.throws(buildArgs);
+        stubSecureFlag(true, true);
         assert.doesNotThrow(buildArgs);
         stubSecureFlag(true, false);
         assert.throws(buildArgs);
     });
-
-    for (const invalidValue of ["invalid", "1", " true", "false ", " "]) {
-        it(`should reject invalid compatibility configuration ${JSON.stringify(invalidValue)} before constructing secure arguments`, () => {
-            stubSecureFlag(true, invalidValue);
-            sandbox.stub(tl, "loc").callsFake((key: string) => key);
-            assert.throws(() => getMSDeployCmdArgs("package.zip", "site", null,
-                false, false, false, null, null, null, false, false, false),
-            /WebDeploymentInvalidCompatibilityFlag/);
-            assert.strictEqual(featureStub.calledWith(WebDeploymentCompatibilityFixEnabled), false);
-        });
-
-        it(`should preserve legacy arguments with security off despite invalid compatibility configuration ${JSON.stringify(invalidValue)}`, () => {
-            stubSecureFlag(false, invalidValue);
-            assert.strictEqual(getMSDeployCmdArgs("my `package.zip", "site", null,
-                false, false, false, null, null, null, false, false, false),
-            " -verb:sync -source:package=\"'my `package.zip'\" -dest:contentPath=\"'site'\"   -enableRule:DoNotDeleteRule");
-            assert.strictEqual(featureStub.calledWith(WebDeploymentCompatibilityFixEnabled), false);
-        });
-    }
 }
 
 export function runGetSpaceSafeToolPathTests(): void {

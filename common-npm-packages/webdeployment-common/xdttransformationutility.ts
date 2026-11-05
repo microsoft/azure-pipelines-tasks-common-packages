@@ -3,9 +3,12 @@ import * as fs from 'fs';
 import path = require('path');
 import { DOMParser } from '@xmldom/xmldom';
 import { detectFileEncoding } from './fileencoding';
-import { WebDeploymentCompatibilityFixEnabled, isWebDeploymentCompatibilityFixEnabled } from './featureFlags';
+import { VsoCommandMode } from 'azure-pipelines-task-lib/externaloutput';
 
 const xdtNamespace = 'http://schemas.microsoft.com/XML-Document-Transform';
+const defaultXdtTelemetryFeature = 'XdtTransformationSecurity';
+// Separate feature so DOCTYPE-check events can be queried independently of the other XDT security events.
+const doctypeTelemetryFeature = 'XdtDoctypeBlock';
 // Built-in XDT transform/locator type names. Verified by reflecting the concrete (non-abstract)
 // subclasses of Microsoft.Web.XmlTransform.Transform / .Locator in the bundled ctt.exe
 // (Microsoft.Web.XmlTransform v1.6.0.51029). Any transform/locator type outside this set can only
@@ -153,10 +156,10 @@ export function applyXdtTransformation(sourceFile: string, transformFile: string
 }
 
 function validateXdtTransformFile(transformFile: string, sourceFile: string): void {
-    if (!isWebDeploymentCompatibilityFixEnabled()) {
+    if (!tl.getPipelineFeature('WebDeploymentCompatibilityFixEnabled')) {
         publishXdtSecurityTelemetry('blocked', 'featureDisabled');
         throw new Error(tl.loc('XdtTransformationFeatureDisabled', transformFile,
-            'DistributedTask.Tasks.' + WebDeploymentCompatibilityFixEnabled));
+            'DistributedTask.Tasks.WebDeploymentCompatibilityFixEnabled'));
     }
 
     // Validate transform security before checking source-encoding compatibility.
@@ -166,9 +169,27 @@ function validateXdtTransformFile(transformFile: string, sourceFile: string): vo
 
     validateUtf16DecoderAgreement(transformFile, transformDeclaredEncoding, transformEncoding);
 
-    const transformDocument = parseTransformFile(transformFile, transformBuffer.toString(transformEncoding as BufferEncoding));
+    const xmlString = transformBuffer.toString(transformEncoding as BufferEncoding);
+    validateNoDoctype(transformFile, xmlString);
+
+    const transformDocument = parseTransformFile(transformFile, xmlString);
     validateXdtNode(transformFile, transformDocument.documentElement);
     validateLatin1TransformCompatibility(sourceFile, transformFile, transformDeclaredEncoding, transformBuffer);
+}
+
+function validateNoDoctype(transformFile: string, xmlString: string): void {
+    if (tl.getPipelineFeature('XdtDoctypeBlockDisabled')) {
+        publishXdtSecurityTelemetry('skipped', 'doctypeCheckDisabled', doctypeTelemetryFeature);
+        return;
+    }
+
+    // DTD defaults are applied by .NET but not by the JS validator.
+    if (/<!DOCTYPE/i.test(xmlString)) {
+        publishXdtSecurityTelemetry('blocked', 'doctype', doctypeTelemetryFeature);
+        throw new Error(tl.loc('XdtTransformationDoctypeNotAllowed', transformFile));
+    }
+
+    publishXdtSecurityTelemetry('passed', 'doctypeCheckPassed', doctypeTelemetryFeature);
 }
 
 function validateLatin1TransformCompatibility(
@@ -321,10 +342,10 @@ function describeError(error: any): string {
     return error && error.message ? error.message : String(error);
 }
 
-function publishXdtSecurityTelemetry(result: string, reason: string): void {
+function publishXdtSecurityTelemetry(result: string, reason: string, feature: string = defaultXdtTelemetryFeature): void {
     try {
         const payload = JSON.stringify({ result: result, reason: reason });
-        console.log('##vso[telemetry.publish area=TaskHub;feature=XdtTransformationSecurity]' + payload);
+        console.log('##vso[telemetry.publish area=TaskHub;feature=' + feature + ']' + payload);
     }
     catch (error) {
         tl.debug('Unable to publish XDT transformation security telemetry: ' + (error && error.message ? error.message : error));
@@ -452,7 +473,7 @@ function isXdtNode(node: Element | Attr, localName: string): boolean {
 * @param    transformConfigs  The array of transform config names, ex : ["Release.config", "EnvName.config"]
 * 
 */
-export function basicXdtTransformation(rootFolder, transformConfigs): boolean {
+export function basicXdtTransformation(rootFolder, transformConfigs, vsoCommandMode: VsoCommandMode = 'disabled'): boolean {
     var sourceXmlFiles = expandWildcardPattern(rootFolder, '**/*.config');
     var isTransformationApplied = false;
     Object.keys(sourceXmlFiles).forEach( function(sourceXmlFile) {
@@ -461,7 +482,8 @@ export function basicXdtTransformation(rootFolder, transformConfigs): boolean {
         transformConfigs.forEach( function(transformConfig) {
             var transformXmlFile = path.join(path.dirname(sourceXmlFile), sourceBasename + "." + transformConfig);
             if(sourceXmlFiles[transformXmlFile.toLowerCase()]) {
-                tl.debug('Applying XDT Transformation : ' + transformXmlFile + ' -> ' + sourceXmlFile);
+                tl.debugExternalOutput('Applying XDT Transformation : ' + transformXmlFile + ' -> ' + sourceXmlFile,
+                    { source: 'repository', vsoCommandMode });
                 applyXdtTransformation(sourceXmlFile, transformXmlFile);
                 isTransformationApplied = true;
             }
@@ -481,7 +503,8 @@ export function basicXdtTransformation(rootFolder, transformConfigs): boolean {
 * Performs XDT transformations using ctt.exe
 * 
 */
-export function specialXdtTransformation(rootFolder, transformConfig, sourceConfig, destinationConfig?: string): boolean {
+export function specialXdtTransformation(rootFolder, transformConfig, sourceConfig, destinationConfig?: string, vsoCommandMode: VsoCommandMode = 'disabled'): boolean {
+    const outputOptions: tl.ExternalOutputOptions = { source: 'repository', vsoCommandMode };
     var sourceXmlFiles = expandWildcardPattern(rootFolder, sourceConfig);
     var isTransformationApplied = false;
 
@@ -531,7 +554,7 @@ export function specialXdtTransformation(rootFolder, transformConfig, sourceConf
         
         for(var transformXmlFile in transformXmlFiles) {                
             if(sourceXmlFiles[transformXmlFile.toLowerCase()] || tl.exist(transformXmlFile)) {
-                console.log(tl.loc('ApplyingXDTtransformation' , transformXmlFile , sourceXmlFile));
+                tl.writeExternalOutput(tl.loc('ApplyingXDTtransformation', transformXmlFile, sourceXmlFile) + '\n', outputOptions);
                 applyXdtTransformation(sourceXmlFile, transformXmlFile, destinationXmlFile);
                 isTransformationApplied = true;
             }

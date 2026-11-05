@@ -6,6 +6,7 @@
   "loc.messages.XDTTransformationsappliedsuccessfully": "XML Transformations applied successfully",
   "loc.messages.CannotPerformXdtTransformationOnNonWindowsPlatform": "Cannot perform XML transformations on a non-Windows platform.",
   "loc.messages.XdtTransformationErrorWhileTransforming": "XML transformation error while transforming %s using %s.",
+  "loc.messages.XdtTransformationDoctypeNotAllowed": "The XML transform file %s contains a DOCTYPE declaration, which is not supported by Azure Pipelines XML transformations. Remove the DOCTYPE declaration and any DTD dependencies. No transformation was run.",
   "loc.messages.JSONParseError": "Unable to parse JSON file: %s. Error: %s",
   "loc.messages.NOJSONfilematchedwithspecificpattern": "NO JSON file matched with specific pattern: %s.",
   "loc.messages.FailedToApplyTransformation": "Unable to apply transformation for the given package. Verify the following.",

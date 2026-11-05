@@ -8,34 +8,13 @@ import * as tl from 'azure-pipelines-task-lib/task';
 import * as msdeployUtility from '../msdeployutility';
 import { DeployUsingMSDeploy, executeWebDeploy } from '../deployusingmsdeploy';
 import { Package } from '../packageUtility';
-import { WebDeploymentCompatibilityFixEnabled } from '../featureFlags';
 
 export function runL1SecureMSDeployTests(this: Mocha.Suite) {
     this.timeout(60000);
-    const flagEnvironmentVariable = 'DISTRIBUTEDTASK_TASKS_' + WebDeploymentCompatibilityFixEnabled.toUpperCase();
-    let previousFeatureValue: string | undefined;
-
-    beforeEach(() => previousFeatureValue = process.env[flagEnvironmentVariable]);
-    afterEach(() => {
-        if (previousFeatureValue === undefined) {
-            delete process.env[flagEnvironmentVariable];
-        }
-        else {
-            process.env[flagEnvironmentVariable] = previousFeatureValue;
-        }
-    });
-
-    [undefined, 'true'].forEach(featureValue => {
-        it('Preserves literal paths and parameter values with both genuine MSDeploy engines when compatibility is ' +
-            (featureValue === undefined ? 'enabled by default' : 'explicitly enabled'), async function() {
+    it('Preserves literal paths and parameter values with both genuine MSDeploy engines when compatibility is enabled',
+        async function() {
             if (tl.getPlatform() !== tl.Platform.Windows) {
                 this.skip();
-            }
-            if (featureValue === undefined) {
-                delete process.env[flagEnvironmentVariable];
-            }
-            else {
-                process.env[flagEnvironmentVariable] = featureValue;
             }
 
             const work = fs.mkdtempSync(path.join(os.tmpdir(), 'secure-msdeploy-'));
@@ -65,7 +44,8 @@ export function runL1SecureMSDeployTests(this: Mocha.Suite) {
                     const sandbox = sinon.createSandbox();
                     try {
                         sandbox.stub(tl, 'getPipelineFeature').callsFake(name =>
-                            name === 'SecureMSDeployCommandExecution' || name === WebDeploymentCompatibilityFixEnabled);
+                            name === 'SecureMSDeployCommandExecution' ||
+                            name === 'WebDeploymentCompatibilityFixEnabled');
                         sandbox.stub(tl, 'getVariable').callsFake(name => name === 'System.DefaultWorkingDirectory' ? work : undefined);
                         sandbox.stub(tl, 'filePathSupplied').withArgs('SetParametersFile').returns(true);
                         sandbox.stub(msdeployUtility, 'getMSDeployFullPath').resolves(executable);
@@ -117,5 +97,4 @@ export function runL1SecureMSDeployTests(this: Mocha.Suite) {
                 await fs.promises.rm(work, { recursive: true, maxRetries: 5, retryDelay: 100 });
             }
         });
-    });
 }

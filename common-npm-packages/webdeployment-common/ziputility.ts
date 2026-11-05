@@ -4,24 +4,26 @@ import Q = require('q');
 import fs = require('fs');
 import StreamZip = require('node-stream-zip');
 import tr = require('azure-pipelines-task-lib/toolrunner');
+import { VsoCommandMode } from 'azure-pipelines-task-lib/externaloutput';
 var archiver = require('archiver');
 
 const deleteDir = (path: string) => tl.exist(path) && tl.rmRF(path);
 
-const extractWindowsZip = async (fromFile: string, toDir: string, usePowerShell?: boolean) => {
+const extractWindowsZip = async (fromFile: string, toDir: string, vsoCommandMode: VsoCommandMode) => {
     let forceUsePSUnzip: string = process.env['ADO_FORCE_USE_PSUNZIP'] || 'false'
     tl.debug(`ADO_FORCE_USE_PSUNZIP = '${forceUsePSUnzip}'`)
     if (forceUsePSUnzip.toLowerCase() === 'true') {
-        await extractUsingPowerShell(fromFile, toDir);
+        await extractUsingPowerShell(fromFile, toDir, vsoCommandMode);
     } else {
-        await extractUsing7zip(fromFile, toDir);
+        await extractUsing7zip(fromFile, toDir, vsoCommandMode);
     }
 }
 
-const extractUsingPowerShell = async (fromFile: string, toDir: string) => {
-    tl.debug(`Using PowerShell for extracting zip ${fromFile}`);
+const extractUsingPowerShell = async (fromFile: string, toDir: string, vsoCommandMode: VsoCommandMode) => {
+    const outputOptions: tl.ExternalOutputOptions = { source: 'repository', vsoCommandMode };
+    tl.debugExternalOutput(`Using PowerShell for extracting zip ${fromFile}`, outputOptions);
     let command = `Expand-Archive -Path "${fromFile}" -DestinationPath "${toDir}" -Force`;
-    tl.debug(`Command to execute: '${command}'`)
+    tl.debugExternalOutput(`Command to execute: '${command}'`, outputOptions);
     let powershellPath: string = ''
     let packageSizeInMB: number = 0
 
@@ -32,7 +34,7 @@ const extractUsingPowerShell = async (fromFile: string, toDir: string) => {
     }
     catch (error) {
         tl.debug("Error occurred while trying to calculate package size in MB.")
-        tl.debug(error)
+        tl.debugExternalOutput(String(error), outputOptions);
         packageSizeInMB = -1
     }
 
@@ -64,7 +66,8 @@ const extractUsingPowerShell = async (fromFile: string, toDir: string) => {
         failOnStdErr: false,
         errStream: process.stdout,
         outStream: process.stdout,
-        ignoreReturnCode: true
+        ignoreReturnCode: true,
+        externalOutput: { source: 'childProcess', vsoCommandMode }
     };
 
     let startTimeInSeconds: number = 0
@@ -86,7 +89,7 @@ const extractUsingPowerShell = async (fromFile: string, toDir: string) => {
     }
 }
 
-const extractUsing7zip = async (fromFile: string, toDir: string) => {
+const extractUsing7zip = async (fromFile: string, toDir: string, vsoCommandMode: VsoCommandMode) => {
     let win7zipLocation: string;
 
     if (tl.getPipelineFeature("Use7zV2501InWebDeploymentCommonPackage")) {
@@ -100,32 +103,33 @@ const extractUsing7zip = async (fromFile: string, toDir: string) => {
 
     await tl.tool(win7zipLocation)
         .arg([ 'x', `-o${toDir}`, fromFile ])
-        .exec();
+        .exec({ externalOutput: { source: 'childProcess', vsoCommandMode } });
 }
 
-const extractUsingUnzip = async (fromFile: string, toDir: string) => {
+const extractUsingUnzip = async (fromFile: string, toDir: string, vsoCommandMode: VsoCommandMode) => {
     tl.debug('Using unzip tool for extracting');
     var unzipToolLocation = tl.which('unzip', true);
     await tl.tool(unzipToolLocation)
         .arg([ fromFile, '-d', toDir ])
-        .exec();
+        .exec({ externalOutput: { source: 'childProcess', vsoCommandMode } });
 }
 
-export async function unzip(zipFileLocation: string, unzipDirLocation: string) {
+export async function unzip(zipFileLocation: string, unzipDirLocation: string, vsoCommandMode: VsoCommandMode = 'disabled') {
+    const outputOptions: tl.ExternalOutputOptions = { source: 'repository', vsoCommandMode };
     deleteDir(unzipDirLocation);
 
     const isWin = tl.getPlatform() === tl.Platform.Windows;
     tl.debug('windows platform: ' + isWin);
 
-    tl.debug('extracting ' + zipFileLocation + ' to ' + unzipDirLocation);
+    tl.debugExternalOutput('extracting ' + zipFileLocation + ' to ' + unzipDirLocation, outputOptions);
     if (isWin) {
-        await extractWindowsZip(zipFileLocation, unzipDirLocation);
+        await extractWindowsZip(zipFileLocation, unzipDirLocation, vsoCommandMode);
     }
     else{
-        await extractUsingUnzip(zipFileLocation, unzipDirLocation);
+        await extractUsingUnzip(zipFileLocation, unzipDirLocation, vsoCommandMode);
     }
 
-    tl.debug('extracted ' + zipFileLocation + ' to ' + unzipDirLocation + ' Successfully');
+    tl.debugExternalOutput('extracted ' + zipFileLocation + ' to ' + unzipDirLocation + ' Successfully', outputOptions);
 }
 
 export async function archiveFolder(folderPath, targetPath, zipName) {

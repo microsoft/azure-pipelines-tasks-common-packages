@@ -29,3 +29,4 @@ export interface PackagingAccessMapping {
  * To use this API, first get connectionData, then pass connectionData.locationServiceData
  */
 export declare function getPackagingAccessMappings(locationServiceData: LocationServiceData): PackagingAccessMapping[];
+export declare function getHttpsPackagingAccessMappings(locationServiceData: LocationServiceData): PackagingAccessMapping[];

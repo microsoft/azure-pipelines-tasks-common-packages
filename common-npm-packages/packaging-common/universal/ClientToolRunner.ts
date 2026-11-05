@@ -27,6 +27,7 @@ function getCommandString(toolPath: string, command: string[]){
 }
 
 export function runClientTool(clientToolPath: string, command: string[], execOptions: IExecOptions): IExecSyncResult{
+    execOptions = { ...execOptions, externalOutput: { source: "childProcess" } };
 
     if (tl.osType() === "Windows_NT" || clientToolPath.trim().toLowerCase().endsWith(".exe")) {
         return tl.execSync(clientToolPath, command, execOptions);
@@ -35,7 +36,9 @@ export function runClientTool(clientToolPath: string, command: string[], execOpt
         fs.chmodSync(clientToolPath, "755");
 
         if (!execOptions.silent) {
-            execOptions.outStream.write(getCommandString(clientToolPath, command) + os.EOL);
+            tl.writeExternalOutput(getCommandString(clientToolPath, command) + os.EOL, {
+                ...execOptions.externalOutput, destination: execOptions.outStream
+            });
         }
 
         const spawnOptions = { ...execOptions, maxBuffer: 1024 * 1024 * 1024 };
@@ -43,11 +46,15 @@ export function runClientTool(clientToolPath: string, command: string[], execOpt
         let result = child.spawnSync(clientToolPath, command, spawnOptions);
 
         if (!execOptions.silent && result.stdout && result.stdout.length > 0) {
-            execOptions.outStream.write(result.stdout);
+            tl.writeExternalOutput(result.stdout, {
+                ...execOptions.externalOutput, destination: execOptions.outStream
+            });
         }
 
         if (!execOptions.silent && result.stderr && result.stderr.length > 0) {
-            execOptions.errStream.write(result.stderr);
+            tl.writeExternalOutput(result.stderr, {
+                ...execOptions.externalOutput, destination: execOptions.errStream
+            });
         }
 
         let res: IExecSyncResult = <IExecSyncResult>{ code: result.status, error: result.error };
