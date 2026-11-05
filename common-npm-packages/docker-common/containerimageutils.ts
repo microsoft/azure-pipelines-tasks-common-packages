@@ -2,6 +2,7 @@
 import * as tl from "azure-pipelines-task-lib/task";
 import * as fs from 'fs';
 import ContainerConnection from "./containerconnection";
+import { sanitizeDockerErrlineForLog, createDockerExecSyncOutputOptions, DOCKER_ERRLINE_SANITIZATION_PIPELINE_FEATURE } from "./vsoCommandSanitizer";
 
 const reservedImageName = "scratch";
 
@@ -308,19 +309,31 @@ function runPullImageCommand(connection: ContainerConnection, imageName: string)
     let pullCommand = connection.createCommand();
     pullCommand.arg("pull");
     pullCommand.arg(imageName);
-    let pullResult = pullCommand.execSync();
+    // execSync() sanitizes the copy written to outStream/errStream through
+    // externalOutput, but returns raw stdout/stderr for parsing. Neutralize
+    // ##vso[ markers in the raw stderr before replaying it through tl.debug() -
+    // same reasoning as the errline capture in containerconnection.ts.
+    // createDockerExecSyncOutputOptions mirrors sanitizeDockerErrlineForLog's feature gate,
+    // so task-lib's detection telemetry always fires here too, even while enforcement is off.
+    const sanitizeDockerErrlineEnabled = tl.getPipelineFeature(DOCKER_ERRLINE_SANITIZATION_PIPELINE_FEATURE);
+    let pullResult = pullCommand.execSync({ externalOutput: createDockerExecSyncOutputOptions(sanitizeDockerErrlineEnabled) });
     if (pullResult.stderr && pullResult.stderr != "") {
-        tl.debug(`An error was found pulling the image ${imageName}, the command output was ${pullResult.stderr}`);
+        // skipTaskLibTelemetry: the live stream above already reported this same
+        // output to task-lib's detection telemetry - see sanitizeDockerErrlineForLog.
+        tl.debug(`An error was found pulling the image ${imageName}, the command output was ${sanitizeDockerErrlineForLog(pullResult.stderr, "Docker", { skipTaskLibTelemetry: true })}`);
     }
 }
 function runInspectImageCommand(connection: ContainerConnection, imageName): any {
         let inspectCommand = connection.createCommand();
         inspectCommand.arg("inspect");
         inspectCommand.arg(imageName);
-        let inspectResult = inspectCommand.execSync();
+        const sanitizeDockerErrlineEnabled = tl.getPipelineFeature(DOCKER_ERRLINE_SANITIZATION_PIPELINE_FEATURE);
+        let inspectResult = inspectCommand.execSync({ externalOutput: createDockerExecSyncOutputOptions(sanitizeDockerErrlineEnabled) });
 
         if (inspectResult.stderr && inspectResult.stderr != "") {
-            tl.debug(`An error was found inspecting the image ${imageName}, the command output was ${inspectResult.stderr}`);
+            // skipTaskLibTelemetry: the live stream above already reported this same
+            // output to task-lib's detection telemetry - see sanitizeDockerErrlineForLog.
+            tl.debug(`An error was found inspecting the image ${imageName}, the command output was ${sanitizeDockerErrlineForLog(inspectResult.stderr, "Docker", { skipTaskLibTelemetry: true })}`);
             return null;
         }
 
