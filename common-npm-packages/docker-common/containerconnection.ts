@@ -10,7 +10,7 @@ import * as imageUtils from "./containerimageutils";
 import AuthenticationToken from "./registryauthenticationprovider/registryauthenticationtoken"
 import * as fileutils from "./fileutils";
 import * as os from "os";
-import { sanitizeVsoCommandMarkers } from "./vsoCommandSanitizer";
+import { sanitizeDockerErrlineForLog } from "./vsoCommandSanitizer";
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
@@ -63,8 +63,10 @@ export default class ContainerConnection {
         // branches below - and any sink added later - are covered by default.
         // Of the two, only console.log() is actually injectable; tl.error()
         // escapes CR/LF and wraps the text in an outer task.issue command.
+        // Pipeline-feature gated enforcement, plus always-on detection telemetry - see
+        // sanitizeDockerErrlineForLog in vsoCommandSanitizer.ts for rollout rationale.
         command.on("errline", line => {
-            errlines.push(sanitizeVsoCommandMarkers(line));
+            errlines.push(sanitizeDockerErrlineForLog(line, "Docker"));
         });
         
         const hideDockerExecTaskLogIssueErrorOutput = tl.getPipelineFeature("hideDockerExecTaskLogIssueErrorOutput");

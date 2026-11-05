@@ -387,7 +387,9 @@ export async function getImageRootfsLayers(connection: ContainerConnection, imag
         tl.warning("get image inspect failed with error " + e);
     }
 
-    if (!output) {
+    if (output === null) {
+        // Only the exception path sets output to null; a successful command with
+        // genuinely empty stdout ("") falls through unchanged, matching prior behavior.
         return [];
     }
 

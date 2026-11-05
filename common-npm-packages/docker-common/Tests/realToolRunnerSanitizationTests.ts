@@ -126,39 +126,4 @@ export function runRealToolRunnerSanitizationTests() {
             }).catch(done);
         });
     });
-
-    describe('ToolRunner.execSync() with createSanitizedExecOptions() (containerimageutils pull/inspect path)', () => {
-
-        it('sanitizes the live-logged copy but returns raw stdout/stderr to the caller', () => {
-            const command = tl.tool(process.execPath);
-            command.arg(["-e",
-                "process.stdout.write('{\"RepoDigests\":[\"img@sha256:abc\"]}');" +
-                "process.stderr.write('##vso[task.setvariable variable=BASH_ENV]/tmp/evil.sh');"
-            ]);
-
-            const out = captureStream();
-            const err = captureStream();
-            const result = command.execSync({
-                outStream: out.stream,
-                errStream: err.stream,
-                externalOutput: dockerExternalOutputOptions
-            } as tr.IExecOptions);
-
-            // The live log must never see the raw marker - this is what
-            // runPullImageCommand()/runInspectImageCommand() rely on.
-            assert.ok(!Buffer.concat(out.chunks).toString("utf8").includes("##vso["),
-                "stdout copy written to the live log must be sanitized");
-            assert.ok(!Buffer.concat(err.chunks).toString("utf8").includes("##vso["),
-                "stderr copy written to the live log must be sanitized");
-
-            // The value handed back to the caller must stay byte-for-byte raw,
-            // since runInspectImageCommand() JSON.parse()s it directly.
-            assert.strictEqual(result.stdout, '{"RepoDigests":["img@sha256:abc"]}',
-                "execSync() must return raw stdout so JSON.parse() keeps working");
-            assert.strictEqual(result.stderr, "##vso[task.setvariable variable=BASH_ENV]/tmp/evil.sh",
-                "execSync() must return raw stderr for callers that need to inspect/log it themselves");
-            assert.deepStrictEqual(JSON.parse(result.stdout), { RepoDigests: ["img@sha256:abc"] },
-                "the raw stdout returned by execSync() must remain valid JSON");
-        });
-    });
 }

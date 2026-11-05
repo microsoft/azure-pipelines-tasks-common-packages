@@ -5,6 +5,7 @@ import { filterExternalOutput } from "azure-pipelines-task-lib/externaloutput";
 process.env['INPUT_BUILDCONTEXT'] = '/tmp/build';
 process.env['SYSTEM_DEFAULTWORKINGDIRECTORY'] = '/tmp/work';
 
+import * as tl from "azure-pipelines-task-lib/task";
 import * as containerImageUtils from "../containerimageutils";
 
 /**
@@ -101,6 +102,20 @@ export function runContainerImageUtilsSanitizationTests() {
 
     describe('getImageDigest() execSync() sanitization', () => {
 
+        let originalGetPipelineFeature: typeof tl.getPipelineFeature;
+
+        afterEach(() => {
+            if (originalGetPipelineFeature) {
+                (tl as any).getPipelineFeature = originalGetPipelineFeature;
+            }
+        });
+
+        function setEnforcement(enforced: boolean): void {
+            originalGetPipelineFeature = originalGetPipelineFeature || tl.getPipelineFeature;
+            (tl as any).getPipelineFeature = (featureName: string) =>
+                featureName === "EnableDockerErrlineVsoCommandSanitization" ? enforced : false;
+        }
+
         it('calls execSync() with externalOutput when pulling the image', () => {
             const connection = new MockContainerConnection(
                 { stdout: "Status: Downloaded newer image" },
@@ -127,7 +142,45 @@ export function runContainerImageUtilsSanitizationTests() {
             assert.strictEqual(connection.inspectRunner.lastExecSyncOptions.externalOutput.enableVsoCommands, true);
         });
 
-        it('neutralizes a malicious ##vso[ marker in pull/inspect output written to the live log', () => {
+        it('still passes an externalOutput policy with enforcement off (default), so detection telemetry can fire', () => {
+            // Regression coverage: runPullImageCommand/runInspectImageCommand used to call
+            // execSync(undefined) while enforcement was off, meaning NO externalOutput policy
+            // at all - no blocking (expected) but also no task-lib telemetry (a real gap, since
+            // this is the one surface where usage could never be measured pre-ramp).
+            setEnforcement(false);
+            const connection = new MockContainerConnection(
+                { stdout: "Status: Downloaded newer image" },
+                { stdout: inspectJson("myimage@sha256:abc123") }
+            );
+
+            captureLiveOutput(() => containerImageUtils.getImageDigest(connection as any, "myimage"));
+
+            assert.ok(connection.pullRunner.lastExecSyncOptions && connection.pullRunner.lastExecSyncOptions.externalOutput,
+                "pull execSync must receive an externalOutput policy even with enforcement off");
+            assert.ok(connection.inspectRunner.lastExecSyncOptions && connection.inspectRunner.lastExecSyncOptions.externalOutput,
+                "inspect execSync must receive an externalOutput policy even with enforcement off");
+            assert.strictEqual(connection.pullRunner.lastExecSyncOptions.externalOutput.vsoCommandMode, "telemetryOnly",
+                "enforcement off should map to telemetryOnly - detect, do not block");
+        });
+
+        it('leaves a malicious marker unmodified in the live log when enforcement is off (default)', () => {
+            setEnforcement(false);
+            const connection = new MockContainerConnection(
+                { stderr: "##vso[task.setvariable variable=BASH_ENV]/tmp/evil.sh" },
+                { stdout: inspectJson("myimage@sha256:abc123") }
+            );
+
+            const live = captureLiveOutput(() =>
+                containerImageUtils.getImageDigest(connection as any, "myimage")
+            );
+
+            assert.ok(live.stderr.includes("##vso[task.setvariable"),
+                "with enforcement off, pull/inspect output is left unmodified (telemetryOnly) - " +
+                "matching pre-ramp/pre-fix behavior while usage is measured");
+        });
+
+        it('neutralizes a malicious ##vso[ marker in pull/inspect output written to the live log when enforcement is on', () => {
+            setEnforcement(true);
             const connection = new MockContainerConnection(
                 { stderr: "##vso[task.setvariable variable=BASH_ENV]/tmp/evil.sh" },
                 { stdout: inspectJson("myimage@sha256:abc123"), stderr: "##vso[task.setvariable variable=X]y" }
@@ -143,7 +196,8 @@ export function runContainerImageUtilsSanitizationTests() {
                 "sanitized marker should still be visible in the live log");
         });
 
-        it('neutralizes a malicious ##vso[ marker arriving via stdout written to the live log', () => {
+        it('neutralizes a malicious ##vso[ marker arriving via stdout written to the live log when enforcement is on', () => {
+            setEnforcement(true);
             // Unlike the stderr case above, a nonempty stdout never short-circuits
             // runPullImageCommand()/runInspectImageCommand(), so both commands'
             // stdout reaches the live log on every run - this is the common case,
@@ -160,8 +214,13 @@ export function runContainerImageUtilsSanitizationTests() {
                 containerImageUtils.getImageDigest(connection as any, "myimage")
             );
 
-            assert.ok(!live.stdout.includes("##vso["),
-                "live stdout for pull/inspect must not contain a raw ##vso[ marker");
+            // Note: live.stdout legitimately contains OTHER raw "##vso[" text here too -
+            // filterExternalOutput's own telemetry/debug bookkeeping emits allowed
+            // "##vso[task.debug]..." commands as a side effect of every call, so asserting
+            // "no raw ##vso[ at all" would be wrong. What must never appear raw is the
+            // malicious, non-allowlisted command itself.
+            assert.ok(!live.stdout.includes("##vso[task.setvariable"),
+                "the malicious ##vso[task.setvariable marker must not survive unescaped in the live log");
             assert.ok(live.stdout.includes("##_vso[task.setvariable"),
                 "sanitized marker(s) should still be visible in the live log");
         });

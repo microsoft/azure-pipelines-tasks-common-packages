@@ -67,8 +67,21 @@ export function runContainerConnectionErrlineTests() {
             // a real Azure Pipelines CI agent may have it on by default),
             // which is exactly what caused these tests to fail in CI while
             // passing locally.
-            (tl as any).getPipelineFeature = (featureName: string) =>
-                featureName === "hideDockerExecTaskLogIssueErrorOutput" ? false : originalGetPipelineFeature(featureName);
+            //
+            // Sanitization is also now gated behind EnableDockerErrlineVsoCommandSanitization
+            // (default off - see vsoCommandSanitizer.ts). This describe block's tests assert
+            // that malicious markers ARE neutralized, so force that flag on here; the dedicated
+            // "feature off (default)" describe block below overrides it back off to cover the
+            // opposite, equally important behavior.
+            (tl as any).getPipelineFeature = (featureName: string) => {
+                if (featureName === "hideDockerExecTaskLogIssueErrorOutput") {
+                    return false;
+                }
+                if (featureName === "EnableDockerErrlineVsoCommandSanitization") {
+                    return true;
+                }
+                return originalGetPipelineFeature(featureName);
+            };
         });
 
         afterEach(() => {
@@ -173,8 +186,14 @@ export function runContainerConnectionErrlineTests() {
             const originalConsoleLog = console.log;
             const consoleLogCalls: string[] = [];
 
-            (tl as any).getPipelineFeature = (featureName: string) =>
-                featureName === "hideDockerExecTaskLogIssueErrorOutput" ? true : false;
+            (tl as any).getPipelineFeature = (featureName: string) => {
+                if (featureName === "hideDockerExecTaskLogIssueErrorOutput") {
+                    return true;
+                }
+                // Keep sanitization enforcement on, matching the outer beforeEach, so this
+                // test still exercises the "marker is neutralized" behavior on this path.
+                return featureName === "EnableDockerErrlineVsoCommandSanitization";
+            };
             console.log = (message?: any) => { consoleLogCalls.push(String(message)); };
 
             const restore = () => {
@@ -204,6 +223,54 @@ export function runContainerConnectionErrlineTests() {
                         done();
                     } catch (assertionError) {
                         restore();
+                        done(assertionError);
+                    }
+                }
+            );
+        });
+    });
+
+    describe('ContainerConnection.execCommand() errline handling - EnableDockerErrlineVsoCommandSanitization off (default)', () => {
+
+        let originalError: typeof tl.error;
+        let originalGetPipelineFeature: typeof tl.getPipelineFeature;
+        let errorCalls: string[];
+
+        beforeEach(() => {
+            errorCalls = [];
+            originalError = tl.error;
+            (tl as any).error = (message: string) => { errorCalls.push(message); };
+
+            originalGetPipelineFeature = tl.getPipelineFeature;
+            // Enforcement off is the default/current production state: before this flag is
+            // ramped, a malicious marker must still be replayed unmodified (telemetry-only),
+            // so compatibility with pre-fix behavior is preserved while usage is measured. This
+            // is intentional, not a regression - see sanitizeDockerErrlineForLog's rollout
+            // semantics in vsoCommandSanitizer.ts.
+            (tl as any).getPipelineFeature = (featureName: string) =>
+                featureName === "hideDockerExecTaskLogIssueErrorOutput" ? false : false;
+        });
+
+        afterEach(() => {
+            (tl as any).error = originalError;
+            (tl as any).getPipelineFeature = originalGetPipelineFeature;
+        });
+
+        it('replays a ##vso[] marker from stderr unmodified when enforcement is off', (done) => {
+            const connection = new ContainerConnection(false);
+            const command = new MockToolRunner();
+            command.errlinesToEmit = ["##vso[task.setvariable variable=BASH_ENV]/tmp/evil.sh"];
+
+            connection.execCommand(command as any).then(
+                () => done(new Error("execCommand should have failed for a nonzero exit")),
+                () => {
+                    try {
+                        assert.strictEqual(errorCalls.length, 1);
+                        assert.strictEqual(errorCalls[0], "##vso[task.setvariable variable=BASH_ENV]/tmp/evil.sh",
+                            "with enforcement off, the raw marker is left untouched (telemetryOnly) - " +
+                            "this is the pre-ramp state expected while usage telemetry is collected");
+                        done();
+                    } catch (assertionError) {
                         done(assertionError);
                     }
                 }
