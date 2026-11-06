@@ -104,6 +104,26 @@ async function run() {
             return;
         }
 
+        if (process.argv[4] === "oidc-failure") {
+            expectedScope = armScope;
+            await creds.getToken();
+            const armMsalCalls = msalCalls;
+            creds.getFederatedToken = async () => {
+                federatedTokens++;
+                throw new Error("Could not fetch access token for AAD. MOCK_OIDC_ROOT_CAUSE");
+            };
+            await assert.rejects(creds.acquireTokenForScope("appservice"), (error: Error) => {
+                assert(error.message.includes("MOCK_OIDC_ROOT_CAUSE"), error.message);
+                assert(!error.message.includes("undefined"), error.message);
+                return true;
+            });
+            assert.strictEqual(federatedTokens, 2, "the scoped assertion must be fetched once, outside MSAL retries");
+            assert.strictEqual(msalCalls, armMsalCalls, "MSAL must not be called without a fresh assertion");
+            assert.strictEqual(creds.getLastScopeTokenTelemetry().outcome, "error");
+            console.log("RUNTIME_SCOPE_TEST_PASSED");
+            return;
+        }
+
         if (process.argv[4] === "failure") {
             creds.getMSALToken = async () => { throw new Error("MOCK_SCOPED_MSAL_ERROR"); };
             creds.getToken = async () => { throw new Error("Unexpected ARM fallback"); };
@@ -122,6 +142,7 @@ async function run() {
         assert.strictEqual(msalClient, runtime < 16 ? "msalv1" : "msalv3");
         assert.strictEqual(identityCalls, useIdentity ? 1 : 0);
         assert.strictEqual(msalCalls, useIdentity ? 0 : 1);
+        assert.strictEqual(federatedTokens, 0, "non-WIF schemes must not fetch an OIDC assertion");
         const telemetry = creds.getLastScopeTokenTelemetry();
         assert.strictEqual(telemetry.requestedAudience, enabled ? "AppService" : undefined);
         assert.strictEqual(telemetry.outcome, enabled ? "scoped" : undefined);

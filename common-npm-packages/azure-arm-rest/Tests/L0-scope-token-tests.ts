@@ -17,7 +17,7 @@ export function ScopeTokenTests(defaultTimeout = 2000) {
         }
     }
 
-    for (const runtime of [16, 20]) {
+    for (const runtime of [10, 16, 20]) {
         for (const feature of ["undefined", "false", "true"]) {
             it(`refreshes scoped WIF assertions on Node ${runtime}, feature ${feature}`, function () {
                 this.timeout(defaultTimeout);
@@ -26,6 +26,12 @@ export function ScopeTokenTests(defaultTimeout = 2000) {
                 ], { encoding: "utf8", timeout: defaultTimeout });
                 assert(output.includes("RUNTIME_SCOPE_TEST_PASSED"));
             });
+
+            // MSAL v1 resolves its authority over the network before calling the IMDS provider,
+            // so offline managed identity coverage uses the MSAL v3 runtimes.
+            if (runtime < 16) {
+                continue;
+            }
 
             it(`preserves scoped managed identity selection on Node ${runtime}, feature ${feature}`, function () {
                 this.timeout(defaultTimeout);
@@ -41,6 +47,14 @@ export function ScopeTokenTests(defaultTimeout = 2000) {
             this.timeout(defaultTimeout);
             const output = execFileSync(process.execPath, [
                 path.join(__dirname, "scope-token-runtime-tests.js"), String(runtime), "true", "failure"
+            ], { encoding: "utf8", timeout: defaultTimeout });
+            assert(output.includes("RUNTIME_SCOPE_TEST_PASSED"));
+        });
+
+        it(`reports scoped WIF assertion failures without MSAL retries on Node ${runtime}`, function () {
+            this.timeout(defaultTimeout);
+            const output = execFileSync(process.execPath, [
+                path.join(__dirname, "scope-token-runtime-tests.js"), String(runtime), "true", "oidc-failure", "WorkloadIdentityFederation"
             ], { encoding: "utf8", timeout: defaultTimeout });
             assert(output.includes("RUNTIME_SCOPE_TEST_PASSED"));
         });

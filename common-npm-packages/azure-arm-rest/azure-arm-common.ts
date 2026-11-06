@@ -543,7 +543,7 @@ export class ApplicationTokenCredentials {
     // 'https://appservice.azure.com/.default'. Those literals already include the "/.default"
     // suffix, so it is NOT appended again here (unlike the default activeDirectoryResourceId case
     // below, which is a bare resource URI and still needs the suffix).
-    private async getMSALToken(force?: boolean, retryCount: number = 3, retryWaitMS: number = 2000, scopeOverride?: string): Promise<string> {
+    private async getMSALToken(force?: boolean, retryCount: number = 3, retryWaitMS: number = 2000, scopeOverride?: string, clientAssertion?: string): Promise<string> {
         tl.debug(`MSAL - getMSALToken called. force=${force}`);
         const msalApp: any /*msal.ConfidentialClientApplication*/ = await this.getMSAL();
         if (force) {
@@ -555,9 +555,8 @@ export class ApplicationTokenCredentials {
             const request: any /*msal.ClientCredentialRequest*/ = {
                 scopes: [effectiveScopeOverride || (this.activeDirectoryResourceId + "/.default")]
             };
-            if (this.allowScopeLevelToken && effectiveScopeOverride && this.scheme === AzureModels.Scheme.WorkloadIdentityFederation && msalVer === "msalv3") {
-                // The cached ARM client may hold an expired assertion; scoped requests need a fresh one.
-                request.clientAssertion = await this.getFederatedToken();
+            if (effectiveScopeOverride && clientAssertion) {
+                request.clientAssertion = clientAssertion;
             }
             const response = await msalApp.acquireTokenByClientCredential(request);
             tl.debug(`MSAL - retrieved token - isFromCache?: ${response.fromCache}`);
@@ -568,7 +567,7 @@ export class ApplicationTokenCredentials {
                 tl.debug(`MSAL - retrying getMSALToken - remaining attempts: ${retryCount}`);
 
                 await new Promise(r => setTimeout(r, Math.min(retryWaitMS, MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT)));
-                return await this.getMSALToken(force, (retryCount - 1), retryWaitMS * 2, scopeOverride);
+                return await this.getMSALToken(force, (retryCount - 1), retryWaitMS * 2, scopeOverride, clientAssertion);
             }
 
             if (error.errorMessage && error.errorMessage.toString().startsWith("7000222")) {
@@ -593,7 +592,12 @@ export class ApplicationTokenCredentials {
                     // Keep the mapped audience with the compatible client: MSAL v1 on Node 10,
                     // MSAL v3 on Node 16/20. Do not fall back to an ARM-audience token.
                     tl.debug(`Node ${nodeVersion} detected; using MSAL to acquire scoped token instead of @azure/identity.`);
-                    const token = await this.getMSALToken(false, 3, 2000, this.scopes[scopeKind]);
+                    // A cached MSAL client may hold an expired WIF assertion. Fetch a fresh one once,
+                    // outside MSAL's retry loop, so an OIDC failure keeps its original message.
+                    const clientAssertion = this.scheme === AzureModels.Scheme.WorkloadIdentityFederation
+                        ? await this.getFederatedToken()
+                        : undefined;
+                    const token = await this.getMSALToken(false, 3, 2000, this.scopes[scopeKind], clientAssertion);
                     // acquireTokenForScope is only ever called for the App Service/Kudu scenario
                     // (scopeKind is always "appservice"), so telemetry only needs to distinguish
                     // this narrow case - not every possible _azureScopes key.
