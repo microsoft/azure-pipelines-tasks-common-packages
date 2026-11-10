@@ -272,7 +272,7 @@ export class ApplicationTokenCredentials {
     // Extracted as its own (overridable) method purely so tests can simulate the Node <16 branch
     // of acquireTokenForScope without needing an actual Node 10 runtime.
     private supportsModernIdentity(): boolean {
-        return nodeVersion >= 16;
+        return nodeVersion >= 22;
     }
 
     private async getMSAL(): Promise<any> /*Promise<msal.ConfidentialClientApplication>*/ {
@@ -405,6 +405,9 @@ export class ApplicationTokenCredentials {
                         ? appTokenProviderParameters.scopes[0]
                         : undefined;
                     resourceId = this.getResourceIdFromScope(requestedScope);
+                    if (resourceId !== this.activeDirectoryResourceId && this.msiClientId) {
+                        resourceId += "&client_id=" + encodeURIComponent(this.msiClientId);
+                    }
                 }
                 webRequest.uri = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=" + apiVersion + "&resource=" + resourceId;
                 webRequest.headers = {
@@ -533,14 +536,14 @@ export class ApplicationTokenCredentials {
         return msalInstance;
     }
 
-    // scopeOverride lets callers (e.g. acquireTokenForScope on Node <16, where @azure/identity is
-    // unavailable) request a specific scope/audience via MSAL instead of the default ARM audience.
+    // scopeOverride lets older task handlers request a specific scope/audience via MSAL
+    // instead of the default ARM audience.
     // Callers must always pass one of our own hardcoded per-cloud entries from the `scopes` map
     // built in azure-arm-endpoint.ts (getScopesByEnvironment) - e.g. appservice:
     // 'https://appservice.azure.com/.default'. Those literals already include the "/.default"
     // suffix, so it is NOT appended again here (unlike the default activeDirectoryResourceId case
     // below, which is a bare resource URI and still needs the suffix).
-    private async getMSALToken(force?: boolean, retryCount: number = 3, retryWaitMS: number = 2000, scopeOverride?: string): Promise<string> {
+    private async getMSALToken(force?: boolean, retryCount: number = 3, retryWaitMS: number = 2000, scopeOverride?: string, clientAssertion?: string): Promise<string> {
         tl.debug(`MSAL - getMSALToken called. force=${force}`);
         const msalApp: any /*msal.ConfidentialClientApplication*/ = await this.getMSAL();
         if (force) {
@@ -552,6 +555,9 @@ export class ApplicationTokenCredentials {
             const request: any /*msal.ClientCredentialRequest*/ = {
                 scopes: [effectiveScopeOverride || (this.activeDirectoryResourceId + "/.default")]
             };
+            if (effectiveScopeOverride && clientAssertion) {
+                request.clientAssertion = clientAssertion;
+            }
             const response = await msalApp.acquireTokenByClientCredential(request);
             tl.debug(`MSAL - retrieved token - isFromCache?: ${response.fromCache}`);
             return response.accessToken;
@@ -561,7 +567,7 @@ export class ApplicationTokenCredentials {
                 tl.debug(`MSAL - retrying getMSALToken - remaining attempts: ${retryCount}`);
 
                 await new Promise(r => setTimeout(r, Math.min(retryWaitMS, MAX_CREATE_AAD_TOKEN_BACKOFF_TIMEOUT)));
-                return await this.getMSALToken(force, (retryCount - 1), retryWaitMS * 2, scopeOverride);
+                return await this.getMSALToken(force, (retryCount - 1), retryWaitMS * 2, scopeOverride, clientAssertion);
             }
 
             if (error.errorMessage && error.errorMessage.toString().startsWith("7000222")) {
@@ -583,12 +589,15 @@ export class ApplicationTokenCredentials {
             if (this.allowScopeLevelToken && this.scopes && this.scopes[scopeKind]) {
                 tl.debug(`allowScopeLevelToken is enabled, using scope: ${this.scopes[scopeKind]}`);
                 if (!this.supportsModernIdentity()) {
-                    // @azure/identity requires Node 16+, but MSAL (msalv1) already supports SPN,
-                    // MSI, and WIF client-credential flows on Node 10. Request the same mapped
-                    // scope/audience through MSAL instead of falling back to the ARM audience, so
-                    // Node 10 agents get a genuine App Service-scoped token, not a compromise.
+                    // Keep the mapped audience with the compatible client: MSAL v1 on Node 10,
+                    // MSAL v3 on Node 16/20. Do not fall back to an ARM-audience token.
                     tl.debug(`Node ${nodeVersion} detected; using MSAL to acquire scoped token instead of @azure/identity.`);
-                    const token = await this.getMSALToken(false, 3, 2000, this.scopes[scopeKind]);
+                    // A cached MSAL client may hold an expired WIF assertion. Fetch a fresh one once,
+                    // outside MSAL's retry loop, so an OIDC failure keeps its original message.
+                    const clientAssertion = this.scheme === AzureModels.Scheme.WorkloadIdentityFederation
+                        ? await this.getFederatedToken()
+                        : undefined;
+                    const token = await this.getMSALToken(false, 3, 2000, this.scopes[scopeKind], clientAssertion);
                     // acquireTokenForScope is only ever called for the App Service/Kudu scenario
                     // (scopeKind is always "appservice"), so telemetry only needs to distinguish
                     // this narrow case - not every possible _azureScopes key.
