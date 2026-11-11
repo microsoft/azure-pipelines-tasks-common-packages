@@ -1,7 +1,7 @@
 import assert = require("assert");
 import { WebApi } from "azure-devops-node-api";
 import * as tl from "azure-pipelines-task-lib/task";
-import { initOIDCToken2, loginAzureRM, setAzureCloudBasedOnServiceEndpoint } from "../azCliUtility";
+import { AzureRMLoginCredentials, cleanupAzureRMLoginCredentials, initOIDCToken2, loginAzureRM, setAzureCloudBasedOnServiceEndpoint } from "../azCliUtility";
 
 class TaskApiNull {
     async createOidcToken() {
@@ -103,6 +103,108 @@ export class AzureCliUtilityTests {
         }
     }
 
+    public static async certificateLoginTest(featureEnabled: boolean, scenario: string, options: { agentTemp?: string, loginExitCode?: number } = {}) {
+        const fs = require("fs");
+        const os = require("os");
+        const path = require("path");
+        const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "azarmrest-cert-test-"));
+        const agentTemp = options.hasOwnProperty("agentTemp") ? options.agentTemp : tempRoot;
+        const invocations: string[] = [];
+        const certificateContent = "-----BEGIN PRIVATE KEY-----test-----END PRIVATE KEY-----";
+        const originals = {
+            execSync: tl.execSync,
+            getEndpointAuthorizationScheme: tl.getEndpointAuthorizationScheme,
+            getEndpointAuthorizationParameter: tl.getEndpointAuthorizationParameter,
+            getEndpointDataParameter: tl.getEndpointDataParameter,
+            getVariable: tl.getVariable,
+            getPipelineFeature: tl.getPipelineFeature,
+            setSecret: tl.setSecret
+        };
+        let certificatePathSeenByAz: string = null;
+        let certificateContentSeenByAz: string = null;
+
+        try {
+            (tl as any).execSync = (tool: string, args: string) => {
+                invocations.push(args);
+                const match = args.match(/--certificate="([^"]+)"/);
+                if (match) {
+                    certificatePathSeenByAz = match[1];
+                    certificateContentSeenByAz = fs.readFileSync(certificatePathSeenByAz, "utf8");
+                }
+                const failLogin = args.indexOf("login ") === 0 && options.loginExitCode;
+                return { code: failLogin ? options.loginExitCode : 0, stdout: args === "--version" ? "azure-cli 2.66.0" : "", stderr: "" };
+            };
+            (tl as any).getEndpointAuthorizationScheme = () => "serviceprincipal";
+            (tl as any).getEndpointAuthorizationParameter = (_connectedService: string, parameterName: string) => ({
+                authenticationType: "spnCertificate",
+                serviceprincipalid: "client-id",
+                tenantid: "tenant-id",
+                servicePrincipalCertificate: certificateContent
+            })[parameterName];
+            (tl as any).getEndpointDataParameter = () => undefined;
+            (tl as any).getVariable = (name: string) => ({
+                "Agent.TempDirectory": agentTemp,
+                "system.DefaultWorkingDirectory": tempRoot
+            })[name];
+            (tl as any).getPipelineFeature = (name: string) => name === "AzureArmRestCredentialFileIsolationEnabled" ? featureEnabled : false;
+            (tl as any).setSecret = () => {};
+
+            let credentials: AzureRMLoginCredentials;
+            let loginError: any;
+            try {
+                credentials = await loginAzureRM("connected-service");
+            } catch (error) {
+                loginError = error;
+            }
+
+            if (!featureEnabled) {
+                const legacyPath = path.join(tempRoot, "spnCert.pem");
+                assert.strictEqual(loginError, undefined);
+                assert.strictEqual(certificatePathSeenByAz, legacyPath);
+                assert.strictEqual(credentials.certificatePath, legacyPath);
+                assert.strictEqual(credentials.directoryPath, undefined);
+                cleanupAzureRMLoginCredentials(credentials);
+                assert(fs.existsSync(legacyPath), "legacy certificate cleanup must stay with the caller");
+            }
+            else if (!agentTemp) {
+                assert(loginError, "login must fail when Agent.TempDirectory is not set");
+                assert(!invocations.some(args => args.indexOf("login ") === 0), "az login must not run");
+                assert(!fs.existsSync(path.join(tempRoot, "spnCert.pem")));
+            }
+            else if (options.loginExitCode) {
+                assert(loginError, "login failure must be rethrown");
+                assert(certificatePathSeenByAz);
+                assert(!fs.existsSync(path.dirname(certificatePathSeenByAz)), "credential directory must be removed after login failure");
+            }
+            else {
+                assert.strictEqual(loginError, undefined);
+                assert.strictEqual(certificatePathSeenByAz, credentials.certificatePath);
+                assert.strictEqual(certificateContentSeenByAz, certificateContent);
+                assert.strictEqual(path.dirname(credentials.certificatePath), credentials.directoryPath);
+                assert.strictEqual(path.dirname(credentials.directoryPath), agentTemp);
+                assert(path.basename(credentials.directoryPath).indexOf(".azarmrest-credentials-") === 0);
+                assert(!fs.existsSync(path.join(agentTemp, "spnCert.pem")), "fixed certificate path must not be used");
+                if (process.platform !== "win32") {
+                    assert.strictEqual(fs.statSync(credentials.directoryPath).mode & 0o777, 0o700);
+                    assert.strictEqual(fs.statSync(credentials.certificatePath).mode & 0o777, 0o600);
+                }
+                assert(fs.existsSync(credentials.certificatePath), "certificate must remain available for later az commands");
+                cleanupAzureRMLoginCredentials(credentials);
+                assert(!fs.existsSync(credentials.directoryPath), "credential directory must be removed by cleanup");
+                cleanupAzureRMLoginCredentials(credentials);
+            }
+
+            console.log(`CERTIFICATE_LOGIN_${scenario}_PASSED`);
+        }
+        catch (error) {
+            console.log(`CERTIFICATE_LOGIN_${scenario}_FAILED: ${error && error.stack || error}`);
+        }
+        finally {
+            Object.keys(originals).forEach(key => (tl as any)[key] = originals[key]);
+            fs.rmSync ? fs.rmSync(tempRoot, { recursive: true, force: true }) : tl.rmRF(tempRoot);
+        }
+    }
+
     public static async initOIDCTokenTestRetryMechanism() {
         try {
             await initOIDCToken2(new WebApiMockNull() as WebApi, 'https://dev.azure.com/organization', 'project', 'pipeline', 'job', 'task', 0, 0);
@@ -122,6 +224,10 @@ export class AzureCliUtilityTests {
 
 async function RUNTESTS() {
     await AzureCliUtilityTests.resolvedAzureCliPathTest();
+    await AzureCliUtilityTests.certificateLoginTest(false, "LEGACY");
+    await AzureCliUtilityTests.certificateLoginTest(true, "ISOLATED");
+    await AzureCliUtilityTests.certificateLoginTest(true, "ISOLATED_LOGIN_FAILURE", { loginExitCode: 1 });
+    await AzureCliUtilityTests.certificateLoginTest(true, "ISOLATED_NO_AGENT_TEMP", { agentTemp: undefined });
     await AzureCliUtilityTests.initOIDCTokenTestRetryMechanism();
     await AzureCliUtilityTests.initOIDCTokenTestAggregateError();
 }

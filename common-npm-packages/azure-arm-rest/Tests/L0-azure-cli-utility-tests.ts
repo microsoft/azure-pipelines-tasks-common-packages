@@ -12,6 +12,10 @@ export function AzureCliUtilityTests() {
         tr.runAsync()
             .then(() => {
                 assert(tr.stdOutContained('ALL_AZURE_CLI_INVOCATIONS_USE_RESOLVED_PATH'));
+                assert(tr.stdOutContained('CERTIFICATE_LOGIN_LEGACY_PASSED'), 'legacy certificate login');
+                assert(tr.stdOutContained('CERTIFICATE_LOGIN_ISOLATED_PASSED'), 'isolated certificate login');
+                assert(tr.stdOutContained('CERTIFICATE_LOGIN_ISOLATED_LOGIN_FAILURE_PASSED'), 'isolated certificate login failure');
+                assert(tr.stdOutContained('CERTIFICATE_LOGIN_ISOLATED_NO_AGENT_TEMP_PASSED'), 'isolated certificate without Agent.TempDirectory');
                 assert(tr.stdOutContained('Retrying OIDC token fetch. Retries left: 2'));
                 assert(tr.stdOutContained('Retrying OIDC token fetch. Retries left: 0'));
                 assert(tr.stdOutContained('Error while trying to get OIDC token: Error: 1'));

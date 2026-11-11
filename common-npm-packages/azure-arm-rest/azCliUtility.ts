@@ -16,7 +16,57 @@ const MAX_CREATE_OIDC_TOKEN_RETRIES = 3;
 // Maximum backoff timeout for creating OIDC token in milliseconds
 const MAX_CREATE_OIDC_TOKEN_BACKOFF_TIMEOUT = 15000;
 
+const CREDENTIAL_FILE_ISOLATION_FEATURE = 'AzureArmRestCredentialFileIsolationEnabled';
+const CREDENTIAL_DIRECTORY_PREFIX = '.azarmrest-credentials-';
+const CERTIFICATE_FILE_NAME = 'spnCert.pem';
+
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
+
+/**
+ * Credential files created by loginAzureRM. Azure CLI re-reads the certificate file on every
+ * command after login, so callers must keep it until their last az invocation and then pass
+ * this object to cleanupAzureRMLoginCredentials.
+ */
+export interface AzureRMLoginCredentials {
+    certificatePath?: string;
+    directoryPath?: string;
+}
+
+function createIsolatedCertificateFile(certificateContent: string): AzureRMLoginCredentials {
+    const agentTempDirectory: string = tl.getVariable('Agent.TempDirectory');
+    if (!agentTempDirectory) {
+        throw new Error('Agent.TempDirectory is required for Azure CLI certificate credentials.');
+    }
+
+    const directoryPath = fs.mkdtempSync(path.join(agentTempDirectory, CREDENTIAL_DIRECTORY_PREFIX));
+    const certificatePath = path.join(directoryPath, CERTIFICATE_FILE_NAME);
+    try {
+        if (process.platform !== 'win32') {
+            fs.chmodSync(directoryPath, 0o700);
+        }
+        fs.writeFileSync(certificatePath, certificateContent, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
+        return { certificatePath, directoryPath };
+    } catch (error) {
+        cleanupAzureRMLoginCredentials({ certificatePath, directoryPath });
+        throw error;
+    }
+}
+
+/**
+ * Removes credential files created by loginAzureRM. Only isolated credential directories are
+ * removed; never throws so it is safe to call from finally blocks.
+ */
+export function cleanupAzureRMLoginCredentials(credentials?: AzureRMLoginCredentials): void {
+    if (!credentials || !credentials.directoryPath) {
+        return;
+    }
+
+    try {
+        tl.rmRF(credentials.directoryPath);
+    } catch (error) {
+        tl.warning('Failed to remove the Azure CLI service-principal certificate credentials.');
+    }
+}
 
 export function setAzureCloudBasedOnServiceEndpoint(connectedService: string, azureCliPath: string = "az"): void {
     var environment = tl.getEndpointDataParameter(connectedService, 'environment', true);
@@ -26,9 +76,21 @@ export function setAzureCloudBasedOnServiceEndpoint(connectedService: string, az
     }
 }
 
-export async function loginAzureRM(connectedService: string, azureCliPath: string = "az"): Promise<void> {
+export async function loginAzureRM(connectedService: string, azureCliPath: string = "az"): Promise<AzureRMLoginCredentials> {
     var authScheme: string = tl.getEndpointAuthorizationScheme(connectedService, true);
+    const credentials: AzureRMLoginCredentials = {};
 
+    try {
+        await loginAzureRMWithScheme(connectedService, azureCliPath, authScheme, credentials);
+    } catch (error) {
+        cleanupAzureRMLoginCredentials(credentials);
+        throw error;
+    }
+
+    return credentials;
+}
+
+async function loginAzureRMWithScheme(connectedService: string, azureCliPath: string, authScheme: string, credentials: AzureRMLoginCredentials): Promise<void> {
     if (authScheme.toLowerCase() == "workloadidentityfederation") {
         var servicePrincipalId: string = tl.getEndpointAuthorizationParameter(connectedService, "serviceprincipalid", false);
         var tenantId: string = tl.getEndpointAuthorizationParameter(connectedService, "tenantid", false);
@@ -58,8 +120,17 @@ export async function loginAzureRM(connectedService: string, azureCliPath: strin
                 authParam = "--certificate";
             }
             let certificateContent: string = tl.getEndpointAuthorizationParameter(connectedService, "servicePrincipalCertificate", false);
-            cliPassword = path.join(tl.getVariable('Agent.TempDirectory') || tl.getVariable('system.DefaultWorkingDirectory'), 'spnCert.pem');
-            fs.writeFileSync(cliPassword, certificateContent);
+            if (tl.getPipelineFeature(CREDENTIAL_FILE_ISOLATION_FEATURE)) {
+                const isolatedCertificate = createIsolatedCertificateFile(certificateContent);
+                credentials.certificatePath = isolatedCertificate.certificatePath;
+                credentials.directoryPath = isolatedCertificate.directoryPath;
+                cliPassword = isolatedCertificate.certificatePath;
+            }
+            else {
+                cliPassword = path.join(tl.getVariable('Agent.TempDirectory') || tl.getVariable('system.DefaultWorkingDirectory'), CERTIFICATE_FILE_NAME);
+                fs.writeFileSync(cliPassword, certificateContent);
+                credentials.certificatePath = cliPassword;
+            }
         }
         else {
             tl.debug('key based endpoint');
