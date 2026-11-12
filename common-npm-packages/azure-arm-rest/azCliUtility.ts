@@ -16,7 +16,8 @@ const MAX_CREATE_OIDC_TOKEN_RETRIES = 3;
 // Maximum backoff timeout for creating OIDC token in milliseconds
 const MAX_CREATE_OIDC_TOKEN_BACKOFF_TIMEOUT = 15000;
 
-const CREDENTIAL_FILE_ISOLATION_FEATURE = 'AzureArmRestCredentialFileIsolationEnabled';
+// Isolation is on by default; setting this pipeline feature to true restores the legacy fixed-path behavior.
+const DISABLE_CREDENTIAL_FILE_ISOLATION_FEATURE = 'DisableAzureArmRestCredentialFileIsolation';
 const CREDENTIAL_DIRECTORY_PREFIX = '.azarmrest-credentials-';
 const CERTIFICATE_FILE_NAME = 'spnCert.pem';
 
@@ -61,10 +62,71 @@ export function cleanupAzureRMLoginCredentials(credentials?: AzureRMLoginCredent
         return;
     }
 
+    let outcome: string;
     try {
-        tl.rmRF(credentials.directoryPath);
+        outcome = removeIsolatedCredentialDirectory(credentials.directoryPath);
+        if (outcome === 'rejected') {
+            tl.warning('Skipped removing the Azure CLI service-principal certificate credentials because the credential directory is not valid.');
+        }
     } catch (error) {
+        outcome = 'error';
         tl.warning('Failed to remove the Azure CLI service-principal certificate credentials.');
+        tl.debug(`Failed to remove the Azure CLI certificate credential directory: ${error && error.code || error}`);
+    }
+
+    publishCertificateCredentialTelemetry({ cleanup: outcome });
+}
+
+// Deliberately avoids tl.rmRF, which follows directory links (symlinks/junctions) and deletes their targets.
+function removeIsolatedCredentialDirectory(directoryPath: string): 'deleted' | 'notfound' | 'rejected' {
+    const agentTempDirectory: string = tl.getVariable('Agent.TempDirectory');
+    if (!agentTempDirectory
+        || !isSamePath(path.dirname(directoryPath), agentTempDirectory)
+        || path.basename(directoryPath).indexOf(CREDENTIAL_DIRECTORY_PREFIX) !== 0) {
+        return 'rejected';
+    }
+
+    let directoryStats: fs.Stats;
+    try {
+        directoryStats = fs.lstatSync(directoryPath);
+    } catch (error) {
+        if (error && error.code === 'ENOENT') {
+            return 'notfound';
+        }
+        throw error;
+    }
+
+    if (directoryStats.isSymbolicLink() || !directoryStats.isDirectory()) {
+        return 'rejected';
+    }
+
+    try {
+        fs.unlinkSync(path.join(directoryPath, CERTIFICATE_FILE_NAME));
+    } catch (error) {
+        if (!error || error.code !== 'ENOENT') {
+            throw error;
+        }
+    }
+
+    fs.rmdirSync(directoryPath);
+    return 'deleted';
+}
+
+function isSamePath(first: string, second: string): boolean {
+    const resolvedFirst = path.resolve(first);
+    const resolvedSecond = path.resolve(second);
+    return process.platform === 'win32'
+        ? resolvedFirst.toLowerCase() === resolvedSecond.toLowerCase()
+        : resolvedFirst === resolvedSecond;
+}
+
+// Only fixed values are published: isolation (enabled|disabled), login (succeeded|failed),
+// cleanup (deleted|notfound|rejected|error).
+function publishCertificateCredentialTelemetry(properties: { [key: string]: string }): void {
+    try {
+        console.log(`##vso[telemetry.publish area=TaskDeploymentMethod;feature=AzureRMLoginCertificateCredentials]${JSON.stringify(properties)}`);
+    } catch (error) {
+        tl.debug(`Failed to publish Azure CLI certificate credential telemetry: ${error}`);
     }
 }
 
@@ -79,18 +141,27 @@ export function setAzureCloudBasedOnServiceEndpoint(connectedService: string, az
 export async function loginAzureRM(connectedService: string, azureCliPath: string = "az"): Promise<AzureRMLoginCredentials> {
     var authScheme: string = tl.getEndpointAuthorizationScheme(connectedService, true);
     const credentials: AzureRMLoginCredentials = {};
+    const certificateLogin: { isolation?: string } = {};
 
     try {
-        await loginAzureRMWithScheme(connectedService, azureCliPath, authScheme, credentials);
+        await loginAzureRMWithScheme(connectedService, azureCliPath, authScheme, credentials, certificateLogin);
     } catch (error) {
+        publishCertificateLoginTelemetry(certificateLogin, 'failed');
         cleanupAzureRMLoginCredentials(credentials);
         throw error;
     }
 
+    publishCertificateLoginTelemetry(certificateLogin, 'succeeded');
     return credentials;
 }
 
-async function loginAzureRMWithScheme(connectedService: string, azureCliPath: string, authScheme: string, credentials: AzureRMLoginCredentials): Promise<void> {
+function publishCertificateLoginTelemetry(certificateLogin: { isolation?: string }, login: string): void {
+    if (certificateLogin.isolation) {
+        publishCertificateCredentialTelemetry({ isolation: certificateLogin.isolation, login: login });
+    }
+}
+
+async function loginAzureRMWithScheme(connectedService: string, azureCliPath: string, authScheme: string, credentials: AzureRMLoginCredentials, certificateLogin: { isolation?: string }): Promise<void> {
     if (authScheme.toLowerCase() == "workloadidentityfederation") {
         var servicePrincipalId: string = tl.getEndpointAuthorizationParameter(connectedService, "serviceprincipalid", false);
         var tenantId: string = tl.getEndpointAuthorizationParameter(connectedService, "tenantid", false);
@@ -120,13 +191,15 @@ async function loginAzureRMWithScheme(connectedService: string, azureCliPath: st
                 authParam = "--certificate";
             }
             let certificateContent: string = tl.getEndpointAuthorizationParameter(connectedService, "servicePrincipalCertificate", false);
-            if (tl.getPipelineFeature(CREDENTIAL_FILE_ISOLATION_FEATURE)) {
+            if (!tl.getPipelineFeature(DISABLE_CREDENTIAL_FILE_ISOLATION_FEATURE)) {
+                certificateLogin.isolation = 'enabled';
                 const isolatedCertificate = createIsolatedCertificateFile(certificateContent);
                 credentials.certificatePath = isolatedCertificate.certificatePath;
                 credentials.directoryPath = isolatedCertificate.directoryPath;
                 cliPassword = isolatedCertificate.certificatePath;
             }
             else {
+                certificateLogin.isolation = 'disabled';
                 cliPassword = path.join(tl.getVariable('Agent.TempDirectory') || tl.getVariable('system.DefaultWorkingDirectory'), CERTIFICATE_FILE_NAME);
                 fs.writeFileSync(cliPassword, certificateContent);
                 credentials.certificatePath = cliPassword;
