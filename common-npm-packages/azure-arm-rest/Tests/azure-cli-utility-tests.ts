@@ -104,7 +104,7 @@ export class AzureCliUtilityTests {
     }
 
     // disableFlagValue: value of DistributedTask.Tasks.DisableAzureArmRestCredentialFileIsolation (undefined = not set).
-    public static async certificateLoginTest(disableFlagValue: boolean | undefined, scenario: string, options: { agentTemp?: string, loginExitCode?: number } = {}) {
+    public static async certificateLoginTest(disableFlagValue: boolean | undefined, scenario: string, options: { agentTemp?: string, loginExitCode?: number, exitCleanup?: boolean } = {}) {
         const isolationEnabled = disableFlagValue !== true;
         const fs = require("fs");
         const os = require("os");
@@ -175,9 +175,15 @@ export class AzureCliUtilityTests {
                 assert.strictEqual(certificatePathSeenByAz, legacyPath);
                 assert.strictEqual(credentials.certificatePath, legacyPath);
                 assert.strictEqual(credentials.directoryPath, undefined);
+                assert(fs.existsSync(legacyPath), "legacy certificate must remain available for later az commands");
                 cleanupAzureRMLoginCredentials(credentials);
-                assert(fs.existsSync(legacyPath), "legacy certificate cleanup must stay with the caller");
-                assert.deepStrictEqual(telemetry, [{ isolation: "disabled", login: "succeeded" }]);
+                assert(!fs.existsSync(legacyPath), "legacy certificate must be removed by cleanup");
+                cleanupAzureRMLoginCredentials(credentials);
+                assert.deepStrictEqual(telemetry, [
+                    { isolation: "disabled", login: "succeeded" },
+                    { isolation: "disabled", cleanup: "deleted", trigger: "explicit" },
+                    { isolation: "disabled", cleanup: "notfound", trigger: "explicit" }
+                ]);
             }
             else if (!agentTemp) {
                 assert(loginError, "login must fail when Agent.TempDirectory is not set");
@@ -189,7 +195,21 @@ export class AzureCliUtilityTests {
                 assert(loginError, "login failure must be rethrown");
                 assert(certificatePathSeenByAz);
                 assert(!fs.existsSync(path.dirname(certificatePathSeenByAz)), "credential directory must be removed after login failure");
-                assert.deepStrictEqual(telemetry, [{ isolation: "enabled", login: "failed" }, { cleanup: "deleted" }]);
+                assert.deepStrictEqual(telemetry, [{ isolation: "enabled", login: "failed" }, { cleanup: "deleted", trigger: "explicit" }]);
+            }
+            else if (options.exitCleanup) {
+                assert.strictEqual(loginError, undefined);
+                const secondCredentials = await loginAzureRM("connected-service");
+                const exitHandlers = process.listeners("exit").filter((listener: Function) => listener.name === "cleanupAzureRMLoginCredentialsOnExit");
+                assert.strictEqual(exitHandlers.length, 1, "exit cleanup must be registered once");
+                assert(fs.existsSync(credentials.directoryPath) && fs.existsSync(secondCredentials.directoryPath));
+                cleanupAzureRMLoginCredentials(secondCredentials);
+                telemetry.length = 0;
+                (exitHandlers[0] as Function)();
+                assert(!fs.existsSync(credentials.directoryPath), "exit cleanup must remove a leftover credential directory");
+                (exitHandlers[0] as Function)();
+                cleanupAzureRMLoginCredentials(credentials);
+                assert.deepStrictEqual(telemetry, [{ cleanup: "deleted", trigger: "exit" }, { cleanup: "notfound", trigger: "explicit" }]);
             }
             else {
                 assert.strictEqual(loginError, undefined);
@@ -207,7 +227,11 @@ export class AzureCliUtilityTests {
                 cleanupAzureRMLoginCredentials(credentials);
                 assert(!fs.existsSync(credentials.directoryPath), "credential directory must be removed by cleanup");
                 cleanupAzureRMLoginCredentials(credentials);
-                assert.deepStrictEqual(telemetry, [{ isolation: "enabled", login: "succeeded" }, { cleanup: "deleted" }, { cleanup: "notfound" }]);
+                assert.deepStrictEqual(telemetry, [
+                    { isolation: "enabled", login: "succeeded" },
+                    { cleanup: "deleted", trigger: "explicit" },
+                    { cleanup: "notfound", trigger: "explicit" }
+                ]);
             }
 
             console.log(`CERTIFICATE_LOGIN_${scenario}_PASSED`);
@@ -254,6 +278,17 @@ export class AzureCliUtilityTests {
             cleanupAzureRMLoginCredentials({ directoryPath: unexpectedName });
             assert(fs.existsSync(unexpectedName), "cleanup must only remove credential directories");
 
+            const legacyLinkPath = path.join(agentTemp, "spnCert.pem");
+            fs.symlinkSync(victim, legacyLinkPath, "junction");
+            cleanupAzureRMLoginCredentials({ certificatePath: legacyLinkPath });
+            assert(fs.existsSync(path.join(victim, "spnCert.pem")), "legacy cleanup must not follow a link");
+            assert(fs.lstatSync(legacyLinkPath).isSymbolicLink(), "legacy cleanup must only remove a regular file");
+
+            const unexpectedLegacyPath = path.join(outside, "spnCert.pem");
+            fs.writeFileSync(unexpectedLegacyPath, "keep");
+            cleanupAzureRMLoginCredentials({ certificatePath: unexpectedLegacyPath });
+            assert(fs.existsSync(unexpectedLegacyPath), "legacy cleanup must only remove the expected certificate path");
+
             console.log("CLEANUP_REJECTS_UNSAFE_DIRECTORY_PASSED");
         }
         catch (error) {
@@ -289,6 +324,7 @@ async function RUNTESTS() {
     await AzureCliUtilityTests.certificateLoginTest(false, "ISOLATED_DISABLE_FLAG_OFF");
     await AzureCliUtilityTests.certificateLoginTest(undefined, "ISOLATED_LOGIN_FAILURE", { loginExitCode: 1 });
     await AzureCliUtilityTests.certificateLoginTest(undefined, "ISOLATED_NO_AGENT_TEMP", { agentTemp: undefined });
+    await AzureCliUtilityTests.certificateLoginTest(undefined, "ISOLATED_EXIT_CLEANUP", { exitCleanup: true });
     AzureCliUtilityTests.cleanupRejectsUnsafeDirectoryTest();
     await AzureCliUtilityTests.initOIDCTokenTestRetryMechanism();
     await AzureCliUtilityTests.initOIDCTokenTestAggregateError();

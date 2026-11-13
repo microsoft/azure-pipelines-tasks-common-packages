@@ -17,6 +17,7 @@ export function AzureCliUtilityTests() {
                 assert(tr.stdOutContained('CERTIFICATE_LOGIN_ISOLATED_DISABLE_FLAG_OFF_PASSED'), 'isolated certificate login when disable flag is false');
                 assert(tr.stdOutContained('CERTIFICATE_LOGIN_ISOLATED_LOGIN_FAILURE_PASSED'), 'isolated certificate login failure');
                 assert(tr.stdOutContained('CERTIFICATE_LOGIN_ISOLATED_NO_AGENT_TEMP_PASSED'), 'isolated certificate without Agent.TempDirectory');
+                assert(tr.stdOutContained('CERTIFICATE_LOGIN_ISOLATED_EXIT_CLEANUP_PASSED'), 'isolated certificate exit cleanup');
                 assert(tr.stdOutContained('CLEANUP_REJECTS_UNSAFE_DIRECTORY_PASSED'), 'cleanup rejects unsafe credential directories');
                 assert(tr.stdOutContained('Retrying OIDC token fetch. Retries left: 2'));
                 assert(tr.stdOutContained('Retrying OIDC token fetch. Retries left: 0'));
