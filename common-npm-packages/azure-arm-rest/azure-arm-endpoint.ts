@@ -9,7 +9,17 @@ import { AzureEndpoint } from './azureModels';
 import constants = require('./constants');
 import webClient = require('./webClient');
 
-const certFilePath: string = path.join(tl.getVariable('Agent.TempDirectory'), 'spnCert.pem');
+// Isolation is on by default; setting this pipeline feature to true restores the legacy fixed-path behavior.
+const DISABLE_CREDENTIAL_FILE_ISOLATION_FEATURE = 'DisableAzureArmEndpointCredentialFileIsolation';
+const CREDENTIAL_DIRECTORY_PREFIX = '.azarmrest-endpoint-';
+const CERTIFICATE_FILE_NAME = 'spnCert.pem';
+
+const certFilePath: string = path.join(tl.getVariable('Agent.TempDirectory'), CERTIFICATE_FILE_NAME);
+
+// The certificate must outlive getEndpoint because credentials re-read it on every token request,
+// so isolated directories are removed by dispose() or, at the latest, when the process exits.
+const isolatedCredentialDirectories: Set<string> = new Set<string>();
+let exitCleanupRegistered: boolean = false;
 
 tl.setResourcePath(path.join(__dirname, 'module.json'), true);
 
@@ -206,8 +216,7 @@ export class AzureRMEndpoint {
                     if (this.endpoint.authenticationType && this.endpoint.authenticationType == constants.AzureServicePrinicipalAuthentications.servicePrincipalCertificate) {
                         tl.debug('certificate spn endpoint');
                         this.endpoint.servicePrincipalCertificate = tl.getEndpointAuthorizationParameter(this._connectedServiceName, 'servicePrincipalCertificate', false);
-                        this.endpoint.servicePrincipalCertificatePath = certFilePath;
-                        fs.writeFileSync(this.endpoint.servicePrincipalCertificatePath, this.endpoint.servicePrincipalCertificate);
+                        this.endpoint.servicePrincipalCertificatePath = writeCertificateFile(this.endpoint.servicePrincipalCertificate);
                     }
                     else {
                         tl.debug('credentials spn endpoint');
@@ -328,9 +337,150 @@ export class AzureRMEndpoint {
     }
 }
 
-export function dispose() {
-    if (tl.exist(certFilePath)) {
-        tl.rmRF(certFilePath);
-        tl.debug('Removed cert endpoint file');
+function writeCertificateFile(certificateContent: string): string {
+    if (tl.getPipelineFeature(DISABLE_CREDENTIAL_FILE_ISOLATION_FEATURE)) {
+        publishCertificateCredentialTelemetry({ isolation: 'disabled' });
+        fs.writeFileSync(certFilePath, certificateContent);
+        return certFilePath;
     }
+
+    publishCertificateCredentialTelemetry({ isolation: 'enabled' });
+    const directoryPath = fs.mkdtempSync(path.join(tl.getVariable('Agent.TempDirectory'), CREDENTIAL_DIRECTORY_PREFIX));
+    trackIsolatedCredentialDirectory(directoryPath);
+    if (process.platform !== 'win32') {
+        fs.chmodSync(directoryPath, 0o700);
+    }
+
+    const certificatePath = path.join(directoryPath, CERTIFICATE_FILE_NAME);
+    fs.writeFileSync(certificatePath, certificateContent, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
+    return certificatePath;
+}
+
+function trackIsolatedCredentialDirectory(directoryPath: string): void {
+    isolatedCredentialDirectories.add(directoryPath);
+    if (!exitCleanupRegistered) {
+        exitCleanupRegistered = true;
+        process.once('exit', () => cleanupIsolatedCredentialDirectories('exit'));
+    }
+}
+
+// Never throws so it is safe to call from finally blocks and the process exit handler.
+function cleanupIsolatedCredentialDirectories(trigger: 'dispose' | 'exit'): void {
+    isolatedCredentialDirectories.forEach((directoryPath: string) => {
+        isolatedCredentialDirectories.delete(directoryPath);
+
+        let outcome: string;
+        try {
+            outcome = removeIsolatedCredentialDirectory(directoryPath);
+            if (outcome === 'rejected') {
+                tl.warning('Skipped removing the Azure RM service-principal certificate because the credential directory is not valid.');
+            }
+        } catch (error) {
+            outcome = 'error';
+            tl.warning('Failed to remove the Azure RM service-principal certificate.');
+            tl.debug(`Failed to remove the Azure RM certificate credential directory: ${error && error.code || error}`);
+        }
+
+        publishCertificateCredentialTelemetry({ cleanup: outcome, trigger: trigger });
+    });
+}
+
+// Deliberately avoids tl.rmRF, which follows directory links (symlinks/junctions) and deletes their targets.
+function removeIsolatedCredentialDirectory(directoryPath: string): 'deleted' | 'notfound' | 'rejected' {
+    const agentTempDirectory: string = tl.getVariable('Agent.TempDirectory');
+    if (!agentTempDirectory
+        || !isSamePath(path.dirname(directoryPath), agentTempDirectory)
+        || path.basename(directoryPath).indexOf(CREDENTIAL_DIRECTORY_PREFIX) !== 0) {
+        return 'rejected';
+    }
+
+    let directoryStats: fs.Stats;
+    try {
+        directoryStats = fs.lstatSync(directoryPath);
+    } catch (error) {
+        if (error && error.code === 'ENOENT') {
+            return 'notfound';
+        }
+        throw error;
+    }
+
+    if (directoryStats.isSymbolicLink() || !directoryStats.isDirectory()) {
+        return 'rejected';
+    }
+
+    try {
+        fs.unlinkSync(path.join(directoryPath, CERTIFICATE_FILE_NAME));
+    } catch (error) {
+        if (!error || error.code !== 'ENOENT') {
+            throw error;
+        }
+    }
+
+    fs.rmdirSync(directoryPath);
+    return 'deleted';
+}
+
+function isSamePath(first: string, second: string): boolean {
+    const resolvedFirst = path.resolve(first);
+    const resolvedSecond = path.resolve(second);
+    return process.platform === 'win32'
+        ? resolvedFirst.toLowerCase() === resolvedSecond.toLowerCase()
+        : resolvedFirst === resolvedSecond;
+}
+
+// Only fixed values are published: isolation (enabled|disabled),
+// cleanup (deleted|notfound|rejected|error) with trigger (dispose|exit).
+function publishCertificateCredentialTelemetry(properties: { [key: string]: string }): void {
+    try {
+        console.log(`##vso[telemetry.publish area=TaskDeploymentMethod;feature=AzureRMEndpointCertificateCredentials]${JSON.stringify(properties)}`);
+    } catch (error) {
+        tl.debug(`Failed to publish Azure RM certificate credential telemetry: ${error}`);
+    }
+}
+
+export function dispose() {
+    cleanupIsolatedCredentialDirectories('dispose');
+    // The fixed certificate path is only written when isolation is disabled.
+    if (tl.getPipelineFeature(DISABLE_CREDENTIAL_FILE_ISOLATION_FEATURE)) {
+        cleanupLegacyCertificateFile();
+    }
+}
+
+// Never throws so it is safe to call from finally blocks.
+function cleanupLegacyCertificateFile(): void {
+    let outcome: string;
+    try {
+        outcome = removeLegacyCertificateFile();
+        if (outcome === 'rejected') {
+            tl.warning('Skipped removing the Azure RM service-principal certificate because the certificate path is not a regular file.');
+        } else if (outcome === 'deleted') {
+            tl.debug('Removed cert endpoint file');
+        }
+    } catch (error) {
+        outcome = 'error';
+        tl.warning('Failed to remove the Azure RM service-principal certificate.');
+        tl.debug(`Failed to remove the Azure RM certificate file: ${error && error.code || error}`);
+    }
+
+    publishCertificateCredentialTelemetry({ isolation: 'disabled', cleanup: outcome, trigger: 'dispose' });
+}
+
+// Deliberately avoids tl.rmRF, which follows links (symlinks/junctions) and deletes their targets.
+function removeLegacyCertificateFile(): 'deleted' | 'notfound' | 'rejected' {
+    let fileStats: fs.Stats;
+    try {
+        fileStats = fs.lstatSync(certFilePath);
+    } catch (error) {
+        if (error && error.code === 'ENOENT') {
+            return 'notfound';
+        }
+        throw error;
+    }
+
+    if (!fileStats.isFile()) {
+        return 'rejected';
+    }
+
+    fs.unlinkSync(certFilePath);
+    return 'deleted';
 }

@@ -10,6 +10,7 @@ import { AzureAppServiceUtilityTests } from "./L0-azure-app-service-utility-test
 import { KuduLogSanitizerTests } from "./L0-kudu-log-sanitizer-tests";
 import { WebClientTests } from "./L0-web-client-tests";
 import { ScopeTokenTests } from "./L0-scope-token-tests";
+import { AzureRMEndpointCertificateTests } from "./L0-azure-arm-endpoint-certificate-tests";
 
 const DEFAULT_TIMEOUT = 1000 * 20;
 
@@ -27,4 +28,5 @@ describe("AzureARMRestTests", function () {
     describe("Kudu log VSO-command sanitizer Tests", KuduLogSanitizerTests);
     describe("Web client Tests", WebClientTests);
     describe("Scope-level token Tests", ScopeTokenTests.bind(ScopeTokenTests, DEFAULT_TIMEOUT));
+    describe("AzureRMEndpoint certificate file Tests", AzureRMEndpointCertificateTests.bind(AzureRMEndpointCertificateTests, DEFAULT_TIMEOUT));
 });
