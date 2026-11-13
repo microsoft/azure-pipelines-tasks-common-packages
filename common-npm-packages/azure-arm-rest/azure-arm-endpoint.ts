@@ -440,8 +440,47 @@ function publishCertificateCredentialTelemetry(properties: { [key: string]: stri
 
 export function dispose() {
     cleanupIsolatedCredentialDirectories('dispose');
-    if (tl.exist(certFilePath)) {
-        tl.rmRF(certFilePath);
-        tl.debug('Removed cert endpoint file');
+    // The fixed certificate path is only written when isolation is disabled.
+    if (tl.getPipelineFeature(DISABLE_CREDENTIAL_FILE_ISOLATION_FEATURE)) {
+        cleanupLegacyCertificateFile();
     }
+}
+
+// Never throws so it is safe to call from finally blocks.
+function cleanupLegacyCertificateFile(): void {
+    let outcome: string;
+    try {
+        outcome = removeLegacyCertificateFile();
+        if (outcome === 'rejected') {
+            tl.warning('Skipped removing the Azure RM service-principal certificate because the certificate path is not a regular file.');
+        } else if (outcome === 'deleted') {
+            tl.debug('Removed cert endpoint file');
+        }
+    } catch (error) {
+        outcome = 'error';
+        tl.warning('Failed to remove the Azure RM service-principal certificate.');
+        tl.debug(`Failed to remove the Azure RM certificate file: ${error && error.code || error}`);
+    }
+
+    publishCertificateCredentialTelemetry({ isolation: 'disabled', cleanup: outcome, trigger: 'dispose' });
+}
+
+// Deliberately avoids tl.rmRF, which follows links (symlinks/junctions) and deletes their targets.
+function removeLegacyCertificateFile(): 'deleted' | 'notfound' | 'rejected' {
+    let fileStats: fs.Stats;
+    try {
+        fileStats = fs.lstatSync(certFilePath);
+    } catch (error) {
+        if (error && error.code === 'ENOENT') {
+            return 'notfound';
+        }
+        throw error;
+    }
+
+    if (!fileStats.isFile()) {
+        return 'rejected';
+    }
+
+    fs.unlinkSync(certFilePath);
+    return 'deleted';
 }

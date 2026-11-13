@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Usage: node azure-arm-endpoint-certificate-tests.js <agentTempDirectory> <isolated|legacy|exit|link>
+// Usage: node azure-arm-endpoint-certificate-tests.js <agentTempDirectory> <isolated|legacy|legacy-link|exit|link>
 const agentTempDirectory = process.argv[2];
 const scenario = process.argv[3];
 const connection = 'CERTCONNECTION';
@@ -17,7 +17,7 @@ process.env[`ENDPOINT_DATA_${connection}_SUBSCRIPTIONID`] = 'subscription-id';
 process.env[`ENDPOINT_DATA_${connection}_SUBSCRIPTIONNAME`] = 'subscription';
 process.env[`ENDPOINT_DATA_${connection}_ENVIRONMENT`] = 'AzureCloud';
 process.env[`ENDPOINT_URL_${connection}`] = 'https://management.azure.com/';
-if (scenario === 'legacy') {
+if (scenario === 'legacy' || scenario === 'legacy-link') {
     process.env['DISTRIBUTEDTASK_TASKS_DISABLEAZUREARMENDPOINTCREDENTIALFILEISOLATION'] = 'true';
 }
 
@@ -39,6 +39,18 @@ async function run(): Promise<void> {
         check(certificatePath === legacyPath, 'legacy path not used');
         dispose();
         check(!fs.existsSync(legacyPath), 'legacy certificate not removed');
+        dispose();
+    } else if (scenario === 'legacy-link') {
+        check(certificatePath === legacyPath, 'legacy path not used');
+        const victimDirectory = fs.mkdtempSync(path.join(agentTempDirectory, 'victim-'));
+        const victimFile = path.join(victimDirectory, 'victim.txt');
+        fs.writeFileSync(victimFile, 'victim');
+        fs.unlinkSync(legacyPath);
+        fs.symlinkSync(victimDirectory, legacyPath, 'junction');
+
+        dispose();
+        check(fs.readFileSync(victimFile, 'utf8') === 'victim', 'legacy cleanup followed the link');
+        check(fs.lstatSync(legacyPath).isSymbolicLink(), 'legacy link removed');
     } else {
         const directoryPath = path.dirname(certificatePath);
         check(path.dirname(directoryPath) === agentTempDirectory, 'isolated directory not in agent temp');
@@ -53,7 +65,10 @@ async function run(): Promise<void> {
         check(secondEndpoint.servicePrincipalCertificatePath !== certificatePath, 'certificate path is not unique per endpoint');
 
         if (scenario === 'isolated') {
+            // A fixed-path certificate owned by another component must be left alone when isolation is on.
+            fs.writeFileSync(legacyPath, 'other');
             dispose();
+            check(fs.readFileSync(legacyPath, 'utf8') === 'other', 'legacy certificate removed while isolation is enabled');
             check(!fs.existsSync(directoryPath), 'isolated directory not removed');
             check(!fs.existsSync(path.dirname(secondEndpoint.servicePrincipalCertificatePath)), 'second isolated directory not removed');
             dispose();

@@ -57,9 +57,22 @@ export function AzureRMEndpointCertificateTests(defaultTimeout = 20000) {
     it('uses the legacy certificate path when isolation is disabled', function () {
         this.timeout(defaultTimeout);
         const telemetry = runScenario('legacy');
-        assert.deepStrictEqual(telemetry, ['{"isolation":"disabled"}']);
+        assert.deepStrictEqual(telemetry, [
+            '{"isolation":"disabled"}',
+            '{"isolation":"disabled","cleanup":"deleted","trigger":"dispose"}',
+            '{"isolation":"disabled","cleanup":"notfound","trigger":"dispose"}'
+        ]);
         assert(!fs.existsSync(path.join(agentTempDirectory, 'spnCert.pem')));
         assert.deepStrictEqual(credentialDirectories(), []);
+    });
+
+    it('does not follow a link at the legacy certificate path on dispose', function () {
+        this.timeout(defaultTimeout);
+        const telemetry = runScenario('legacy-link');
+        assert.deepStrictEqual(telemetry, [
+            '{"isolation":"disabled"}',
+            '{"isolation":"disabled","cleanup":"rejected","trigger":"dispose"}'
+        ]);
     });
 
     it('removes isolated directories when the process exits without dispose', function () {
