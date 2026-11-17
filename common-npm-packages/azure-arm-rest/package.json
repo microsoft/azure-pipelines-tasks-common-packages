@@ -37,9 +37,6 @@
         "shelljs": "^0.8.5",
         "typescript": "^4.9.5"
     },
-    "overrides": {
-        "brace-expansion": "^1.1.18"
-    },
     "scripts": {
         "build": "node make.js"
     }
