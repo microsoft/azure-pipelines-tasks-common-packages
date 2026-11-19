@@ -1,0 +1,32 @@
+{
+  "name": "azure-pipelines-tasks-node-installer-common",
+  "version": "1.0.0",
+  "description": "Azure Pipelines helpers for node installation tasks",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "node ./make.js"
+  },
+  "keywords": [],
+  "author": "Microsoft Corporation",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/microsoft/azure-pipelines-tasks-common-packages"
+  },
+  "bugs": {
+    "url": "https://github.com/microsoft/azure-pipelines-tasks-common-packages/issues"
+  },
+  "dependencies": {
+    "azure-pipelines-task-lib": "^4.2.0",
+    "azure-pipelines-tool-lib": "^2.0.0-preview",
+    "typed-rest-client": "^1.8.9"
+  },
+  "devDependencies": {
+    "@types/node": "^10.17.60",
+    "typescript": "4.0.2"
+  },
+  "engines": {
+    "node": ">=10.24.1"
+  }
+}
