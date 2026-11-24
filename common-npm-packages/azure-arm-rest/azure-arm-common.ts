@@ -32,10 +32,9 @@ tl.debug('Using ' + msalVer);
 const msal = require(msalVer);
 
 /// Dynamic @azure/identity loading based on the node version
-/// The @azure/identity package depends on @azure/msal-node which uses modern JavaScript features like optional chaining
-/// that are not supported in Node 10. We only load it when running on Node 14+.
+/// Tasks can bundle SDK dependencies requiring Node 22+. Keep loading aligned with scoped-client selection.
 let azureIdentity: any;
-if (nodeVersion >= 16) {
+if (nodeVersion >= 22) {
     azureIdentity = require("@azure/identity");
 }
 
