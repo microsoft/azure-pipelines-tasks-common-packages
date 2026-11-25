@@ -1,0 +1,12 @@
+import '../EngineTests/artifactEngineTests';
+import '../EngineTests/workerTests';
+import '../ProvidersTests/filesystemProviderTests';
+import '../ProvidersTests/handlersTests';
+import '../ProvidersTests/webClientFactoryTests';
+import '../ProvidersTests/webProviderTests';
+import '../ProvidersTests/zipProviderTests';
+import '../StoreTests/artifactItemStoreTests';
+import '../EngineTests/jenkinsTests';
+import '../EngineTests/proxyTests';
+import '../EngineTests/httpStatusFailureTests';
+import '../EngineTests/scalabilityTests';
