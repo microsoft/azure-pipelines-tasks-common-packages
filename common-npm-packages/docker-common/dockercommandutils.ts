@@ -6,7 +6,7 @@ import ContainerConnection from "./containerconnection";
 import * as pipelineUtils from "./pipelineutils";
 import * as path from "path";
 import * as crypto from "crypto";
-import { dockerExternalOutputOptions, sanitizeVsoCommandMarkers } from "./vsoCommandSanitizer";
+import { createDockerExecSyncOutputOptions, DOCKER_ERRLINE_SANITIZATION_PIPELINE_FEATURE, sanitizeVsoCommandMarkers } from "./vsoCommandSanitizer";
 
 const matchPatternForSize = new RegExp(/[\d\.]+/);
 const orgUrl = tl.getVariable('System.TeamFoundationCollectionUri');
@@ -461,6 +461,6 @@ export function sanitizeDockerOutput(data: string): string {
 // child process exits, including when the final output has no newline.
 export function createSanitizedExecOptions(): tr.IExecOptions {
     return {
-        externalOutput: dockerExternalOutputOptions
+        externalOutput: createDockerExecSyncOutputOptions(tl.getPipelineFeature(DOCKER_ERRLINE_SANITIZATION_PIPELINE_FEATURE))
     };
 }
