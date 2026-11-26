@@ -6,7 +6,7 @@ import { execFileSync } from 'child_process';
 export function ScopeTokenTests(defaultTimeout = 2000) {
     for (const runtime of [10, 16, 20, 22, 24]) {
         for (const feature of ["undefined", "false", "true"]) {
-            it(`selects a compatible scoped-token client on Node ${runtime}, feature ${feature}`, function () {
+            it(`selects a compatible scoped-token client for simulated Node ${runtime}, feature ${feature}`, function () {
                 this.timeout(defaultTimeout);
                 const output = execFileSync(process.execPath, [
                     path.join(__dirname, "scope-token-runtime-tests.js"), String(runtime), feature
