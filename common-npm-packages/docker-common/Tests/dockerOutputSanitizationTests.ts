@@ -6,6 +6,7 @@ import { createFilteredWriter } from "azure-pipelines-task-lib/externaloutput";
 process.env['INPUT_BUILDCONTEXT'] = '/tmp/build';
 process.env['SYSTEM_DEFAULTWORKINGDIRECTORY'] = '/tmp/work';
 
+import * as tl from "azure-pipelines-task-lib/task";
 import * as dockerCommandUtils from "../dockercommandutils";
 
 /**
@@ -85,7 +86,11 @@ class MockContainerConnection {
         const self = this;
 
         process.stdout.write = function (chunk: any, encodingOrCb?: any, cb?: any): boolean {
-            self.stdoutWritten += typeof chunk === 'string' ? chunk : chunk.toString();
+            // blockAndTelemetry makes task-lib write its own telemetry command (and debug lines
+            // for the variables it reads); neither is docker output
+            const text = (typeof chunk === 'string' ? chunk : chunk.toString())
+                .replace(/##vso\[(?:telemetry\.publish |task\.debug\]SYSTEM_)[^\r\n]*(\r?\n|$)/g, "");
+            self.stdoutWritten += text;
             const callback = typeof encodingOrCb === 'function' ? encodingOrCb : cb;
             if (typeof callback === 'function') callback();
             return true;
@@ -110,6 +115,25 @@ class MockContainerConnection {
 }
 
 export function runDockerCommandSanitizationTests() {
+
+    let sanitizationFlagOn: boolean;
+    let originalGetPipelineFeature: typeof tl.getPipelineFeature;
+
+    // The live stream is only blocked when EnableDockerErrlineVsoCommandSanitization is on, so
+    // the suites below that assert blocking run with it on. The dedicated flag-gating suite at
+    // the end flips it per test.
+    beforeEach(() => {
+        sanitizationFlagOn = true;
+        originalGetPipelineFeature = tl.getPipelineFeature;
+        (tl as any).getPipelineFeature = (featureName: string) =>
+            featureName === "EnableDockerErrlineVsoCommandSanitization"
+                ? sanitizationFlagOn
+                : originalGetPipelineFeature(featureName);
+    });
+
+    afterEach(() => {
+        (tl as any).getPipelineFeature = originalGetPipelineFeature;
+    });
 
     describe('build()', () => {
 
@@ -402,6 +426,70 @@ export function runDockerCommandSanitizationTests() {
                     "##vso[ split across three chunks should be sanitized");
                 done();
             }).catch(done);
+        });
+    });
+
+    describe('EnableDockerErrlineVsoCommandSanitization gating of the live stream', () => {
+
+        const injected = "##vso[task.setvariable variable=BASH_ENV]/tmp/evil.sh";
+
+        const commands: { name: string; run: (c: any) => Promise<any> }[] = [
+            { name: "build", run: c => dockerCommandUtils.build(c, "Dockerfile", "", [], ["test:latest"], () => {}) },
+            { name: "command", run: c => dockerCommandUtils.command(c, "run", "image", () => {}) },
+            { name: "push", run: c => dockerCommandUtils.push(c, "myimage:latest", "", () => {}) },
+            { name: "start", run: c => dockerCommandUtils.start(c, "container-1", "", () => {}) },
+            { name: "stop", run: c => dockerCommandUtils.stop(c, "container-1", "", () => {}) },
+            { name: "getHistory", run: c => dockerCommandUtils.getHistory(c, "myimage:latest") }
+        ];
+
+        commands.forEach(({ name, run }) => {
+            it(`${name}: flag OFF leaves the live stream unchanged and reports telemetry only`, (done) => {
+                sanitizationFlagOn = false;
+                const connection = new MockContainerConnection(injected);
+
+                run(connection).then(() => {
+                    assert.strictEqual(connection.lastExecOptions.externalOutput.vsoCommandMode, "telemetryOnly");
+                    assert.ok(connection.stdoutWritten.includes(injected),
+                        "with the flag off the marker must not be rewritten");
+                    done();
+                }).catch(done);
+            });
+
+            it(`${name}: flag ON blocks the live stream`, (done) => {
+                sanitizationFlagOn = true;
+                const connection = new MockContainerConnection(injected);
+
+                run(connection).then(() => {
+                    assert.strictEqual(connection.lastExecOptions.externalOutput.vsoCommandMode, "blockAndTelemetry");
+                    assert.ok(!connection.stdoutWritten.includes("##vso["),
+                        "with the flag on the marker must be neutralized");
+                    assert.ok(connection.stdoutWritten.includes("##_vso[task.setvariable"));
+                    done();
+                }).catch(done);
+            });
+        });
+
+        it('flag OFF still leaves a split marker unchanged', (done) => {
+            sanitizationFlagOn = false;
+            const connection = new MockContainerConnection();
+            connection.mockToolRunner.simulatedStdoutChunks = ["##vs", "o[task.prependpath]/tmp/pwned"];
+
+            dockerCommandUtils.build(
+                connection as any, "Dockerfile", "", [], ["test:latest"], () => {}
+            ).then(() => {
+                assert.ok(connection.stdoutWritten.includes("##vso[task.prependpath]"));
+                done();
+            }).catch(done);
+        });
+
+        it('sanitizeDockerOutput is a no-op with the flag OFF and blocks with the flag ON', () => {
+            sanitizationFlagOn = false;
+            assert.strictEqual(dockerCommandUtils.sanitizeDockerOutput(injected), injected);
+
+            sanitizationFlagOn = true;
+            const sanitized = dockerCommandUtils.sanitizeDockerOutput(injected);
+            assert.ok(!sanitized.includes("##vso["));
+            assert.ok(sanitized.includes("##_vso[task.setvariable"));
         });
     });
 

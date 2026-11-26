@@ -168,10 +168,12 @@ function emitBlockedCommandHostTrace(feature: string, hostId: string, commandNam
  * `enableVsoCommands` keeps task-lib's default allowlist
  * (`defaultAllowedVsoCommands`: task.debug and task.setprogress) working, so
  * benign progress/debug output from tooling is not silently dropped, while
- * every state-changing command remains blocked. This path predates and is
- * unaffected by DOCKER_ERRLINE_SANITIZATION_PIPELINE_FEATURE above (it is
- * unconditional, matching pre-existing behavior), so vsoCommandMode is left
- * at its default ('blockOnly' - block, no telemetry).
+ * every state-changing command remains blocked.
+ *
+ * This constant is the ENFORCED policy (vsoCommandMode defaults to 'blockOnly').
+ * Call sites must not use it directly: they go through
+ * createDockerExecSyncOutputOptions, which applies it only when
+ * DOCKER_ERRLINE_SANITIZATION_PIPELINE_FEATURE is on.
  */
 export const dockerExternalOutputOptions: ExternalOutputOptions = {
     source: "childProcess",
@@ -182,17 +184,23 @@ export const dockerExternalOutputOptions: ExternalOutputOptions = {
  * Neutralizes logging-command markers in a complete string of Docker output.
  *
  * Use this for values that are already whole (e.g. a single captured stderr
- * line). For streamed child-process output, pass dockerExternalOutputOptions
+ * line). Gated by DOCKER_ERRLINE_SANITIZATION_PIPELINE_FEATURE: a no-op when off.
+ * For streamed child-process output, pass createDockerExecSyncOutputOptions(flag)
  * to ToolRunner's `externalOutput` option so ToolRunner owns both filtering
  * and finalization.
  */
 export function sanitizeVsoCommandMarkers(data: string): string {
-    return filterExternalOutput(data, dockerExternalOutputOptions).toString("utf8");
+    const enforced = tl.getPipelineFeature(DOCKER_ERRLINE_SANITIZATION_PIPELINE_FEATURE);
+    return filterExternalOutput(data, {
+        ...dockerExternalOutputOptions,
+        vsoCommandMode: enforced ? "blockOnly" : "disabled"
+    }).toString("utf8");
 }
 
 /**
- * The external-output policy for containerimageutils.ts's runPullImageCommand/
- * runInspectImageCommand execSync() call sites. Mirrors sanitizeDockerErrlineForLog's
+ * The feature-gated external-output policy for every live Docker child-process stream
+ * (createSanitizedExecOptions in dockercommandutils.ts and containerimageutils.ts's
+ * runPullImageCommand/runInspectImageCommand execSync() call sites). Mirrors sanitizeDockerErrlineForLog's
  * enforcement gating (vsoCommandMode 'telemetryOnly' when off, 'blockAndTelemetry' when on)
  * so these call sites always receive *some* externalOutput policy - and therefore always get
  * task-lib's detection telemetry for their live stdout/stderr - instead of passing `undefined`
