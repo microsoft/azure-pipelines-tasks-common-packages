@@ -2,7 +2,8 @@ import assert = require("assert");
 import Module = require("module");
 
 const originalVersion = process.version;
-const runtime = process.argv[2] === "native" ? Number(process.versions.node.split(".")[0]) : Number(process.argv[2]);
+const nativeRuntime = process.argv[2] === "native";
+const runtime = nativeRuntime ? Number(process.versions.node.split(".")[0]) : Number(process.argv[2]);
 const feature = process.argv[3];
 const originalLoad = (Module as any)._load;
 let identityLoads = 0;
@@ -10,7 +11,9 @@ let msalClient: string;
 
 async function run() {
     try {
-        Object.defineProperty(process, "version", { value: `v${runtime}.0.0`, configurable: true });
+        if (!nativeRuntime) {
+            Object.defineProperty(process, "version", { value: `v${runtime}.0.0`, configurable: true });
+        }
         const tl = require("azure-pipelines-task-lib/task");
         if (feature === "undefined") {
             delete process.env.DISTRIBUTEDTASK_TASKS_ALLOWSCOPELEVELTOKEN;
@@ -18,11 +21,11 @@ async function run() {
             tl.setVariable("DistributedTask.Tasks.AllowScopeLevelToken", feature);
         }
         const enabled = tl.getPipelineFeature("ALLOWSCOPELEVELTOKEN");
-        const loadIdentity = runtime >= 16;
+        const loadIdentity = runtime >= 22;
         (Module as any)._load = function (request: string) {
             if (request === "@azure/identity") {
                 identityLoads++;
-                assert(loadIdentity, "SDK imports must match the runtime and feature-flag baseline");
+                assert(loadIdentity, "Azure Identity must not load on handlers below Node 22, regardless of the feature flag");
                 return {};
             }
             if (request === "msalv1" || request === "msalv3") {
