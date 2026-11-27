@@ -14,7 +14,7 @@
     },
     "homepage": "https://github.com/microsoft/azure-pipelines-tasks-common-packages#readme",
     "dependencies": {
-        "@azure/identity": "^4.13.1",
+        "@azure/identity": "4.13.1",
         "@azure/storage-blob": "12.17.0",
         "artifact-engine": "^1.283.2",
         "azure-pipelines-task-lib": "^5.283.2",
